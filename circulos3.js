@@ -1,13 +1,8 @@
 document.addEventListener("DOMContentLoaded", function () {
 
-    const canvas =
-        document.getElementById("canvas");
-
-    const ctx =
-        canvas.getContext("2d");
-
-    const mensaje =
-        document.getElementById("mensaje");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const mensaje = document.getElementById("mensaje");
 
 
     // =====================================================
@@ -15,12 +10,10 @@ document.addEventListener("DOMContentLoaded", function () {
     // =====================================================
 
     const colores = [
-
         "#D9D9D9",
         "#8BB2D3",
         "#202D64",
         "#2B538E"
-
     ];
 
 
@@ -35,12 +28,10 @@ document.addEventListener("DOMContentLoaded", function () {
     const FUERZA_COLISION = 0.7;
 
 
-    // Cantidad inicial de dedos
+    // Cantidad de dedos necesaria
+    // Comienza en 2 y aumenta hasta 5.
 
     let dedosNecesarios = 2;
-
-
-    // Máximo de dedos que puede pedir el juego
 
     const MAXIMO_DEDOs = 5;
 
@@ -53,9 +44,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const dedos = new Map();
 
-    let colaboracionActiva = false;
-
     let colaboracionCompletada = false;
+
+    let creandoCirculo = false;
 
 
     // =====================================================
@@ -64,50 +55,41 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function ajustarCanvas() {
 
-        const anchoAnterior =
-            canvas.width;
-
-        const altoAnterior =
-            canvas.height;
+        const anchoAnterior = canvas.width;
+        const altoAnterior = canvas.height;
 
 
-        canvas.width =
-            canvas.clientWidth;
-
-        canvas.height =
-            canvas.clientHeight;
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
 
 
         if (circulos.length > 0) {
 
-            circulos.forEach(
-                circulo => {
+            circulos.forEach(circulo => {
 
-                    if (anchoAnterior > 0) {
+                if (anchoAnterior > 0) {
 
-                        circulo.x =
-                            circulo.x *
-                            canvas.width /
-                            anchoAnterior;
-
-                    }
-
-                    if (altoAnterior > 0) {
-
-                        circulo.y =
-                            circulo.y *
-                            canvas.height /
-                            altoAnterior;
-
-                    }
-
-
-                    controlarBordes(
-                        circulo
-                    );
+                    circulo.x =
+                        circulo.x *
+                        canvas.width /
+                        anchoAnterior;
 
                 }
-            );
+
+
+                if (altoAnterior > 0) {
+
+                    circulo.y =
+                        circulo.y *
+                        canvas.height /
+                        altoAnterior;
+
+                }
+
+
+                controlarBordes(circulo);
+
+            });
 
         }
 
@@ -147,22 +129,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const radioResponsive =
             Math.min(
-
                 RADIO_BASE,
-
                 Math.min(
                     canvas.width,
                     canvas.height
                 ) * 0.10
-
             );
 
 
-        for (
-            let i = 0;
-            i < 4;
-            i++
-        ) {
+        for (let i = 0; i < 4; i++) {
 
             crearCirculo(
 
@@ -196,34 +171,24 @@ document.addEventListener("DOMContentLoaded", function () {
 
         circulos.push({
 
-            // ---------------------------------------------
-            // POSICIÓN
-            // ---------------------------------------------
+            // Posición
 
             x: x,
-
             y: y,
 
 
-            // ---------------------------------------------
-            // TAMAÑO
-            // ---------------------------------------------
+            // Tamaño
 
             radio: radio,
-
             radioOriginal: radio,
 
 
-            // ---------------------------------------------
-            // COLOR
-            // ---------------------------------------------
+            // Color
 
             color: color,
 
 
-            // ---------------------------------------------
-            // MOVIMIENTO
-            // ---------------------------------------------
+            // Movimiento
 
             vx:
                 (Math.random() - 0.5) *
@@ -234,9 +199,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 VELOCIDAD_MAXIMA,
 
 
-            // ---------------------------------------------
-            // MOVIMIENTO ORGÁNICO
-            // ---------------------------------------------
+            // Movimiento orgánico
 
             faseX:
                 Math.random() *
@@ -254,9 +217,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 0.004,
 
 
-            // ---------------------------------------------
-            // RESPIRACIÓN
-            // ---------------------------------------------
+            // Respiración
 
             faseRespiracion:
                 Math.random() *
@@ -274,13 +235,16 @@ document.addEventListener("DOMContentLoaded", function () {
                 0.025,
 
 
-            // ---------------------------------------------
-            // APARICIÓN
-            // ---------------------------------------------
+            // Aparición
 
             aparicion: 0,
 
-            nuevo: true
+            nuevo: true,
+
+
+            // Estado de colaboración
+
+            congelado: false
 
         });
 
@@ -293,21 +257,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function controlarBordes(circulo) {
 
-        const radio =
-            circulo.radio;
+        const radio = circulo.radio;
 
 
-        if (
-            circulo.x - radio < 0
-        ) {
+        if (circulo.x - radio < 0) {
 
-            circulo.x =
-                radio;
+            circulo.x = radio;
 
             circulo.vx =
-                Math.abs(
-                    circulo.vx
-                );
+                Math.abs(circulo.vx);
 
         }
 
@@ -321,24 +279,17 @@ document.addEventListener("DOMContentLoaded", function () {
                 canvas.width - radio;
 
             circulo.vx =
-                -Math.abs(
-                    circulo.vx
-                );
+                -Math.abs(circulo.vx);
 
         }
 
 
-        if (
-            circulo.y - radio < 0
-        ) {
+        if (circulo.y - radio < 0) {
 
-            circulo.y =
-                radio;
+            circulo.y = radio;
 
             circulo.vy =
-                Math.abs(
-                    circulo.vy
-                );
+                Math.abs(circulo.vy);
 
         }
 
@@ -352,11 +303,40 @@ document.addEventListener("DOMContentLoaded", function () {
                 canvas.height - radio;
 
             circulo.vy =
-                -Math.abs(
-                    circulo.vy
-                );
+                -Math.abs(circulo.vy);
 
         }
+
+    }
+
+
+    // =====================================================
+    // OBTENER CÍRCULOS QUE ESTÁN SIENDO PRESIONADOS
+    // =====================================================
+
+    function obtenerCirculosPresionados() {
+
+        const resultado = [];
+
+
+        dedos.forEach(dato => {
+
+            if (
+                !resultado.includes(
+                    dato.circulo
+                )
+            ) {
+
+                resultado.push(
+                    dato.circulo
+                );
+
+            }
+
+        });
+
+
+        return resultado;
 
     }
 
@@ -367,71 +347,80 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function moverCirculos() {
 
-        circulos.forEach(
-            circulo => {
+        circulos.forEach(circulo => {
 
-                circulo.x +=
-                    circulo.vx;
+            // ---------------------------------------------
+            // Si está colaborando, se queda quieto
+            // ---------------------------------------------
 
-                circulo.y +=
-                    circulo.vy;
+            if (
+                circulo.congelado
+            ) {
 
+                return;
 
-                // Movimiento orgánico
-
-                circulo.faseX +=
-                    circulo.velocidadOrganica;
-
-                circulo.faseY +=
-                    circulo.velocidadOrganica *
-                    0.8;
+            }
 
 
-                circulo.x +=
-                    Math.sin(
-                        circulo.faseX
-                    ) *
-                    0.12;
+            circulo.x +=
+                circulo.vx;
+
+            circulo.y +=
+                circulo.vy;
 
 
-                circulo.y +=
-                    Math.cos(
-                        circulo.faseY
-                    ) *
-                    0.12;
+            // Movimiento orgánico
+
+            circulo.faseX +=
+                circulo.velocidadOrganica;
+
+            circulo.faseY +=
+                circulo.velocidadOrganica *
+                0.8;
 
 
-                controlarBordes(
-                    circulo
-                );
+            circulo.x +=
+                Math.sin(
+                    circulo.faseX
+                ) *
+                0.12;
 
 
-                // Aparición progresiva
+            circulo.y +=
+                Math.cos(
+                    circulo.faseY
+                ) *
+                0.12;
+
+
+            controlarBordes(circulo);
+
+
+            // Aparición
+
+            if (
+                circulo.nuevo
+            ) {
+
+                circulo.aparicion +=
+                    0.025;
+
 
                 if (
-                    circulo.nuevo
+                    circulo.aparicion >= 1
                 ) {
 
-                    circulo.aparicion +=
-                        0.025;
+                    circulo.aparicion =
+                        1;
 
-
-                    if (
-                        circulo.aparicion >= 1
-                    ) {
-
-                        circulo.aparicion =
-                            1;
-
-                        circulo.nuevo =
-                            false;
-
-                    }
+                    circulo.nuevo =
+                        false;
 
                 }
 
             }
-        );
+
+        });
 
     }
 
@@ -454,11 +443,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 j++
             ) {
 
-                const a =
-                    circulos[i];
+                const a = circulos[i];
 
-                const b =
-                    circulos[j];
+                const b = circulos[j];
 
 
                 const dx =
@@ -513,31 +500,72 @@ document.addEventListener("DOMContentLoaded", function () {
                     distancia;
 
 
+                // -----------------------------------------
                 // Separación
+                // -----------------------------------------
 
-                a.x -=
-                    nx *
-                    penetracion *
-                    0.5;
+                // Si alguno está congelado,
+                // el otro se separa de él.
 
-                a.y -=
-                    ny *
-                    penetracion *
-                    0.5;
+                if (
+                    a.congelado &&
+                    !b.congelado
+                ) {
+
+                    b.x +=
+                        nx *
+                        penetracion;
+
+                    b.y +=
+                        ny *
+                        penetracion;
+
+                }
+
+                else if (
+                    !a.congelado &&
+                    b.congelado
+                ) {
+
+                    a.x -=
+                        nx *
+                        penetracion;
+
+                    a.y -=
+                        ny *
+                        penetracion;
+
+                }
+
+                else {
+
+                    a.x -=
+                        nx *
+                        penetracion *
+                        0.5;
+
+                    a.y -=
+                        ny *
+                        penetracion *
+                        0.5;
 
 
-                b.x +=
-                    nx *
-                    penetracion *
-                    0.5;
+                    b.x +=
+                        nx *
+                        penetracion *
+                        0.5;
 
-                b.y +=
-                    ny *
-                    penetracion *
-                    0.5;
+                    b.y +=
+                        ny *
+                        penetracion *
+                        0.5;
+
+                }
 
 
+                // -----------------------------------------
                 // Rebote
+                // -----------------------------------------
 
                 const relativaX =
                     b.vx -
@@ -579,22 +607,34 @@ document.addEventListener("DOMContentLoaded", function () {
                     ny;
 
 
-                a.vx -=
-                    impulsoX *
-                    FUERZA_COLISION;
+                if (
+                    !a.congelado
+                ) {
 
-                a.vy -=
-                    impulsoY *
-                    FUERZA_COLISION;
+                    a.vx -=
+                        impulsoX *
+                        FUERZA_COLISION;
+
+                    a.vy -=
+                        impulsoY *
+                        FUERZA_COLISION;
+
+                }
 
 
-                b.vx +=
-                    impulsoX *
-                    FUERZA_COLISION;
+                if (
+                    !b.congelado
+                ) {
 
-                b.vy +=
-                    impulsoY *
-                    FUERZA_COLISION;
+                    b.vx +=
+                        impulsoX *
+                        FUERZA_COLISION;
+
+                    b.vy +=
+                        impulsoY *
+                        FUERZA_COLISION;
+
+                }
 
             }
 
@@ -689,34 +729,39 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // =====================================================
-    // OBTENER CÍRCULOS PRESIONADOS
+    // CONGELAR CÍRCULOS
     // =====================================================
 
-    function obtenerCirculosPresionados() {
+    function congelarCirculos() {
 
-        const resultado = [];
-
-
-        dedos.forEach(
-            dato => {
-
-                if (
-                    !resultado.includes(
-                        dato.circulo
-                    )
-                ) {
-
-                    resultado.push(
-                        dato.circulo
-                    );
-
-                }
-
-            }
-        );
+        const seleccionados =
+            obtenerCirculosPresionados();
 
 
-        return resultado;
+        circulos.forEach(circulo => {
+
+            circulo.congelado =
+                seleccionados.includes(
+                    circulo
+                );
+
+        });
+
+    }
+
+
+    // =====================================================
+    // LIBERAR CÍRCULOS
+    // =====================================================
+
+    function liberarCirculos() {
+
+        circulos.forEach(circulo => {
+
+            circulo.congelado =
+                false;
+
+        });
 
     }
 
@@ -727,57 +772,44 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function comprobarColaboracion() {
 
-        const circulosPresionados =
+        const seleccionados =
             obtenerCirculosPresionados();
 
 
-        // Todavía no hay suficientes dedos
+        // Si hay círculos repetidos,
+        // no cuenta.
 
         if (
-            circulosPresionados.length <
+            seleccionados.length <
             dedosNecesarios
         ) {
-
-            colaboracionActiva =
-                false;
-
-            colaboracionCompletada =
-                false;
 
             return;
 
         }
 
 
-        // Ya tenemos la cantidad necesaria
+        // ---------------------------------------------
+        // Exactamente la cantidad necesaria
+        // ---------------------------------------------
 
         if (
-            circulosPresionados.length ===
+            seleccionados.length ===
             dedosNecesarios
         ) {
 
             if (
-                !colaboracionActiva
+                colaboracionCompletada
             ) {
 
-                colaboracionActiva =
-                    true;
-
-                colaboracionCompletada =
-                    false;
+                return;
 
             }
 
 
-            if (
-                !colaboracionCompletada
-            ) {
-
-                completarColaboracion(
-                    circulosPresionados
-                );
-
-            }
+            completarColaboracion(
+                seleccionados
+            );
 
         }
 
@@ -789,20 +821,23 @@ document.addEventListener("DOMContentLoaded", function () {
     // =====================================================
 
     function completarColaboracion(
-        circulosPresionados
+        seleccionados
     ) {
 
         colaboracionCompletada =
             true;
 
 
-        // ---------------------------------------------
-        // Crear conexiones entre todos los círculos
-        // presionados
-        // ---------------------------------------------
+        // Los círculos quedan congelados
 
-        // Las conexiones NO se guardan.
-        // Se dibujan mientras los dedos estén activos.
+        seleccionados.forEach(
+            circulo => {
+
+                circulo.congelado =
+                    true;
+
+            }
+        );
 
 
         mensaje.textContent =
@@ -813,40 +848,50 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
         // ---------------------------------------------
-        // Aparece un nuevo círculo
+        // Esperar un momento manteniendo
+        // los dedos presionados
         // ---------------------------------------------
 
         setTimeout(
             function () {
 
-                crearNuevoCirculo();
+                // Si todavía están todos
+                // los dedos presionados,
+                // aparece el nuevo círculo.
 
+                const actuales =
+                    obtenerCirculosPresionados();
 
-                // Aumentar la dificultad
 
                 if (
-                    dedosNecesarios <
-                    MAXIMO_DEDOs
+                    actuales.length ===
+                    dedosNecesarios
                 ) {
 
-                    dedosNecesarios++;
+                    crearNuevoCirculo();
+
+
+                    // Aumentar dificultad
+
+                    if (
+                        dedosNecesarios <
+                        MAXIMO_DEDOs
+                    ) {
+
+                        dedosNecesarios++;
+
+                    }
+
+
+                    mensaje.textContent =
+                        dedosNecesarios +
+                        " DEDOS · CONECTÁ";
 
                 }
 
 
-                colaboracionActiva =
-                    false;
-
-                colaboracionCompletada =
-                    false;
-
-
-                mensaje.textContent =
-                    dedosNecesarios +
-                    " DEDOS · CONECTÁ";
-
             },
-            700
+            600
         );
 
     }
@@ -857,6 +902,19 @@ document.addEventListener("DOMContentLoaded", function () {
     // =====================================================
 
     function crearNuevoCirculo() {
+
+        if (
+            creandoCirculo
+        ) {
+
+            return;
+
+        }
+
+
+        creandoCirculo =
+            true;
+
 
         const radio =
             Math.min(
@@ -909,9 +967,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 radio
             )
             &&
-            intentos < 50
+            intentos < 60
         );
 
+
+        // Rotación de colores
 
         const color =
             colores[
@@ -921,26 +981,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
         crearCirculo(
-
             x,
-
             y,
-
             color,
-
             radio
-
         );
 
 
-        mensaje.textContent =
-            "NUEVA PRESENCIA";
+        creandoCirculo =
+            false;
 
     }
 
 
     // =====================================================
-    // REVISAR POSICIÓN
+    // POSICIÓN LIBRE
     // =====================================================
 
     function posicionCercaDeOtro(
@@ -1008,6 +1063,38 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
             // -----------------------------------------
+            // Evitar dos dedos sobre el mismo círculo
+            // -----------------------------------------
+
+            let yaSeleccionado =
+                false;
+
+
+            dedos.forEach(dato => {
+
+                if (
+                    dato.circulo ===
+                    circulo
+                ) {
+
+                    yaSeleccionado =
+                        true;
+
+                }
+
+            });
+
+
+            if (
+                yaSeleccionado
+            ) {
+
+                return;
+
+            }
+
+
+            // -----------------------------------------
             // Guardar dedo
             // -----------------------------------------
 
@@ -1031,6 +1118,11 @@ document.addEventListener("DOMContentLoaded", function () {
             canvas.setPointerCapture(
                 e.pointerId
             );
+
+
+            // Congelar círculos seleccionados
+
+            congelarCirculos();
 
 
             comprobarColaboracion();
@@ -1074,9 +1166,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 posicion.y;
 
 
-            // Si el dedo se mueve demasiado
-            // fuera del círculo original,
-            // deja de contar como presión.
+            // El dedo puede moverse dentro
+            // de un margen alrededor del círculo,
+            // pero el círculo permanece quieto.
 
             const dx =
                 posicion.x -
@@ -1094,9 +1186,12 @@ document.addEventListener("DOMContentLoaded", function () {
                 );
 
 
+            // Si el dedo se aleja demasiado,
+            // se rompe la unión.
+
             if (
                 distancia >
-                dato.circulo.radio * 1.5
+                dato.circulo.radio * 1.8
             ) {
 
                 dedos.delete(
@@ -1104,11 +1199,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 );
 
 
-                colaboracionActiva =
-                    false;
-
                 colaboracionCompletada =
                     false;
+
+
+                liberarCirculos();
 
             }
 
@@ -1136,19 +1231,28 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
 
+        // Quitar dedo
+
         dedos.delete(
             e.pointerId
         );
 
 
-        // Al soltar cualquier dedo
-        // desaparece la colaboración.
-
-        colaboracionActiva =
-            false;
+        // IMPORTANTE:
+        // al soltar un dedo se rompe
+        // toda la colaboración.
 
         colaboracionCompletada =
             false;
+
+
+        liberarCirculos();
+
+
+        // Si todavía quedan dedos,
+        // vuelven a estar disponibles,
+        // pero la colaboración debe empezar
+        // nuevamente.
 
     }
 
@@ -1171,15 +1275,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function dibujarConexiones() {
 
-        const circulosPresionados =
+        const seleccionados =
             obtenerCirculosPresionados();
 
 
-        // Solo dibujar si tenemos exactamente
-        // la cantidad de dedos necesaria.
+        // Solo dibujar cuando están
+        // todos los dedos necesarios.
 
         if (
-            circulosPresionados.length !==
+            seleccionados.length !==
             dedosNecesarios
         ) {
 
@@ -1188,27 +1292,22 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
 
-        // -------------------------------------------------
-        // Conectar cada círculo con el siguiente
-        // -------------------------------------------------
+        // Conectar todos los círculos
+        // seleccionados en cadena.
 
         for (
             let i = 0;
             i <
-            circulosPresionados.length - 1;
+            seleccionados.length - 1;
             i++
         ) {
 
-            const a =
-                circulosPresionados[i];
-
-            const b =
-                circulosPresionados[i + 1];
-
-
             dibujarConexion(
-                a,
-                b
+
+                seleccionados[i],
+
+                seleccionados[i + 1]
+
             );
 
         }
@@ -1217,7 +1316,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // =====================================================
-    // DIBUJAR UNA CONEXIÓN
+    // DIBUJAR CONEXIÓN
     // =====================================================
 
     function dibujarConexion(
@@ -1248,7 +1347,9 @@ document.addEventListener("DOMContentLoaded", function () {
             );
 
 
-        // Pequeños círculos
+        // ---------------------------------------------
+        // Puntos pequeños
+        // ---------------------------------------------
 
         for (
             let i = 1;
@@ -1331,9 +1432,7 @@ document.addEventListener("DOMContentLoaded", function () {
         circulo
     ) {
 
-        // -----------------------------------------
-        // RESPIRACIÓN
-        // -----------------------------------------
+        // Respiración
 
         circulo.faseRespiracion +=
             circulo.velocidadRespiracion;
@@ -1352,9 +1451,7 @@ document.addEventListener("DOMContentLoaded", function () {
             respiracion;
 
 
-        // -----------------------------------------
-        // APARICIÓN
-        // -----------------------------------------
+        // Aparición
 
         let escala =
             1;
@@ -1375,10 +1472,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
         }
 
-
-        // -----------------------------------------
-        // DIBUJAR
-        // -----------------------------------------
 
         ctx.save();
 
@@ -1455,19 +1548,6 @@ document.addEventListener("DOMContentLoaded", function () {
         );
 
 
-        // Mientras haya suficientes círculos,
-        // revisar continuamente la colaboración.
-
-        if (
-            dedos.size >=
-            dedosNecesarios
-        ) {
-
-            comprobarColaboracion();
-
-        }
-
-
         requestAnimationFrame(
             animar
         );
@@ -1481,8 +1561,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     ajustarCanvas();
 
+
     mensaje.textContent =
         "2 DEDOS · CONECTÁ";
+
 
     animar();
 
