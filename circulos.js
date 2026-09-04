@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
 
+
     // =====================================================
     // COLORES
     // =====================================================
@@ -32,10 +33,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let circulos = [];
 
-    // Un dedo
+    // Todos los dedos activos
     const dedos = new Map();
 
-    // Dos dedos sobre un mismo círculo
+    // Deformación activa
     let deformacionActiva = null;
 
 
@@ -49,7 +50,9 @@ document.addEventListener("DOMContentLoaded", function () {
         canvas.height = canvas.clientHeight;
 
         if (circulos.length === 0) {
+
             crearCirculos();
+
         }
 
     }
@@ -72,11 +75,8 @@ document.addEventListener("DOMContentLoaded", function () {
         const posiciones = [
 
             [0.25, 0.30],
-
             [0.75, 0.30],
-
             [0.25, 0.70],
-
             [0.75, 0.70]
 
         ];
@@ -105,7 +105,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 radio:
                     TAMAÑO_INICIAL,
-
 
                 radioOriginal:
                     TAMAÑO_INICIAL,
@@ -136,15 +135,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 faseX:
                     Math.random() *
-                    Math.PI * 2,
+                    Math.PI *
+                    2,
 
                 faseY:
                     Math.random() *
-                    Math.PI * 2,
+                    Math.PI *
+                    2,
 
                 velocidadOrganica:
                     0.004 +
-                    Math.random() * 0.004,
+                    Math.random() *
+                    0.004,
 
 
                 // =========================================
@@ -153,39 +155,49 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 faseRespiracion:
                     Math.random() *
-                    Math.PI * 2,
+                    Math.PI *
+                    2,
 
                 velocidadRespiracion:
                     0.012 +
-                    Math.random() * 0.006,
+                    Math.random() *
+                    0.006,
 
                 intensidadRespiracion:
                     0.035 +
-                    Math.random() * 0.025,
+                    Math.random() *
+                    0.025,
 
 
                 // =========================================
                 // INTERACCIÓN
                 // =========================================
 
-                siendoMovido: false,
+                siendoMovido:
+                    false,
 
-                punteroMovimiento: null,
+                punteroMovimiento:
+                    null,
 
 
                 // =========================================
                 // DEFORMACIÓN
                 // =========================================
 
-                deformando: false,
+                deformando:
+                    false,
 
-                dedosDeformacion: [],
+                dedosDeformacion:
+                    [],
 
-                escalaX: 1,
+                escalaX:
+                    1,
 
-                escalaY: 1,
+                escalaY:
+                    1,
 
-                anguloDeformacion: 0
+                anguloDeformacion:
+                    0
 
             });
 
@@ -213,19 +225,23 @@ document.addEventListener("DOMContentLoaded", function () {
 
         circulos.forEach(circulo => {
 
-            // Si lo estamos moviendo con un dedo,
+            // Si lo estamos moviendo con un dedo
             // no hacemos movimiento automático.
 
             if (circulo.siendoMovido) {
+
                 return;
+
             }
 
 
-            // Si está siendo deformado,
+            // Si está siendo deformado
             // tampoco modificamos su posición.
 
             if (circulo.deformando) {
+
                 return;
+
             }
 
 
@@ -234,6 +250,7 @@ document.addEventListener("DOMContentLoaded", function () {
             // =============================================
 
             circulo.x += circulo.vx;
+
             circulo.y += circulo.vy;
 
 
@@ -245,7 +262,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 circulo.velocidadOrganica;
 
             circulo.faseY +=
-                circulo.velocidadOrganica * 0.8;
+                circulo.velocidadOrganica *
+                0.8;
 
 
             circulo.x +=
@@ -276,7 +294,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (circulo.x - radio < 0) {
 
-            circulo.x = radio;
+            circulo.x =
+                radio;
 
             circulo.vx =
                 Math.abs(circulo.vx);
@@ -300,7 +319,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (circulo.y - radio < 0) {
 
-            circulo.y = radio;
+            circulo.y =
+                radio;
 
             circulo.vy =
                 Math.abs(circulo.vy);
@@ -342,9 +362,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 j++
             ) {
 
-                const a = circulos[i];
+                const a =
+                    circulos[i];
 
-                const b = circulos[j];
+                const b =
+                    circulos[j];
 
 
                 const dx =
@@ -370,12 +392,16 @@ document.addEventListener("DOMContentLoaded", function () {
                     distancia >=
                     distanciaMinima
                 ) {
+
                     continue;
+
                 }
 
 
                 if (distancia === 0) {
+
                     continue;
+
                 }
 
 
@@ -384,10 +410,12 @@ document.addEventListener("DOMContentLoaded", function () {
                 // =========================================
 
                 const nx =
-                    dx / distancia;
+                    dx /
+                    distancia;
 
                 const ny =
-                    dy / distancia;
+                    dy /
+                    distancia;
 
 
                 // =========================================
@@ -398,8 +426,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     distanciaMinima -
                     distancia;
 
-
-                // Si ninguno está siendo movido
 
                 if (
                     !a.siendoMovido &&
@@ -430,9 +456,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
 
 
-                // Si A está siendo movido
-
-                else if (a.siendoMovido) {
+                else if (
+                    a.siendoMovido
+                ) {
 
                     b.x +=
                         nx *
@@ -445,9 +471,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
 
 
-                // Si B está siendo movido
-
-                else if (b.siendoMovido) {
+                else if (
+                    b.siendoMovido
+                ) {
 
                     a.x -=
                         nx *
@@ -479,7 +505,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (
                     velocidadNormal > 0
                 ) {
+
                     continue;
+
                 }
 
 
@@ -659,7 +687,8 @@ document.addEventListener("DOMContentLoaded", function () {
         ctx.strokeStyle =
             circulo.color;
 
-        ctx.lineWidth = 3;
+        ctx.lineWidth =
+            3;
 
         ctx.stroke();
 
@@ -675,19 +704,34 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function iniciarMovimiento(
         circulo,
-        pointerId
+        pointerId,
+        x,
+        y
     ) {
 
-        circulo.siendoMovido = true;
+        circulo.siendoMovido =
+            true;
 
         circulo.punteroMovimiento =
             pointerId;
 
+
         dedos.set(
             pointerId,
             {
-                circulo: circulo,
-                tipo: "movimiento"
+
+                circulo:
+                    circulo,
+
+                tipo:
+                    "movimiento",
+
+                x:
+                    x,
+
+                y:
+                    y
+
             }
         );
 
@@ -704,23 +748,37 @@ document.addEventListener("DOMContentLoaded", function () {
         dedoB
     ) {
 
-        circulo.deformando = true;
+        circulo.siendoMovido =
+            false;
+
+
+        circulo.deformando =
+            true;
+
 
         circulo.dedosDeformacion = [
+
             dedoA,
             dedoB
+
         ];
 
 
         deformacionActiva = {
 
-            circulo: circulo,
+            circulo:
+                circulo,
 
-            dedoA: dedoA,
+            dedoA:
+                dedoA,
 
-            dedoB: dedoB
+            dedoB:
+                dedoB
 
         };
+
+
+        actualizarDeformacion();
 
     }
 
@@ -732,7 +790,9 @@ document.addEventListener("DOMContentLoaded", function () {
     function actualizarDeformacion() {
 
         if (!deformacionActiva) {
+
             return;
+
         }
 
 
@@ -747,6 +807,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const dedoA =
             datos.dedoA;
 
+
         const dedoB =
             datos.dedoB;
 
@@ -755,7 +816,9 @@ document.addEventListener("DOMContentLoaded", function () {
             !dedoA ||
             !dedoB
         ) {
+
             return;
+
         }
 
 
@@ -794,7 +857,11 @@ document.addEventListener("DOMContentLoaded", function () {
         // ESCALA
         // =========================================
 
-        const distanciaBase = 70;
+        // Distancia pequeña =
+        // poca deformación.
+
+        const distanciaBase =
+            70;
 
 
         let factor =
@@ -802,14 +869,27 @@ document.addEventListener("DOMContentLoaded", function () {
             distanciaBase;
 
 
-        // Limitar deformación
+        // =========================================
+        // MÁXIMO DE ESTIRAMIENTO
+        // =========================================
+
+        // Permite llegar prácticamente
+        // al tamaño completo de la pantalla.
+
+        const factorMaximo =
+            Math.max(
+                canvas.width,
+                canvas.height
+            ) /
+            distanciaBase;
+
 
         factor =
             Math.max(
                 0.55,
                 Math.min(
                     factor,
-                    2.5
+                    factorMaximo
                 )
             );
 
@@ -821,8 +901,10 @@ document.addEventListener("DOMContentLoaded", function () {
         circulo.escalaX =
             factor;
 
+
         circulo.escalaY =
-            1 / Math.sqrt(factor);
+            1 /
+            Math.sqrt(factor);
 
 
         circulo.anguloDeformacion =
@@ -837,30 +919,34 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function restaurarForma(circulo) {
 
-        circulo.deformando = false;
+        circulo.deformando =
+            false;
 
-        circulo.dedosDeformacion = [];
+        circulo.dedosDeformacion =
+            [];
 
-
-        // No vuelve de golpe.
-        // Lo hacemos suave.
 
         const animacion =
             setInterval(() => {
 
                 circulo.escalaX +=
-                    (1 - circulo.escalaX) *
+                    (1 -
+                        circulo.escalaX) *
                     0.18;
 
+
                 circulo.escalaY +=
-                    (1 - circulo.escalaY) *
+                    (1 -
+                        circulo.escalaY) *
                     0.18;
+
 
                 circulo.anguloDeformacion *=
                     0.82;
 
 
                 if (
+
                     Math.abs(
                         circulo.escalaX - 1
                     ) < 0.01 &&
@@ -868,19 +954,55 @@ document.addEventListener("DOMContentLoaded", function () {
                     Math.abs(
                         circulo.escalaY - 1
                     ) < 0.01
+
                 ) {
 
-                    circulo.escalaX = 1;
+                    circulo.escalaX =
+                        1;
 
-                    circulo.escalaY = 1;
+                    circulo.escalaY =
+                        1;
 
-                    circulo.anguloDeformacion = 0;
+                    circulo.anguloDeformacion =
+                        0;
 
-                    clearInterval(animacion);
+
+                    clearInterval(
+                        animacion
+                    );
 
                 }
 
             }, 16);
+
+    }
+
+
+    // =====================================================
+    // OBTENER POSICIÓN DEL PUNTERO
+    // =====================================================
+
+    function obtenerPosicion(e) {
+
+        const rect =
+            canvas.getBoundingClientRect();
+
+
+        return {
+
+            x:
+                (e.clientX -
+                    rect.left) *
+                (canvas.width /
+                    rect.width),
+
+            y:
+                (e.clientY -
+                    rect.top) *
+                (canvas.height /
+                    rect.height)
+
+        };
 
     }
 
@@ -893,90 +1015,92 @@ document.addEventListener("DOMContentLoaded", function () {
         "pointerdown",
         function (e) {
 
-            const rect =
-                canvas.getBoundingClientRect();
+            const posicion =
+                obtenerPosicion(e);
 
 
             const x =
-                (e.clientX -
-                    rect.left) *
-                (canvas.width /
-                    rect.width);
-
+                posicion.x;
 
             const y =
-                (e.clientY -
-                    rect.top) *
-                (canvas.height /
-                    rect.height);
+                posicion.y;
 
 
             const circulo =
-                buscarCirculo(x, y);
+                buscarCirculo(
+                    x,
+                    y
+                );
 
 
             if (!circulo) {
+
                 return;
+
             }
 
 
             // =========================================
-            // SI YA HAY UN DEDO SOBRE ESTE CÍRCULO
+            // ¿YA HAY UN DEDO SOBRE ESTE CÍRCULO?
             // =========================================
 
             const dedosDelCirculo =
                 Array.from(
-                    dedos.values()
+                    dedos.entries()
                 ).filter(
-                    dato =>
+                    ([id, dato]) =>
                         dato.circulo ===
                         circulo
                 );
 
 
-            // Segundo dedo
+            // =========================================
+            // SEGUNDO DEDO
+            // =========================================
 
             if (
                 dedosDelCirculo.length === 1
             ) {
 
-                // El primer dedo queda
-                // como punto de referencia.
-
-                const primerPointer =
+                const [
+                    primerId,
+                    primerDato
+                ] =
                     dedosDelCirculo[0];
 
 
-                const primerId =
-                    Array.from(
-                        dedos.entries()
-                    ).find(
-                        ([id, dato]) =>
-                            dato ===
-                            primerPointer
-                    );
+                // El primer dedo conserva
+                // su posición REAL.
+
+                primerDato.tipo =
+                    "deformacion";
 
 
                 const dedoA =
-                    primerPointer;
-
-                dedoA.x =
-                    circulo.x;
-
-                dedoA.y =
-                    circulo.y;
+                    primerDato;
 
 
                 const dedoB = {
 
-                    x: x,
+                    circulo:
+                        circulo,
 
-                    y: y,
+                    tipo:
+                        "deformacion",
 
-                    pointerId:
-                        e.pointerId
+                    x:
+                        x,
+
+                    y:
+                        y
 
                 };
+
+
+                dedos.set(
+                    e.pointerId,
+                    dedoB
+                );
 
 
                 iniciarDeformacion(
@@ -986,18 +1110,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 );
 
 
-                dedos.set(
-                    e.pointerId,
-                    {
-                        circulo: circulo,
-
-                        tipo: "deformacion",
-
-                        x: x,
-
-                        y: y
-                    }
-                );
+                actualizarDeformacion();
 
 
                 canvas.setPointerCapture(
@@ -1018,7 +1131,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
             iniciarMovimiento(
                 circulo,
-                e.pointerId
+                e.pointerId,
+                x,
+                y
             );
 
 
@@ -1048,26 +1163,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
             if (!dato) {
+
                 return;
+
             }
 
 
-            const rect =
-                canvas.getBoundingClientRect();
+            const posicion =
+                obtenerPosicion(e);
 
 
             const x =
-                (e.clientX -
-                    rect.left) *
-                (canvas.width /
-                    rect.width);
-
+                posicion.x;
 
             const y =
-                (e.clientY -
-                    rect.top) *
-                (canvas.height /
-                    rect.height);
+                posicion.y;
 
 
             // =========================================
@@ -1079,15 +1189,20 @@ document.addEventListener("DOMContentLoaded", function () {
                 "deformacion"
             ) {
 
-                dato.x = x;
+                dato.x =
+                    x;
 
-                dato.y = y;
+                dato.y =
+                    y;
+
 
                 actualizarDeformacion();
+
 
                 e.preventDefault();
 
                 return;
+
             }
 
 
@@ -1110,18 +1225,31 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (
                     circulo.deformando
                 ) {
+
                     return;
+
                 }
 
 
-                circulo.x = x;
+                circulo.x =
+                    x;
 
-                circulo.y = y;
+                circulo.y =
+                    y;
 
 
-                circulo.vx = 0;
+                dato.x =
+                    x;
 
-                circulo.vy = 0;
+                dato.y =
+                    y;
+
+
+                circulo.vx =
+                    0;
+
+                circulo.vy =
+                    0;
 
 
                 e.preventDefault();
@@ -1145,7 +1273,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
         if (!dato) {
+
             return;
+
         }
 
 
@@ -1167,7 +1297,8 @@ document.addEventListener("DOMContentLoaded", function () {
             );
 
 
-            // Al soltar uno de los dedos,
+            // Al soltar cualquiera
+            // de los dos dedos,
             // vuelve a su forma.
 
             if (
@@ -1181,8 +1312,38 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
 
+            // El otro dedo también
+            // deja de controlar.
+
+            circulo.siendoMovido =
+                false;
+
+
+            circulo.punteroMovimiento =
+                null;
+
+
             deformacionActiva =
                 null;
+
+
+            // Eliminar cualquier otro
+            // dedo asociado al círculo.
+
+            dedos.forEach(
+                (datoOtro, id) => {
+
+                    if (
+                        datoOtro.circulo ===
+                        circulo
+                    ) {
+
+                        dedos.delete(id);
+
+                    }
+
+                }
+            );
 
 
             return;
@@ -1235,7 +1396,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
         moverCirculos();
-
 
         detectarColisiones();
 

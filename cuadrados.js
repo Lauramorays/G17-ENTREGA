@@ -1,8 +1,11 @@
 
 document.addEventListener("DOMContentLoaded", function () {
 
-    const contenedor = document.getElementById("contenedor");
-    const mensaje = document.getElementById("mensaje");
+    const contenedor =
+        document.getElementById("contenedor");
+
+    const mensaje =
+        document.getElementById("mensaje");
 
 
     // ==========================================
@@ -10,35 +13,20 @@ document.addEventListener("DOMContentLoaded", function () {
     // ==========================================
 
     const colores = [
-        "#FF4F70",
-        "#FFD84D",
-        "#4DE1FF",
-        "#B56CFF",
-        "#FF914D",
-        "#70FF8A",
-        "#FF70D9",
-        "#9D70FF",
-        "#70FFD9"
+        "#D9D9D9",
+        "#8BB2D3",
+        "#202D64",
+        "#2B538E"
     ];
 
 
     // ==========================================
-    // CANTIDAD DE CUADRADOS
+    // VARIABLES
     // ==========================================
 
     let cantidadCuadrados = 4;
 
-
-    // ==========================================
-    // CUADRADOS
-    // ==========================================
-
     let cuadrados = [];
-
-
-    // ==========================================
-    // SECUENCIA
-    // ==========================================
 
     let secuencia = [];
 
@@ -58,10 +46,15 @@ document.addEventListener("DOMContentLoaded", function () {
         cuadrados = [];
 
 
-        for (let i = 0; i < cantidadCuadrados; i++) {
+        for (
+            let i = 0;
+            i < cantidadCuadrados;
+            i++
+        ) {
 
             const cuadrado =
                 document.createElement("div");
+
 
             cuadrado.classList.add("cuadrado");
 
@@ -76,12 +69,83 @@ document.addEventListener("DOMContentLoaded", function () {
             );
 
 
-            cuadrado.style.borderColor =
+            cuadrado.style.backgroundColor =
                 color;
 
 
-            cuadrado.dataset.numero = i;
+            // Sin borde
 
+            cuadrado.style.border =
+                "none";
+
+            cuadrado.style.outline =
+                "none";
+
+            cuadrado.style.boxShadow =
+                "none";
+
+
+            cuadrado.dataset.numero =
+                i;
+
+
+            // ==================================
+            // OBJETO
+            // ==================================
+
+            const objeto = {
+
+                elemento: cuadrado,
+
+                x: 0,
+
+                y: 0,
+
+                // MOVIMIENTO LENTO
+
+                vx:
+                    (Math.random() - 0.5)
+                    * 0.5,
+
+                vy:
+                    (Math.random() - 0.5)
+                    * 0.5,
+
+                tamaño: 120,
+
+                fase:
+                    Math.random()
+                    * Math.PI
+                    * 2,
+
+                velocidadRespiracion:
+                    0.0015 +
+                    Math.random()
+                    * 0.001,
+
+                intensidad:
+                    3 +
+                    Math.random()
+                    * 3,
+
+                empujeX: 0,
+
+                empujeY: 0,
+
+                rotacion:
+                    (Math.random() - 0.5)
+                    * 8,
+
+                rotacionObjetivo: 0
+            };
+
+
+            cuadrados.push(objeto);
+
+
+            // ==================================
+            // CLICK
+            // ==================================
 
             cuadrado.addEventListener(
                 "click",
@@ -93,68 +157,177 @@ document.addEventListener("DOMContentLoaded", function () {
             );
 
 
-            contenedor.appendChild(cuadrado);
-
-            cuadrados.push(cuadrado);
+            contenedor.appendChild(
+                cuadrado
+            );
 
         }
 
 
         actualizarGrid();
 
+        posicionarCuadrados();
+
     }
 
 
     // ==========================================
-    // ORGANIZAR CUADRADOS
+    // GRID
     // ==========================================
 
     function actualizarGrid() {
 
-        // 1 a 4 cuadrados
         if (cantidadCuadrados <= 4) {
 
-            contenedor.style.gridTemplateColumns =
-                "repeat(2, 120px)";
+            cuadrados.forEach(
+                function (c) {
 
-            cuadrados.forEach(c => {
+                    c.tamaño = 120;
 
-                c.style.width = "120px";
-                c.style.height = "120px";
+                    c.elemento.style.width =
+                        "120px";
 
-            });
+                    c.elemento.style.height =
+                        "120px";
+
+                }
+            );
 
         }
 
-        // 5 a 9 cuadrados
         else if (cantidadCuadrados <= 9) {
 
-            contenedor.style.gridTemplateColumns =
-                "repeat(3, 120px)";
+            cuadrados.forEach(
+                function (c) {
 
-            cuadrados.forEach(c => {
+                    c.tamaño = 120;
 
-                c.style.width = "120px";
-                c.style.height = "120px";
+                    c.elemento.style.width =
+                        "120px";
 
-            });
+                    c.elemento.style.height =
+                        "120px";
+
+                }
+            );
 
         }
 
-        // Más de 9
         else {
 
-            contenedor.style.gridTemplateColumns =
-                "repeat(4, 100px)";
+            cuadrados.forEach(
+                function (c) {
 
-            cuadrados.forEach(c => {
+                    c.tamaño = 100;
 
-                c.style.width = "100px";
-                c.style.height = "100px";
+                    c.elemento.style.width =
+                        "100px";
 
-            });
+                    c.elemento.style.height =
+                        "100px";
+
+                }
+            );
 
         }
+
+    }
+
+
+    // ==========================================
+    // POSICIÓN INICIAL
+    // ==========================================
+
+    function posicionarCuadrados() {
+
+        const ancho =
+            contenedor.clientWidth;
+
+        const alto =
+            contenedor.clientHeight;
+
+
+        const columnas =
+            cantidadCuadrados <= 4
+                ? 2
+                : cantidadCuadrados <= 9
+                    ? 3
+                    : 4;
+
+
+        const espacioX =
+            cantidadCuadrados <= 4
+                ? 180
+                : 150;
+
+
+        const espacioY =
+            cantidadCuadrados <= 4
+                ? 180
+                : 150;
+
+
+        const filas =
+            Math.ceil(
+                cantidadCuadrados /
+                columnas
+            );
+
+
+        const centroX =
+            ancho / 2;
+
+        const centroY =
+            alto / 2;
+
+
+        cuadrados.forEach(
+            function (cuadrado, i) {
+
+                const columna =
+                    i % columnas;
+
+                const fila =
+                    Math.floor(
+                        i / columnas
+                    );
+
+
+                const totalColumnas =
+                    Math.min(
+                        columnas,
+                        cantidadCuadrados
+                    );
+
+
+                const x =
+                    centroX +
+                    (
+                        columna -
+                        (totalColumnas - 1) / 2
+                    )
+                    * espacioX
+                    -
+                    cuadrado.tamaño / 2;
+
+
+                const y =
+                    centroY +
+                    (
+                        fila -
+                        (filas - 1) / 2
+                    )
+                    * espacioY
+                    -
+                    cuadrado.tamaño / 2;
+
+
+                cuadrado.x = x;
+
+                cuadrado.y = y;
+
+            }
+        );
 
     }
 
@@ -170,25 +343,30 @@ document.addEventListener("DOMContentLoaded", function () {
         jugando = false;
 
 
-        // Agregar una nueva posición
         const nuevoNumero =
             Math.floor(
-                Math.random() * cantidadCuadrados
+                Math.random()
+                * cantidadCuadrados
             );
 
 
-        secuencia.push(nuevoNumero);
+        secuencia.push(
+            nuevoNumero
+        );
 
 
         mensaje.textContent =
             "MIRÁ LA SECUENCIA";
 
 
-        setTimeout(function () {
+        setTimeout(
+            function () {
 
-            mostrarSecuencia();
+                mostrarSecuencia();
 
-        }, 600);
+            },
+            600
+        );
 
     }
 
@@ -212,10 +390,12 @@ document.addEventListener("DOMContentLoaded", function () {
                 secuencia[i];
 
 
-            await encenderCuadrado(numero);
+            await encenderCuadrado(
+                numero
+            );
 
 
-            await esperar(200);
+            await esperar(250);
 
         }
 
@@ -237,40 +417,78 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function encenderCuadrado(numero) {
 
-        return new Promise(function (resolve) {
+        return new Promise(
+            function (resolve) {
 
-            const cuadrado =
-                cuadrados[numero];
-
-
-            if (!cuadrado) {
-
-                resolve();
-
-                return;
-
-            }
+                const cuadrado =
+                    cuadrados[numero];
 
 
-            cuadrado.classList.add("activo");
+                if (!cuadrado) {
+
+                    resolve();
+
+                    return;
+
+                }
 
 
-            setTimeout(function () {
+                // ==================================
+                // BRILLO
+                // ==================================
 
-                cuadrado.classList.remove(
+                cuadrado.elemento.classList.add(
                     "activo"
                 );
 
 
-                setTimeout(function () {
+                // Frenar suavemente mientras
+                // muestra la secuencia
 
-                    resolve();
+                cuadrado.vx *= 0.5;
 
-                }, 100);
+                cuadrado.vy *= 0.5;
 
-            }, 600);
 
-        });
+                cuadrado.rotacionObjetivo =
+                    (
+                        Math.random()
+                        - 0.5
+                    )
+                    * 12;
+
+
+                setTimeout(
+                    function () {
+
+
+                        // Quitar brillo
+
+                        cuadrado.elemento.classList.remove(
+                            "activo"
+                        );
+
+
+                        cuadrado.rotacionObjetivo =
+                            0;
+
+
+                        setTimeout(
+                            function () {
+
+                                resolve();
+
+                            },
+                            120
+                        );
+
+
+                    },
+                    700
+                );
+
+            }
+        );
 
     }
 
@@ -281,14 +499,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function esperar(tiempo) {
 
-        return new Promise(function (resolve) {
+        return new Promise(
+            function (resolve) {
 
-            setTimeout(
-                resolve,
-                tiempo
-            );
+                setTimeout(
+                    resolve,
+                    tiempo
+                );
 
-        });
+            }
+        );
 
     }
 
@@ -300,30 +520,62 @@ document.addEventListener("DOMContentLoaded", function () {
     function tocarCuadrado(numero) {
 
         if (!jugando) {
-
             return;
-
         }
 
 
-        // --------------------------------------
-        // EFECTO DEL CLIC
-        // --------------------------------------
-
-        cuadrados[numero]
-            .classList.add("activo");
+        const cuadrado =
+            cuadrados[numero];
 
 
-        setTimeout(function () {
+        // Pequeño destello al tocar
 
-            cuadrados[numero]
-                .classList.remove("activo");
+        cuadrado.elemento.classList.add(
+            "activo"
+        );
 
-        }, 200);
+
+        cuadrado.vx +=
+            (
+                Math.random()
+                - 0.5
+            )
+            * 0.5;
+
+
+        cuadrado.vy +=
+            (
+                Math.random()
+                - 0.5
+            )
+            * 0.5;
+
+
+        cuadrado.rotacionObjetivo =
+            (
+                Math.random()
+                - 0.5
+            )
+            * 15;
+
+
+        setTimeout(
+            function () {
+
+                cuadrado.elemento.classList.remove(
+                    "activo"
+                );
+
+                cuadrado.rotacionObjetivo =
+                    0;
+
+            },
+            180
+        );
 
 
         // ======================================
-        // RESPUESTA CORRECTA
+        // CORRECTO
         // ======================================
 
         if (
@@ -333,10 +585,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
             posicionJugador++;
 
-
-            // ==================================
-            // SECUENCIA COMPLETA
-            // ==================================
 
             if (
                 posicionJugador ===
@@ -350,62 +598,59 @@ document.addEventListener("DOMContentLoaded", function () {
                     "¡MUY BIEN!";
 
 
-                // --------------------------------
-                // SI LA SECUENCIA LLEGÓ AL
-                // TOTAL DE CUADRADOS
-                // --------------------------------
+                // ==================================
+                // APARECE OTRO
+                // ==================================
 
                 if (
                     secuencia.length ===
                     cantidadCuadrados
                 ) {
 
-                    setTimeout(function () {
+                    setTimeout(
+                        function () {
 
-                        // AGREGAR CUADRADO
-                        cantidadCuadrados++;
-
-
-                        // Crear el nuevo
-                        crearCuadrados();
+                            cantidadCuadrados++;
 
 
-                        mensaje.textContent =
-                            "¡APARECIÓ OTRO!";
+                            crearCuadrados();
 
 
-                        setTimeout(function () {
-
-                            nuevaRonda();
-
-                        }, 1000);
+                            mensaje.textContent =
+                                "¡APARECIÓ OTRO!";
 
 
-                    }, 700);
+                            setTimeout(
+                                function () {
+
+                                    nuevaRonda();
+
+                                },
+                                1000
+                            );
+
+                        },
+                        700
+                    );
 
                 }
 
                 else {
 
-                    // --------------------------------
-                    // CONTINUAR
-                    // --------------------------------
+                    setTimeout(
+                        function () {
 
-                    setTimeout(function () {
+                            nuevaRonda();
 
-                        nuevaRonda();
-
-                    }, 1000);
+                        },
+                        1000
+                    );
 
                 }
 
             }
 
         }
-
-        // ======================================
-        // RESPUESTA INCORRECTA
-        // ======================================
 
         else {
 
@@ -429,121 +674,563 @@ document.addEventListener("DOMContentLoaded", function () {
             "TE EQUIVOCASTE";
 
 
-        // --------------------------------------
-        // PARPADEAR TODOS LOS CUADRADOS
-        // --------------------------------------
+        cuadrados.forEach(
+            function (cuadrado) {
 
-        cuadrados.forEach(function (cuadrado) {
-
-            cuadrado.classList.add(
-                "activo"
-            );
-
-        });
-
-
-        setTimeout(function () {
-
-            cuadrados.forEach(function (cuadrado) {
-
-                cuadrado.classList.remove(
+                cuadrado.elemento.classList.add(
                     "activo"
                 );
 
-            });
+                cuadrado.vx *= -1.3;
 
-        }, 400);
-
-
-        // --------------------------------------
-        // ELIMINAR UN CUADRADO
-        // --------------------------------------
-
-        setTimeout(function () {
-
-
-            // Si todavía hay cuadrados
-            if (cantidadCuadrados > 0) {
-
-                cantidadCuadrados--;
+                cuadrado.vy *= -1.3;
 
             }
+        );
 
 
-            // ----------------------------------
-            // REINICIAR SECUENCIA
-            // ----------------------------------
+        setTimeout(
+            function () {
 
-            secuencia = [];
+                cuadrados.forEach(
+                    function (cuadrado) {
 
-            posicionJugador = 0;
+                        cuadrado.elemento.classList.remove(
+                            "activo"
+                        );
 
+                    }
+                );
 
-            // ----------------------------------
-            // ¿QUEDARON 0?
-            // ----------------------------------
-
-            if (cantidadCuadrados === 0) {
-
-                mensaje.textContent =
-                    "FIN DEL JUEGO";
-
-
-                setTimeout(function () {
-
-                    // Volver a empezar
-                    cantidadCuadrados = 4;
-
-                    secuencia = [];
-
-                    posicionJugador = 0;
+            },
+            400
+        );
 
 
-                    crearCuadrados();
+        setTimeout(
+            function () {
 
+                if (
+                    cantidadCuadrados > 0
+                ) {
+
+                    cantidadCuadrados--;
+
+                }
+
+
+                secuencia = [];
+
+                posicionJugador = 0;
+
+
+                // ==================================
+                // FIN DEL JUEGO
+                // ==================================
+
+                if (
+                    cantidadCuadrados === 0
+                ) {
 
                     mensaje.textContent =
-                        "NUEVAMENTE";
+                        "FIN DEL JUEGO";
 
 
-                    setTimeout(function () {
+                    setTimeout(
+                        function () {
+
+                            cantidadCuadrados = 4;
+
+                            secuencia = [];
+
+                            posicionJugador = 0;
+
+                            crearCuadrados();
+
+
+                            mensaje.textContent =
+                                "NUEVAMENTE";
+
+
+                            setTimeout(
+                                function () {
+
+                                    nuevaRonda();
+
+                                },
+                                1000
+                            );
+
+                        },
+                        1500
+                    );
+
+
+                    return;
+
+                }
+
+
+                crearCuadrados();
+
+
+                mensaje.textContent =
+                    "PERDISTE UN CUADRADO";
+
+
+                setTimeout(
+                    function () {
 
                         nuevaRonda();
 
-                    }, 1000);
+                    },
+                    1000
+                );
 
 
-                }, 1500);
+            },
+            700
+        );
+
+    }
 
 
-                return;
+    // ==========================================
+    // MOVIMIENTO LENTO
+    // ==========================================
+
+    function moverCuadrados() {
+
+        const ancho =
+            contenedor.clientWidth;
+
+        const alto =
+            contenedor.clientHeight;
+
+
+        cuadrados.forEach(
+            function (cuadrado) {
+
+
+                // Movimiento orgánico MUY SUAVE
+
+                cuadrado.vx +=
+
+                    Math.sin(
+                        Date.now()
+                        * 0.0007
+                        +
+                        cuadrado.fase
+                    )
+                    * 0.0015;
+
+
+                cuadrado.vy +=
+
+                    Math.cos(
+                        Date.now()
+                        * 0.0006
+                        +
+                        cuadrado.fase
+                    )
+                    * 0.0015;
+
+
+                // VELOCIDAD MÁXIMA LENTA
+
+                const velocidadMaxima =
+                    0.7;
+
+
+                cuadrado.vx =
+
+                    Math.max(
+                        -velocidadMaxima,
+                        Math.min(
+                            velocidadMaxima,
+                            cuadrado.vx
+                        )
+                    );
+
+
+                cuadrado.vy =
+
+                    Math.max(
+                        -velocidadMaxima,
+                        Math.min(
+                            velocidadMaxima,
+                            cuadrado.vy
+                        )
+                    );
+
+
+                cuadrado.x +=
+                    cuadrado.vx;
+
+
+                cuadrado.y +=
+                    cuadrado.vy;
+
+
+                // Empuje
+
+                cuadrado.x +=
+                    cuadrado.empujeX;
+
+
+                cuadrado.y +=
+                    cuadrado.empujeY;
+
+
+                cuadrado.empujeX *=
+                    0.92;
+
+
+                cuadrado.empujeY *=
+                    0.92;
+
+
+                const tamaño =
+                    cuadrado.tamaño;
+
+
+                // ==================================
+                // PAREDES
+                // ==================================
+
+                if (
+                    cuadrado.x <= 0
+                ) {
+
+                    cuadrado.x = 0;
+
+                    cuadrado.vx *= -1;
+
+                }
+
+
+                if (
+                    cuadrado.x + tamaño >= ancho
+                ) {
+
+                    cuadrado.x =
+                        ancho - tamaño;
+
+                    cuadrado.vx *= -1;
+
+                }
+
+
+                if (
+                    cuadrado.y <= 0
+                ) {
+
+                    cuadrado.y = 0;
+
+                    cuadrado.vy *= -1;
+
+                }
+
+
+                if (
+                    cuadrado.y + tamaño >= alto
+                ) {
+
+                    cuadrado.y =
+                        alto - tamaño;
+
+                    cuadrado.vy *= -1;
+
+                }
+
+            }
+        );
+
+    }
+
+
+    // ==========================================
+    // COLISIONES
+    // ==========================================
+
+    function detectarColisiones() {
+
+
+        for (
+            let i = 0;
+            i < cuadrados.length;
+            i++
+        ) {
+
+
+            for (
+                let j = i + 1;
+                j < cuadrados.length;
+                j++
+            ) {
+
+
+                const a =
+                    cuadrados[i];
+
+                const b =
+                    cuadrados[j];
+
+
+                const ax =
+                    a.x +
+                    a.tamaño / 2;
+
+                const ay =
+                    a.y +
+                    a.tamaño / 2;
+
+
+                const bx =
+                    b.x +
+                    b.tamaño / 2;
+
+                const by =
+                    b.y +
+                    b.tamaño / 2;
+
+
+                const dx =
+                    bx - ax;
+
+                const dy =
+                    by - ay;
+
+
+                const distancia =
+                    Math.sqrt(
+                        dx * dx +
+                        dy * dy
+                    );
+
+
+                const radioA =
+                    a.tamaño * 0.5;
+
+                const radioB =
+                    b.tamaño * 0.5;
+
+
+                const distanciaMinima =
+                    radioA +
+                    radioB;
+
+
+                if (
+                    distancia <
+                    distanciaMinima
+                ) {
+
+
+                    let nx;
+
+                    let ny;
+
+
+                    if (
+                        distancia === 0
+                    ) {
+
+                        nx = 1;
+
+                        ny = 0;
+
+                    }
+
+                    else {
+
+                        nx =
+                            dx /
+                            distancia;
+
+                        ny =
+                            dy /
+                            distancia;
+
+                    }
+
+
+                    // Separación
+
+                    const penetracion =
+                        distanciaMinima -
+                        distancia;
+
+
+                    const separacion =
+                        penetracion / 2;
+
+
+                    a.x -=
+                        nx *
+                        separacion;
+
+                    a.y -=
+                        ny *
+                        separacion;
+
+
+                    b.x +=
+                        nx *
+                        separacion;
+
+                    b.y +=
+                        ny *
+                        separacion;
+
+
+                    // Rebote
+
+                    const velocidadRelativa =
+
+                        (
+                            b.vx -
+                            a.vx
+                        )
+                        * nx
+
+                        +
+
+                        (
+                            b.vy -
+                            a.vy
+                        )
+                        * ny;
+
+
+                    if (
+                        velocidadRelativa < 0
+                    ) {
+
+
+                        const rebote =
+                            1.1;
+
+
+                        const impulso =
+                            -velocidadRelativa
+                            * rebote;
+
+
+                        a.vx -=
+                            impulso *
+                            nx;
+
+
+                        a.vy -=
+                            impulso *
+                            ny;
+
+
+                        b.vx +=
+                            impulso *
+                            nx;
+
+
+                        b.vy +=
+                            impulso *
+                            ny;
+
+                    }
+
+                }
 
             }
 
+        }
 
-            // ----------------------------------
-            // CREAR NUEVAMENTE LOS CUADRADOS
-            // ----------------------------------
-
-            crearCuadrados();
+    }
 
 
-            mensaje.textContent =
-                "PERDISTE UN CUADRADO";
+    // ==========================================
+    // RESPIRACIÓN
+    // ==========================================
+
+    function dibujarCuadrados() {
 
 
-            // ----------------------------------
-            // COMENZAR DE NUEVO
-            // ----------------------------------
-
-            setTimeout(function () {
-
-                nuevaRonda();
-
-            }, 1000);
+        cuadrados.forEach(
+            function (cuadrado) {
 
 
-        }, 700);
+                const tiempo =
+                    Date.now();
+
+
+                const respiracion =
+
+                    Math.sin(
+                        tiempo *
+                        cuadrado.velocidadRespiracion
+                        +
+                        cuadrado.fase
+                    );
+
+
+                const escala =
+
+                    1 +
+
+                    (
+                        respiracion *
+                        cuadrado.intensidad /
+                        100
+                    );
+
+
+                cuadrado.elemento.style.left =
+                    cuadrado.x + "px";
+
+
+                cuadrado.elemento.style.top =
+                    cuadrado.y + "px";
+
+
+                // Rotación suave
+
+                cuadrado.rotacion +=
+
+                    (
+                        cuadrado.rotacionObjetivo -
+                        cuadrado.rotacion
+                    )
+                    * 0.08;
+
+
+                cuadrado.elemento.style.transform =
+
+                    `
+                    scale(${escala})
+                    rotate(${cuadrado.rotacion}deg)
+                    `;
+
+            }
+        );
+
+    }
+
+
+    // ==========================================
+    // ANIMACIÓN
+    // ==========================================
+
+    function animar() {
+
+        moverCuadrados();
+
+        detectarColisiones();
+
+        dibujarCuadrados();
+
+
+        requestAnimationFrame(
+            animar
+        );
 
     }
 
@@ -554,16 +1241,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
     crearCuadrados();
 
-
-    setTimeout(function () {
-
-        mensaje.textContent =
-            "MIRÁ LA SECUENCIA";
+    animar();
 
 
-        nuevaRonda();
+    setTimeout(
+        function () {
 
-    }, 1000);
+            mensaje.textContent =
+                "MIRÁ LA SECUENCIA";
+
+            nuevaRonda();
+
+        },
+        1000
+    );
 
 });
 
