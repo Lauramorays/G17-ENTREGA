@@ -1,14 +1,21 @@
+
 <!DOCTYPE html>
 <html lang="es">
 
 <head>
 
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Memoria</title>
 
+
     <style>
+
+        /* =====================================================
+           CONFIGURACIÓN GENERAL
+        ===================================================== */
 
         * {
             margin: 0;
@@ -17,12 +24,21 @@
         }
 
 
+        /* =====================================================
+           HTML Y BODY
+           Ocupan toda la pantalla.
+        ===================================================== */
+
         html,
         body {
             width: 100%;
             height: 100%;
         }
 
+
+        /* =====================================================
+           CUERPO
+        ===================================================== */
 
         body {
             background: #D9D9D9;
@@ -31,28 +47,31 @@
         }
 
 
-        /* =====================================
-           ÁREA DEL JUEGO
-        ===================================== */
+        /* =====================================================
+           ÁREA PRINCIPAL DEL JUEGO
+        ===================================================== */
 
         #juego {
 
             width: 95vw;
             height: 95vh;
 
+            /* Centra el área del juego */
             margin: 2.5vh auto;
 
+            /* Fondo azul oscuro */
             background: #060C1A;
 
             position: relative;
 
+            /* Evita que los objetos salgan del área */
             overflow: hidden;
         }
 
 
-        /* =====================================
-           CONTENEDOR
-        ===================================== */
+        /* =====================================================
+           CONTENEDOR DE LOS CUADRADOS
+        ===================================================== */
 
         #contenedor {
 
@@ -64,13 +83,16 @@
             width: 100%;
             height: 100%;
 
+            /*
+             * El contenedor no bloquea la navegación.
+             */
             pointer-events: none;
         }
 
 
-        /* =====================================
+        /* =====================================================
            CUADRADOS
-        ===================================== */
+        ===================================================== */
 
         .cuadrado {
 
@@ -79,6 +101,7 @@
             width: 120px;
             height: 120px;
 
+            /* El color viene de la variable --color */
             background: var(--color);
 
             border: none;
@@ -86,24 +109,35 @@
 
             cursor: pointer;
 
+            /*
+             * Los cuadrados sí pueden recibir interacción.
+             */
             pointer-events: auto;
 
+            /* Las transformaciones se hacen desde el centro */
             transform-origin: center center;
 
+            /*
+             * Transiciones suaves para el brillo.
+             */
             transition:
                 filter 0.12s ease,
                 box-shadow 0.12s ease;
         }
 
 
-        /* =====================================
-           CUADRADO ILUMINADO
-        ===================================== */
+        /* =====================================================
+           CUADRADO ACTIVO
+           Se ilumina cuando forma parte de la secuencia.
+        ===================================================== */
 
         .cuadrado.activo {
 
             filter: brightness(4);
 
+            /*
+             * Resplandor alrededor del cuadrado.
+             */
             box-shadow:
                 0 0 25px var(--color),
                 0 0 55px var(--color),
@@ -111,32 +145,58 @@
         }
 
 
-        /* =====================================
+        /* =====================================================
            NAVEGACIÓN
-        ===================================== */
+           ESTA ES LA MISMA POSICIÓN QUE EN CIRCULOS.HTML
+        ===================================================== */
 
         #navegacion {
 
+            /* Se coloca dentro del área del juego */
             position: absolute;
 
+            /* Distancia desde arriba */
             top: 18px;
+
+            /* Comienza en el centro */
             left: 50%;
 
+            /* Centra el contenedor */
             transform: translateX(-50%);
+
+            /*
+             * Ocupa casi todo el ancho del juego.
+             * Esto permite separar las flechas hacia los extremos.
+             */
+            width: 94%;
 
             display: flex;
 
             align-items: center;
 
-            gap: 15px;
+            /*
+             * IMPORTANTE:
+             * La flecha izquierda queda a la izquierda,
+             * los círculos al centro y la flecha derecha
+             * a la derecha.
+             */
+            justify-content: space-between;
 
+            /*
+             * La navegación queda por encima del juego.
+             */
             z-index: 1000;
+
+            /*
+             * El contenedor no bloquea el canvas.
+             */
+            pointer-events: none;
         }
 
 
-        /* =====================================
-           PROGRESO
-        ===================================== */
+        /* =====================================================
+           CÍRCULOS DE PROGRESO
+        ===================================================== */
 
         #progreso {
 
@@ -144,9 +204,16 @@
 
             align-items: center;
 
+            /*
+             * Separación entre cada círculo.
+             */
             gap: 7px;
         }
 
+
+        /* =====================================================
+           CADA CÍRCULO DE PROGRESO
+        ===================================================== */
 
         #progreso span {
 
@@ -161,11 +228,17 @@
 
             background: transparent;
 
+            /*
+             * Los círculos inactivos son más suaves.
+             */
             opacity: 0.45;
         }
 
 
-        /* PRIMER JUEGO ACTIVO */
+        /* =====================================================
+           CÍRCULO ACTIVO
+           MEMORIA = CÍRCULO 1
+        ===================================================== */
 
         #progreso span.activo {
 
@@ -175,9 +248,9 @@
         }
 
 
-        /* =====================================
+        /* =====================================================
            FLECHAS
-        ===================================== */
+        ===================================================== */
 
         #navegacion button {
 
@@ -187,6 +260,9 @@
 
             color: #C4CEE5;
 
+            /*
+             * Tamaño de la flecha.
+             */
             font-size: 32px;
 
             cursor: pointer;
@@ -201,15 +277,39 @@
             align-items: center;
             justify-content: center;
 
+            /*
+             * MUY IMPORTANTE:
+             * Permite que las flechas reciban clics aunque
+             * #navegacion tenga pointer-events:none.
+             */
+            pointer-events: auto;
+
             position: relative;
 
+            /*
+             * Las flechas quedan por encima del canvas.
+             */
             z-index: 1001;
         }
 
 
+        /* =====================================================
+           EFECTO AL PASAR EL MOUSE
+        ===================================================== */
+
         #navegacion button:hover {
 
             opacity: 0.6;
+        }
+
+
+        /* =====================================================
+           EFECTO AL PRESIONAR
+        ===================================================== */
+
+        #navegacion button:active {
+
+            opacity: 0.4;
         }
 
     </style>
@@ -220,68 +320,82 @@
 <body>
 
 
+    <!-- =====================================================
+         ÁREA PRINCIPAL
+    ===================================================== -->
+
     <main id="juego">
 
 
-        <!-- =================================
+        <!-- =================================================
              NAVEGACIÓN
-        ================================== -->
+             Igual que en circulos.html
+        ================================================== -->
 
         <div id="navegacion">
 
 
-            <!-- VOLVER AL INICIO -->
+            <!-- =============================================
+                 FLECHA IZQUIERDA
+                 Vuelve al inicio.
+            ============================================== -->
 
             <button
                 type="button"
-                onclick="window.location.href='index.html'">
+                onclick="window.location.href='index.html'"
+                aria-label="Volver al inicio">
 
                 ‹
 
             </button>
 
 
-            <!-- =================================
-                 9 CÍRCULOS
-            ================================== -->
+            <!-- =============================================
+                 PROGRESO
+                 Son las 9 experiencias.
+            ============================================== -->
 
             <div id="progreso">
 
-                <!-- 1 MEMORIA -->
+                <!-- 1 - MEMORIA -->
                 <span class="activo"></span>
 
-                <!-- 2 HERENCIA -->
+                <!-- 2 - HERENCIA -->
                 <span></span>
 
-                <!-- 3 CADUCIDAD -->
+                <!-- 3 - CADUCIDAD -->
                 <span></span>
 
-                <!-- 4 IDENTIDAD -->
+                <!-- 4 - IDENTIDAD -->
                 <span></span>
 
-                <!-- 5 EMPATÍA -->
+                <!-- 5 - EMPATÍA -->
                 <span></span>
 
-                <!-- 6 COLABORACIÓN -->
+                <!-- 6 - COLABORACIÓN -->
                 <span></span>
 
-                <!-- 7 INCERTIDUMBRE -->
+                <!-- 7 - INCERTIDUMBRE -->
                 <span></span>
 
-                <!-- 8 DESPRENDIMIENTO -->
+                <!-- 8 - DESPRENDIMIENTO -->
                 <span></span>
 
-                <!-- 9 EXPECTATIVA -->
+                <!-- 9 - EXPECTATIVA -->
                 <span></span>
 
             </div>
 
 
-            <!-- AVANZAR -->
+            <!-- =============================================
+                 FLECHA DERECHA
+                 Avanza a HERENCIA.
+            ============================================== -->
 
             <button
                 type="button"
-                onclick="window.location.href='cuadrados2.html'">
+                onclick="window.location.href='cuadrados2.html'"
+                aria-label="Avanzar a Herencia">
 
                 ›
 
@@ -291,9 +405,10 @@
         </div>
 
 
-        <!-- =================================
-             JUEGO
-        ================================== -->
+        <!-- =================================================
+             CONTENEDOR DEL JUEGO
+             cuadrados.js crea los cuadrados acá.
+        ================================================== -->
 
         <div id="contenedor"></div>
 
@@ -301,9 +416,9 @@
     </main>
 
 
-    <!-- =================================
-         JAVASCRIPT
-    ================================== -->
+    <!-- =====================================================
+         JAVASCRIPT DEL JUEGO
+    ===================================================== -->
 
     <script src="cuadrados.js"></script>
 

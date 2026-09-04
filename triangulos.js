@@ -9,39 +9,34 @@ const colores = [
 ];
 
 const VELOCIDAD_MAXIMA = 0.8;
+const VELOCIDAD_ABSOLUTA_MAXIMA = 2.2;
 const FUERZA_COLISION = 0.4;
+
+const TAMAÑO_INICIAL = 120;
+const TAMAÑO_MAXIMO = 145;
+
+const MAXIMO_TRIANGULOS = 9;
 
 let triangulos = [];
 
-
-// ===============================
-// AJUSTAR CANVAS
-// ===============================
-
+// Ajusta el canvas al tamaño real del área de juego.
 function ajustarCanvas() {
-
     const rect = canvas.getBoundingClientRect();
 
     canvas.width = rect.width;
     canvas.height = rect.height;
-
 }
 
 window.addEventListener("resize", ajustarCanvas);
-
 ajustarCanvas();
 
-
-// ===============================
-// CREAR TRIÁNGULO
-// ===============================
-
-function crearTriangulo(x, y, tamaño = 45) {
-
+// Crea un triángulo con movimiento, respiración y color aleatorios.
+function crearTriangulo(x, y, tamaño = TAMAÑO_INICIAL) {
     const angulo = Math.random() * Math.PI * 2;
+    const colorInicial =
+        colores[Math.floor(Math.random() * colores.length)];
 
     return {
-
         x: x,
         y: y,
 
@@ -51,320 +46,277 @@ function crearTriangulo(x, y, tamaño = 45) {
         tamaño: tamaño,
         tamañoObjetivo: tamaño,
 
-        color: colores[
-            Math.floor(Math.random() * colores.length)
-        ],
-
-        colorObjetivo: colores[
-            Math.floor(Math.random() * colores.length)
-        ],
+        color: colorInicial,
+        colorObjetivo: colorInicial,
 
         angulo: angulo,
         anguloObjetivo: angulo,
 
         fase: Math.random() * Math.PI * 2,
-
         respiracion: 0,
 
         reaccion: 0,
 
         vivo: true
-
     };
-
 }
 
-
-// ===============================
-// 4 TRIÁNGULOS INICIALES
-// ===============================
-
+// Crea los cuatro triángulos iniciales.
 function crearIniciales() {
-
     triangulos = [];
 
     const posiciones = [
-
         {
             x: canvas.width * 0.25,
             y: canvas.height * 0.30
         },
-
         {
             x: canvas.width * 0.75,
             y: canvas.height * 0.30
         },
-
         {
             x: canvas.width * 0.30,
             y: canvas.height * 0.70
         },
-
         {
             x: canvas.width * 0.70,
             y: canvas.height * 0.70
         }
-
     ];
 
     posiciones.forEach(pos => {
-
         triangulos.push(
             crearTriangulo(
                 pos.x,
                 pos.y,
-                45
+                TAMAÑO_INICIAL
             )
         );
-
     });
-
 }
 
 crearIniciales();
 
-
-// ===============================
-// DISTANCIA
-// ===============================
-
-function distancia(a, b) {
-
-    const dx = a.x - b.x;
-    const dy = a.y - b.y;
-
-    return Math.sqrt(
-        dx * dx +
-        dy * dy
+// Limita la velocidad para evitar que las colisiones acumulen demasiada energía.
+function limitarVelocidad(triangulo) {
+    let velocidad = Math.sqrt(
+        triangulo.vx * triangulo.vx +
+        triangulo.vy * triangulo.vy
     );
 
+    if (velocidad > VELOCIDAD_ABSOLUTA_MAXIMA) {
+        triangulo.vx =
+            (triangulo.vx / velocidad) *
+            VELOCIDAD_ABSOLUTA_MAXIMA;
+
+        triangulo.vy =
+            (triangulo.vy / velocidad) *
+            VELOCIDAD_ABSOLUTA_MAXIMA;
+    }
 }
 
-
-// ===============================
-// MOVIMIENTO
-// ===============================
-
+// Mueve los triángulos y mantiene su movimiento orgánico.
 function moverTriangulos() {
-
     triangulos.forEach(triangulo => {
-
         if (!triangulo.vivo) return;
 
-
-        // Movimiento autónomo
         triangulo.x += triangulo.vx;
         triangulo.y += triangulo.vy;
 
-
-        // ===========================
-        // RESPIRACIÓN
-        // ===========================
-
+        // Movimiento suave de respiración.
         triangulo.fase += 0.025;
 
         triangulo.respiracion =
             Math.sin(triangulo.fase) * 0.06;
 
-
-        // ===========================
-        // INTERPOLAR TAMAÑO
-        // ===========================
-
+        // Cambia suavemente hacia el nuevo tamaño.
         triangulo.tamaño +=
-            (
-                triangulo.tamañoObjetivo -
-                triangulo.tamaño
-            ) * 0.035;
+            (triangulo.tamañoObjetivo -
+                triangulo.tamaño) *
+            0.035;
 
-
-        // ===========================
-        // ROTACIÓN ORGÁNICA
-        // ===========================
-
+        // Cambia suavemente la rotación.
         triangulo.angulo +=
-            (
-                triangulo.anguloObjetivo -
-                triangulo.angulo
-            ) * 0.02;
+            (triangulo.anguloObjetivo -
+                triangulo.angulo) *
+            0.02;
 
-
-        // ===========================
-        // COLOR
-        // ===========================
-
-        if (triangulo.color !== triangulo.colorObjetivo) {
-
+        // Cambia suavemente el color.
+        if (
+            triangulo.color !==
+            triangulo.colorObjetivo
+        ) {
             triangulo.color =
                 interpolarColor(
                     triangulo.color,
                     triangulo.colorObjetivo,
                     0.025
                 );
-
         }
 
-
-        // ===========================
-        // REACCIÓN
-        // ===========================
-
+        // Pequeña reacción después de una interacción.
         if (triangulo.reaccion > 0) {
-
             triangulo.reaccion -= 0.02;
 
             triangulo.angulo +=
-                Math.sin(triangulo.reaccion * 15) * 0.01;
-
+                Math.sin(
+                    triangulo.reaccion * 15
+                ) * 0.01;
         }
 
+        limitarVelocidad(triangulo);
 
-        // ===========================
-        // BORDES
-        // ===========================
-
+        // Radio utilizado para detectar los bordes.
         const radio =
             triangulo.tamaño * 0.8;
 
-
+        // Rebote contra el borde izquierdo.
         if (triangulo.x - radio < 0) {
-
             triangulo.x = radio;
-            triangulo.vx *= -1;
-
+            triangulo.vx =
+                Math.abs(triangulo.vx);
         }
 
-
-        if (triangulo.x + radio > canvas.width) {
-
+        // Rebote contra el borde derecho.
+        if (
+            triangulo.x + radio >
+            canvas.width
+        ) {
             triangulo.x =
                 canvas.width - radio;
 
-            triangulo.vx *= -1;
-
+            triangulo.vx =
+                -Math.abs(triangulo.vx);
         }
 
-
+        // Rebote contra el borde superior.
         if (triangulo.y - radio < 0) {
-
             triangulo.y = radio;
-            triangulo.vy *= -1;
-
+            triangulo.vy =
+                Math.abs(triangulo.vy);
         }
 
-
-        if (triangulo.y + radio > canvas.height) {
-
+        // Rebote contra el borde inferior.
+        if (
+            triangulo.y + radio >
+            canvas.height
+        ) {
             triangulo.y =
                 canvas.height - radio;
 
-            triangulo.vy *= -1;
-
+            triangulo.vy =
+                -Math.abs(triangulo.vy);
         }
-
     });
-
 }
 
-
-// ===============================
-// COLISIONES
-// ===============================
-
+// Detecta y resuelve las colisiones entre triángulos.
 function colisiones() {
-
     for (
         let i = 0;
         i < triangulos.length;
         i++
     ) {
+        const a = triangulos[i];
+
+        if (!a.vivo) continue;
 
         for (
             let j = i + 1;
             j < triangulos.length;
             j++
         ) {
-
-            const a = triangulos[i];
             const b = triangulos[j];
 
-            if (!a.vivo || !b.vivo) continue;
-
+            if (!b.vivo) continue;
 
             const dx = b.x - a.x;
             const dy = b.y - a.y;
 
-            const d =
+            const distancia =
                 Math.sqrt(
                     dx * dx +
                     dy * dy
                 );
 
-
             const distanciaMinima =
-                (a.tamaño + b.tamaño) * 0.55;
-
+                (a.tamaño + b.tamaño) *
+                0.55;
 
             if (
-                d > 0 &&
-                d < distanciaMinima
+                distancia > 0 &&
+                distancia < distanciaMinima
             ) {
+                const nx =
+                    dx / distancia;
 
-                const nx = dx / d;
-                const ny = dy / d;
+                const ny =
+                    dy / distancia;
 
-                const fuerza =
+                // Separa físicamente los triángulos.
+                const separacion =
+                    distanciaMinima -
+                    distancia;
+
+                a.x -=
+                    nx *
+                    separacion *
+                    0.5;
+
+                a.y -=
+                    ny *
+                    separacion *
+                    0.5;
+
+                b.x +=
+                    nx *
+                    separacion *
+                    0.5;
+
+                b.y +=
+                    ny *
+                    separacion *
+                    0.5;
+
+                // Genera un pequeño impulso.
+                a.vx -=
+                    nx *
                     FUERZA_COLISION;
 
+                a.vy -=
+                    ny *
+                    FUERZA_COLISION;
 
-                a.vx -= nx * fuerza * 0.02;
-                a.vy -= ny * fuerza * 0.02;
+                b.vx +=
+                    nx *
+                    FUERZA_COLISION;
 
-                b.vx += nx * fuerza * 0.02;
-                b.vy += ny * fuerza * 0.02;
+                b.vy +=
+                    ny *
+                    FUERZA_COLISION;
 
-
-                // Separación
-
-                const separacion =
-                    distanciaMinima - d;
-
-
-                a.x -= nx * separacion * 0.5;
-                a.y -= ny * separacion * 0.5;
-
-                b.x += nx * separacion * 0.5;
-                b.y += ny * separacion * 0.5;
-
+                // Evita velocidades excesivas.
+                limitarVelocidad(a);
+                limitarVelocidad(b);
             }
-
         }
-
     }
-
 }
 
-
-// ===============================
-// DIBUJAR TRIÁNGULO
-// ===============================
-
+// Dibuja un triángulo equilátero.
 function dibujarTriangulo(triangulo) {
-
     if (!triangulo.vivo) return;
-
 
     const escala =
         1 + triangulo.respiracion;
 
-
     const tamaño =
         triangulo.tamaño * escala;
 
-
     const altura =
-        tamaño * Math.sqrt(3) / 2;
-
+        tamaño *
+        Math.sqrt(3) /
+        2;
 
     ctx.save();
 
@@ -377,44 +329,36 @@ function dibujarTriangulo(triangulo) {
         triangulo.angulo
     );
 
-
     ctx.beginPath();
 
+    // Triángulo equilátero centrado.
     ctx.moveTo(
         0,
-        -altura * 0.65
+        -altura * 2 / 3
     );
 
     ctx.lineTo(
-        -tamaño * 0.5,
-        altura * 0.35
+        -tamaño / 2,
+        altura / 3
     );
 
     ctx.lineTo(
-        tamaño * 0.5,
-        altura * 0.35
+        tamaño / 2,
+        altura / 3
     );
 
     ctx.closePath();
-
 
     ctx.fillStyle =
         triangulo.color;
 
     ctx.fill();
 
-
     ctx.restore();
-
 }
 
-
-// ===============================
-// DIBUJAR TODO
-// ===============================
-
+// Limpia y vuelve a dibujar todos los triángulos.
 function dibujar() {
-
     ctx.clearRect(
         0,
         0,
@@ -422,33 +366,22 @@ function dibujar() {
         canvas.height
     );
 
-
     triangulos.forEach(
         dibujarTriangulo
     );
-
 }
 
-
-// ===============================
-// BUSCAR TRIÁNGULO
-// ===============================
-
+// Busca qué triángulo fue tocado.
 function buscarTriangulo(x, y) {
-
     for (
         let i = triangulos.length - 1;
         i >= 0;
         i--
     ) {
-
         const triangulo =
             triangulos[i];
 
-
-        if (!triangulo.vivo)
-            continue;
-
+        if (!triangulo.vivo) continue;
 
         const dx =
             x - triangulo.x;
@@ -456,10 +389,9 @@ function buscarTriangulo(x, y) {
         const dy =
             y - triangulo.y;
 
-
         const radio =
-            triangulo.tamaño * 0.75;
-
+            triangulo.tamaño *
+            0.75;
 
         if (
             Math.sqrt(
@@ -467,123 +399,81 @@ function buscarTriangulo(x, y) {
                 dy * dy
             ) < radio
         ) {
-
             return triangulo;
-
         }
-
     }
 
     return null;
-
 }
 
-
-// ===============================
-// ACCIÓN IMPREDECIBLE
-// ===============================
-
+// Ejecuta una reacción aleatoria cuando se toca un triángulo.
 function accionImpredecible(triangulo) {
-
     const accion =
         Math.floor(
             Math.random() * 7
         );
 
-
-    // ===========================
-    // 1. CRECER
-    // ===========================
-
+    // Crece.
     if (accion === 0) {
-
         triangulo.tamañoObjetivo =
             Math.min(
                 triangulo.tamaño * 1.8,
-                130
+                TAMAÑO_MAXIMO
             );
 
         triangulo.reaccion = 1;
-
-        mostrarMensaje("CRECIÓ");
-
     }
 
-
-    // ===========================
-    // 2. CAMBIAR POSICIÓN
-    // ===========================
-
+    // Se mueve a otra posición.
     else if (accion === 1) {
-
-        const margen = 80;
+        const margen = 100;
 
         triangulo.x =
             margen +
             Math.random() *
-            (canvas.width - margen * 2);
+                Math.max(
+                    1,
+                    canvas.width -
+                        margen * 2
+                );
 
         triangulo.y =
             margen +
             Math.random() *
-            (canvas.height - margen * 2);
+                Math.max(
+                    1,
+                    canvas.height -
+                        margen * 2
+                );
 
         triangulo.reaccion = 1;
-
-        mostrarMensaje("CAMBIÓ DE LUGAR");
-
     }
 
-
-    // ===========================
-    // 3. CAMBIAR COLOR
-    // ===========================
-
+    // Cambia de color.
     else if (accion === 2) {
-
         let nuevoColor;
 
         do {
-
             nuevoColor =
                 colores[
                     Math.floor(
                         Math.random() *
-                        colores.length
+                            colores.length
                     )
                 ];
-
         } while (
             nuevoColor ===
             triangulo.colorObjetivo
         );
 
-
         triangulo.colorObjetivo =
             nuevoColor;
 
         triangulo.reaccion = 1;
-
-        mostrarMensaje("CAMBIÓ");
-
     }
 
-
-    // ===========================
-    // 4. HACER REACCIONAR A OTROS
-    // ===========================
-
+    // Hace reaccionar a otros triángulos.
     else if (accion === 3) {
-
-        const cantidad =
-            Math.min(
-                triangulos.length - 1,
-                Math.floor(
-                    Math.random() * 3
-                ) + 1
-            );
-
-
         const candidatos =
             triangulos.filter(
                 t =>
@@ -591,83 +481,73 @@ function accionImpredecible(triangulo) {
                     t.vivo
             );
 
+        const cantidad =
+            Math.min(
+                candidatos.length,
+                Math.floor(
+                    Math.random() * 2
+                ) + 1
+            );
 
         candidatos
             .sort(
-                () => Math.random() - 0.5
+                () =>
+                    Math.random() - 0.5
             )
             .slice(0, cantidad)
             .forEach(otro => {
-
                 const tipo =
                     Math.floor(
                         Math.random() * 3
                     );
 
-
                 if (tipo === 0) {
-
                     otro.tamañoObjetivo =
                         Math.min(
-                            otro.tamaño * 1.5,
-                            110
+                            otro.tamaño * 0.4,
+                            TAMAÑO_MAXIMO
                         );
-
                 }
 
                 else if (tipo === 1) {
+                    otro.vx *= 1.5;
+                    otro.vy *= 1.5;
 
-                    otro.vx *= 1.8;
-                    otro.vy *= 1.8;
-
+                    limitarVelocidad(
+                        otro
+                    );
                 }
 
                 else {
-
                     otro.colorObjetivo =
                         colores[
                             Math.floor(
                                 Math.random() *
-                                colores.length
+                                    colores.length
                             )
                         ];
-
                 }
 
-
                 otro.reaccion = 1;
-
             });
-
-
-        mostrarMensaje("TODO REACCIONÓ");
-
     }
 
-
-    // ===========================
-    // 5. CAMBIAR VELOCIDAD
-    // ===========================
-
+    // Cambia su velocidad.
     else if (accion === 4) {
-
         const factor =
             Math.random() < 0.5
-                ? 0.35
-                : 2.5;
-
+                ? 0.45
+                : 1.8;
 
         triangulo.vx *= factor;
         triangulo.vy *= factor;
 
-
-        // Evitar que quede completamente quieto
-
+        // Si queda prácticamente quieto,
+        // recibe una pequeña velocidad nueva.
         if (
-            Math.abs(triangulo.vx) < 0.08 &&
-            Math.abs(triangulo.vy) < 0.08
+            Math.abs(triangulo.vx) < 0.05 &&
+            Math.abs(triangulo.vy) < 0.05
         ) {
-
             triangulo.vx =
                 (Math.random() - 0.5) *
                 VELOCIDAD_MAXIMA;
@@ -675,59 +555,35 @@ function accionImpredecible(triangulo) {
             triangulo.vy =
                 (Math.random() - 0.5) *
                 VELOCIDAD_MAXIMA;
-
         }
 
-
-        // Limitar velocidad
-
-        const velocidad =
-            Math.sqrt(
-                triangulo.vx ** 2 +
-                triangulo.vy ** 2
-            );
-
-
-        if (
-            velocidad >
-            VELOCIDAD_MAXIMA * 3
-        ) {
-
-            triangulo.vx =
-                (triangulo.vx / velocidad) *
-                VELOCIDAD_MAXIMA * 3;
-
-            triangulo.vy =
-                (triangulo.vy / velocidad) *
-                VELOCIDAD_MAXIMA * 3;
-
-        }
-
-
-        mostrarMensaje("CAMBIÓ LA VELOCIDAD");
-
+        limitarVelocidad(
+            triangulo
+        );
     }
 
-
-    // ===========================
-    // 6. MULTIPLICARSE
-    // ===========================
-
+    // Crea otro triángulo solamente si todavía hay espacio.
     else if (accion === 5) {
+        if (
+            triangulos.length >=
+            MAXIMO_TRIANGULOS
+        ) {
+            triangulo.reaccion = 1;
+            return;
+        }
 
         const nuevo =
             crearTriangulo(
                 triangulo.x +
-                (Math.random() - 0.5) * 80,
+                    (Math.random() - 0.5) *
+                        80,
 
                 triangulo.y +
-                (Math.random() - 0.5) * 80,
+                    (Math.random() - 0.5) *
+                        80,
 
                 triangulo.tamaño * 0.65
             );
-
-
-        // Hereda algunas características
 
         nuevo.color =
             triangulo.color;
@@ -737,110 +593,80 @@ function accionImpredecible(triangulo) {
 
         nuevo.vx =
             triangulo.vx *
-            (0.8 + Math.random() * 0.5);
+            (0.7 + Math.random() * 0.4);
 
         nuevo.vy =
             triangulo.vy *
-            (0.8 + Math.random() * 0.5);
+            (0.7 + Math.random() * 0.4);
 
+        limitarVelocidad(
+            nuevo
+        );
 
         triangulos.push(nuevo);
 
         triangulo.reaccion = 1;
-
-        mostrarMensaje("SE MULTIPLICÓ");
-
     }
 
-
-    // ===========================
-    // 7. DESAPARECER
-    // ===========================
-
+    // Hace desaparecer el triángulo.
     else if (accion === 6) {
-
         triangulo.vivo = false;
 
-        mostrarMensaje("DESAPARECIÓ");
-
-
-        // Sacarlo después de un pequeño tiempo
-
+        // Lo elimina después de una pequeña pausa.
         setTimeout(() => {
-
             const indice =
                 triangulos.indexOf(
                     triangulo
                 );
 
-
             if (indice !== -1) {
-
                 triangulos.splice(
                     indice,
                     1
                 );
-
             }
-
-        }, 500);
-
+        }, 400);
     }
-
 }
 
+// Detecta mouse, toque y lápiz.
+canvas.addEventListener(
+    "pointerdown",
+    function(event) {
+        const rect =
+            canvas.getBoundingClientRect();
 
-// ===============================
-// MENSAJE
-// ===============================
+        const x =
+            event.clientX -
+            rect.left;
 
-let mensajeTimer = null;
+        const y =
+            event.clientY -
+            rect.top;
 
-function mostrarMensaje(texto) {
+        const triangulo =
+            buscarTriangulo(
+                x,
+                y
+            );
 
-    const mensaje =
-        document.getElementById("mensaje");
+        if (triangulo) {
+            accionImpredecible(
+                triangulo
+            );
+        }
+    }
+);
 
-
-    mensaje.textContent =
-        texto;
-
-
-    clearTimeout(
-        mensajeTimer
-    );
-
-
-    mensajeTimer =
-        setTimeout(() => {
-
-            mensaje.textContent =
-                "TOCÁ UN TRIÁNGULO";
-
-        }, 1000);
-
-}
-
-
-// ===============================
-// COLOR
-// ===============================
-
+// Interpola suavemente entre dos colores.
 function interpolarColor(
     color1,
     color2,
     cantidad
 ) {
-
-    if (
-        !color1 ||
-        !color2
-    ) {
-
+    if (!color1 || !color2) {
         return color2;
-
     }
-
 
     const r1 =
         parseInt(
@@ -860,7 +686,6 @@ function interpolarColor(
             16
         );
 
-
     const r2 =
         parseInt(
             color2.substring(1, 3),
@@ -879,28 +704,26 @@ function interpolarColor(
             16
         );
 
-
     const r =
         Math.round(
             r1 +
-            (r2 - r1) *
-            cantidad
+                (r2 - r1) *
+                    cantidad
         );
 
     const g =
         Math.round(
             g1 +
-            (g2 - g1) *
-            cantidad
+                (g2 - g1) *
+                    cantidad
         );
 
     const b =
         Math.round(
             b1 +
-            (b2 - b1) *
-            cantidad
+                (b2 - b1) *
+                    cantidad
         );
-
 
     return (
         "#" +
@@ -908,67 +731,17 @@ function interpolarColor(
         g.toString(16).padStart(2, "0") +
         b.toString(16).padStart(2, "0")
     );
-
 }
 
-
-// ===============================
-// TOQUE
-// ===============================
-
-canvas.addEventListener(
-    "pointerdown",
-    function(event) {
-
-        const rect =
-            canvas.getBoundingClientRect();
-
-
-        const x =
-            event.clientX -
-            rect.left;
-
-
-        const y =
-            event.clientY -
-            rect.top;
-
-
-        const triangulo =
-            buscarTriangulo(
-                x,
-                y
-            );
-
-
-        if (triangulo) {
-
-            accionImpredecible(
-                triangulo
-            );
-
-        }
-
-    }
-);
-
-
-// ===============================
-// ANIMACIÓN
-// ===============================
-
+// Bucle principal de animación.
 function animar() {
-
     moverTriangulos();
-
     colisiones();
-
     dibujar();
 
     requestAnimationFrame(
         animar
     );
-
 }
 
 animar();

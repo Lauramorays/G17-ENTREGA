@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 
@@ -10,8 +11,10 @@
 
     <title>Incertidumbre</title>
 
+
     <style>
 
+        /* Configuración general */
         * {
             margin: 0;
             padding: 0;
@@ -19,35 +22,38 @@
         }
 
 
+        html,
         body {
-
-            background: #D9D9D9;
-
-            overflow: hidden;
-
-            font-family: Arial, sans-serif;
-
+            width: 100%;
+            height: 100%;
         }
 
 
-        #juego {
+        /* Fondo exterior */
+        body {
+            background: #D9D9D9;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
 
+
+        /* Área principal del juego */
+        #juego {
             width: 95vw;
             height: 95vh;
 
-            margin: 2.5vh auto;
+            margin: 2.5vh auto 0 auto;
 
             background: #060C1A;
 
             position: relative;
 
             overflow: hidden;
-
         }
 
 
-        canvas {
-
+        /* Canvas donde funciona el juego */
+        #canvas {
             display: block;
 
             width: 100%;
@@ -55,6 +61,7 @@
 
             touch-action: none;
 
+            cursor: pointer;
         }
 
 
@@ -71,58 +78,20 @@
 
             transform: translateX(-50%);
 
+            /* La navegación ocupa casi todo el ancho */
+            width: 94%;
+
             display: flex;
 
             align-items: center;
 
-            gap: 15px;
+            /* Coloca las flechas en los extremos */
+            justify-content: space-between;
 
             z-index: 1000;
 
-        }
-
-
-        /* =========================
-           CÍRCULOS DE PROGRESO
-        ========================= */
-
-        #progreso {
-
-            display: flex;
-
-            align-items: center;
-
-            gap: 7px;
-
-        }
-
-
-        #progreso span {
-
-            display: block;
-
-            width: 9px;
-            height: 9px;
-
-            border-radius: 50%;
-
-            border: 1px solid #C4CEE5;
-
-            background: transparent;
-
-            opacity: 0.45;
-
-        }
-
-
-        /* SÉPTIMO CÍRCULO ACTIVO */
-
-        #progreso span.activo {
-
-            background: #C4CEE5;
-
-            opacity: 1;
-
+            /* Solo las flechas reciben los clics */
+            pointer-events: none;
         }
 
 
@@ -138,14 +107,53 @@
 
             color: #C4CEE5;
 
-            font-size: 32px;
+            font-size: 38px;
+
+            font-weight: 200;
+
+            line-height: 1;
 
             cursor: pointer;
 
             padding: 0;
 
-            width: 30px;
-            height: 35px;
+            width: auto;
+            height: auto;
+
+            display: flex;
+
+            align-items: center;
+            justify-content: center;
+
+            position: relative;
+
+            z-index: 1001;
+
+            /* Permite hacer clic en las flechas */
+            pointer-events: auto;
+
+            user-select: none;
+
+            transition:
+                opacity 0.3s ease,
+                transform 0.3s ease;
+        }
+
+
+        /* Efecto al pasar el mouse */
+        #navegacion button:hover {
+
+            opacity: 0.7;
+
+            transform: scale(1.1);
+        }
+
+
+        /* =========================
+           PROGRESO
+        ========================= */
+
+        #progreso {
 
             display: flex;
 
@@ -153,17 +161,34 @@
 
             justify-content: center;
 
-            position: relative;
-
-            z-index: 1001;
-
+            gap: 11px;
         }
 
 
-        #navegacion button:hover {
+        /* Cada punto del progreso */
+        #progreso span {
 
-            opacity: 0.6;
+            display: block;
 
+            width: 9px;
+            height: 9px;
+
+            border-radius: 50%;
+
+            border: 1px solid #C4CEE5;
+
+            background: transparent;
+
+            opacity: 0.45;
+        }
+
+
+        /* Séptimo punto: pantalla actual */
+        #progreso span.activo {
+
+            background: #C4CEE5;
+
+            opacity: 1;
         }
 
 
@@ -191,7 +216,6 @@
             pointer-events: none;
 
             z-index: 10;
-
         }
 
 
@@ -223,8 +247,8 @@
             white-space: nowrap;
 
             z-index: 10;
-
         }
+
 
     </style>
 
@@ -233,98 +257,88 @@
 
 <body>
 
+
     <main id="juego">
 
 
-        <!-- =========================
-             NAVEGACIÓN
-        ========================= -->
-
+        <!-- Navegación superior -->
         <div id="navegacion">
 
 
-            <!-- VOLVER A COLABORACIÓN -->
-
+            <!-- Volver a Colaboración -->
             <button
                 type="button"
-                onclick="window.location.href='circulos3.html'">
-
+                onclick="window.location.href='circulos3.html'"
+                aria-label="Volver a Colaboración"
+            >
                 ‹
-
             </button>
 
 
-            <!-- 9 PUNTOS -->
-
+            <!-- 9 puntos de progreso -->
             <div id="progreso">
 
-                <!-- 1 MEMORIA -->
+                <!-- 1. MEMORIA -->
                 <span></span>
 
-                <!-- 2 HERENCIA -->
+                <!-- 2. HERENCIA -->
                 <span></span>
 
-                <!-- 3 CADUCIDAD -->
+                <!-- 3. CADUCIDAD -->
                 <span></span>
 
-                <!-- 4 IDENTIDAD -->
+                <!-- 4. IDENTIDAD -->
                 <span></span>
 
-                <!-- 5 EMPATÍA -->
+                <!-- 5. EMPATÍA -->
                 <span></span>
 
-                <!-- 6 COLABORACIÓN -->
+                <!-- 6. COLABORACIÓN -->
                 <span></span>
 
-                <!-- 7 INCERTIDUMBRE -->
+                <!-- 7. INCERTIDUMBRE -->
                 <span class="activo"></span>
 
-                <!-- 8 DESPRENDIMIENTO -->
+                <!-- 8. DESPRENDIMIENTO -->
                 <span></span>
 
-                <!-- 9 EXPECTATIVA -->
+                <!-- 9. EXPECTATIVA -->
                 <span></span>
 
             </div>
 
 
-            <!-- AVANZAR A DESPRENDIMIENTO -->
-
+            <!-- Avanzar a Desprendimiento -->
             <button
                 type="button"
-                onclick="window.location.href='triangulos2.html'">
-
+                onclick="window.location.href='triangulos2.html'"
+                aria-label="Avanzar a Desprendimiento"
+            >
                 ›
-
             </button>
 
 
         </div>
 
 
-        <!-- =========================
-             JUEGO
-        ========================= -->
-
+        <!-- Canvas del juego -->
         <canvas id="canvas"></canvas>
 
 
-        <div id="titulo">
-        
-        </div>
+        <!-- Título -->
+        <div id="titulo"></div>
 
 
-        <div id="mensaje">
-          
-        </div>
+        <!-- Mensaje -->
+        <div id="mensaje"></div>
 
 
     </main>
 
 
-    <!-- JAVASCRIPT DEL JUEGO -->
-
+    <!-- JavaScript del juego -->
     <script src="triangulos.js"></script>
+
 
 </body>
 

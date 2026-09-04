@@ -1,11 +1,7 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-
-// =====================================
-// COLORES
-// =====================================
-
+// Colores de los cuatro triángulos.
 const colores = [
     "#202D64",
     "#2B538E",
@@ -13,33 +9,29 @@ const colores = [
     "#D9D9D9"
 ];
 
-
-// =====================================
-// CONFIGURACIÓN
-// =====================================
-
-const LADO = 90;
+// Configuración general del juego.
+const LADO = 120;
 const VELOCIDAD_MIN = 0.35;
 const VELOCIDAD_MAX = 0.8;
 const DISTANCIA_COLOCACION = 45;
 
+// Calcula la altura de un triángulo equilátero.
 const ALTURA =
     LADO * Math.sqrt(3) / 2;
 
-
-// =====================================
-// VARIABLES
-// =====================================
-
+// Guarda las cuatro piezas.
 let piezas = [];
 
+// Guarda la pieza que se está arrastrando.
 let piezaSeleccionada = null;
 
 let offsetX = 0;
 let offsetY = 0;
 
+// Indica si el juego ya fue iniciado.
 let juegoIniciado = false;
 
+// Evita que el desarme se ejecute varias veces.
 let desarmando = false;
 
 
@@ -55,10 +47,10 @@ function ajustarCanvas() {
     canvas.width = rect.width;
     canvas.height = rect.height;
 
+    // Al comenzar se crean las piezas.
     if (!juegoIniciado) {
         crearPiezas();
     }
-
 }
 
 window.addEventListener(
@@ -82,29 +74,7 @@ function crearPiezas() {
         canvas.height / 2;
 
 
-    /*
-    
-        TRIÁNGULO GRANDE
-
-                 /\
-                /  \
-               / 0  \
-              /______\
-             /\      /\
-            /  \ 3  /  \
-           / 1  \  /  2 \
-          /______\/______\
-
-
-        Son 4 triángulos equiláteros
-        exactamente iguales.
-
-    */
-
-
-    // ---------------------------------
-    // VÉRTICES DEL TRIÁNGULO GRANDE
-    // ---------------------------------
+    // Vértices del triángulo grande.
 
     const A = {
         x: cx,
@@ -122,9 +92,7 @@ function crearPiezas() {
     };
 
 
-    // ---------------------------------
-    // PUNTOS MEDIOS
-    // ---------------------------------
+    // Puntos medios.
 
     const AB = {
         x: (A.x + B.x) / 2,
@@ -142,9 +110,7 @@ function crearPiezas() {
     };
 
 
-    // ---------------------------------
-    // CENTROS DE CADA PIEZA
-    // ---------------------------------
+    // Centro de cada uno de los cuatro triángulos.
 
     const centro0 = centroTriangulo(
         A,
@@ -178,6 +144,8 @@ function crearPiezas() {
         centro3
     ];
 
+
+    // Crea las cuatro piezas.
 
     centros.forEach(
         (centro, indice) => {
@@ -217,7 +185,6 @@ function crearPiezas() {
 
         }
     );
-
 }
 
 
@@ -236,7 +203,6 @@ function centroTriangulo(a, b, c) {
             (a.y + b.y + c.y) / 3
 
     };
-
 }
 
 
@@ -259,9 +225,7 @@ function desarmar() {
             pieza.libre = true;
 
 
-            // -----------------------------
-            // DIRECCIÓN DE SALIDA
-            // -----------------------------
+            // Cada pieza sale en una dirección diferente.
 
             const angulo =
                 (
@@ -288,9 +252,7 @@ function desarmar() {
                 distancia;
 
 
-            // -----------------------------
-            // VELOCIDAD
-            // -----------------------------
+            // Cada pieza recibe una velocidad aleatoria.
 
             const velocidad =
                 VELOCIDAD_MIN +
@@ -317,7 +279,6 @@ function desarmar() {
     mostrarMensaje(
         "SE DESARMÓ"
     );
-
 }
 
 
@@ -330,9 +291,7 @@ function moverPiezas() {
     piezas.forEach(
         pieza => {
 
-            // -----------------------------
-            // RESPIRACIÓN
-            // -----------------------------
+            // Genera el movimiento orgánico de respiración.
 
             pieza.respiracion +=
                 pieza.velocidadRespiracion;
@@ -349,9 +308,7 @@ function moverPiezas() {
                 pulso * 0.045;
 
 
-            // -----------------------------
-            // PIEZAS LIBRES
-            // -----------------------------
+            // Las piezas libres se mueven.
 
             if (
                 pieza.libre &&
@@ -362,9 +319,7 @@ function moverPiezas() {
                 pieza.y += pieza.vy;
 
 
-                // -------------------------
-                // BORDES
-                // -------------------------
+                // Rebote contra los bordes.
 
                 const margen =
                     pieza.lado * 0.45;
@@ -377,7 +332,6 @@ function moverPiezas() {
                     pieza.x = margen;
 
                     pieza.vx *= -1;
-
                 }
 
 
@@ -391,7 +345,6 @@ function moverPiezas() {
                         margen;
 
                     pieza.vx *= -1;
-
                 }
 
 
@@ -402,7 +355,6 @@ function moverPiezas() {
                     pieza.y = margen;
 
                     pieza.vy *= -1;
-
                 }
 
 
@@ -416,14 +368,10 @@ function moverPiezas() {
                         margen;
 
                     pieza.vy *= -1;
-
                 }
-
             }
-
         }
     );
-
 }
 
 
@@ -453,19 +401,7 @@ function colisiones() {
             const b = piezas[j];
 
 
-            if (
-                !a.libre ||
-                !b.libre
-            )
-                continue;
-
-
-            if (
-                a === piezaSeleccionada ||
-                b === piezaSeleccionada
-            )
-                continue;
-
+            // Calcula la distancia entre las piezas.
 
             const dx =
                 b.x - a.x;
@@ -481,77 +417,199 @@ function colisiones() {
                 );
 
 
+            if (distancia === 0)
+                continue;
+
+
+            // Distancia a partir de la cual
+            // las piezas se consideran en contacto.
+
             const distanciaMinima =
-                a.lado * 0.72;
+                a.lado * 0.82;
 
 
             if (
-                distancia > 0 &&
-                distancia <
+                distancia >=
                 distanciaMinima
+            )
+                continue;
+
+
+            // Dirección del empuje.
+
+            const nx =
+                dx / distancia;
+
+            const ny =
+                dy / distancia;
+
+
+            const penetracion =
+                distanciaMinima -
+                distancia;
+
+
+            // Las dos piezas están libres.
+
+            if (
+                a.libre &&
+                b.libre
             ) {
 
-                const nx =
-                    dx / distancia;
-
-                const ny =
-                    dy / distancia;
-
-
-                // -------------------------
-                // EMPUJE
-                // -------------------------
-
-                a.vx -=
-                    nx * 0.03;
-
-                a.vy -=
-                    ny * 0.03;
-
-
-                b.vx +=
-                    nx * 0.03;
-
-                b.vy +=
-                    ny * 0.03;
-
-
-                // -------------------------
-                // SEPARAR
-                // -------------------------
-
-                const diferencia =
-                    distanciaMinima -
-                    distancia;
-
+                // Evita que se atraviesen.
 
                 a.x -=
                     nx *
-                    diferencia *
+                    penetracion *
                     0.5;
 
                 a.y -=
                     ny *
-                    diferencia *
+                    penetracion *
                     0.5;
 
 
                 b.x +=
                     nx *
-                    diferencia *
+                    penetracion *
                     0.5;
 
                 b.y +=
                     ny *
-                    diferencia *
+                    penetracion *
                     0.5;
 
+
+                // Empuja suavemente las piezas.
+
+                const fuerza = 0.12;
+
+
+                a.vx -=
+                    nx *
+                    fuerza;
+
+                a.vy -=
+                    ny *
+                    fuerza;
+
+
+                b.vx +=
+                    nx *
+                    fuerza;
+
+                b.vy +=
+                    ny *
+                    fuerza;
             }
 
+
+            // A está siendo arrastrada.
+
+            else if (
+                a === piezaSeleccionada &&
+                b.libre
+            ) {
+
+                b.x +=
+                    nx *
+                    penetracion;
+
+                b.y +=
+                    ny *
+                    penetracion;
+
+
+                b.vx +=
+                    nx *
+                    0.18;
+
+                b.vy +=
+                    ny *
+                    0.18;
+            }
+
+
+            // B está siendo arrastrada.
+
+            else if (
+                b === piezaSeleccionada &&
+                a.libre
+            ) {
+
+                a.x -=
+                    nx *
+                    penetracion;
+
+                a.y -=
+                    ny *
+                    penetracion;
+
+
+                a.vx -=
+                    nx *
+                    0.18;
+
+                a.vy -=
+                    ny *
+                    0.18;
+            }
+
+
+            // A libre y B colocada.
+
+            else if (
+                a.libre &&
+                b.colocada &&
+                b !== piezaSeleccionada
+            ) {
+
+                a.x -=
+                    nx *
+                    penetracion;
+
+                a.y -=
+                    ny *
+                    penetracion;
+
+
+                a.vx -=
+                    nx *
+                    0.12;
+
+                a.vy -=
+                    ny *
+                    0.12;
+            }
+
+
+            // B libre y A colocada.
+
+            else if (
+                b.libre &&
+                a.colocada &&
+                a !== piezaSeleccionada
+            ) {
+
+                b.x +=
+                    nx *
+                    penetracion;
+
+                b.y +=
+                    ny *
+                    penetracion;
+
+
+                b.vx +=
+                    nx *
+                    0.12;
+
+                b.vy +=
+                    ny *
+                    0.12;
+            }
         }
-
     }
-
 }
 
 
@@ -585,24 +643,12 @@ function dibujarPieza(pieza) {
     );
 
 
-    /*
-    
-    Todos los triángulos
-    son equiláteros.
-
-    El triángulo central
-    está invertido.
-
-    */
-
     ctx.beginPath();
 
 
-    if (pieza.id === 3) {
+    // El triángulo central está invertido.
 
-        // -----------------------------
-        // TRIÁNGULO INVERTIDO
-        // -----------------------------
+    if (pieza.id === 3) {
 
         ctx.moveTo(
             -lado / 2,
@@ -621,9 +667,8 @@ function dibujarPieza(pieza) {
 
     } else {
 
-        // -----------------------------
-        // TRIÁNGULO NORMAL
-        // -----------------------------
+        // Los otros tres triángulos
+        // apuntan hacia arriba.
 
         ctx.moveTo(
             0,
@@ -639,7 +684,6 @@ function dibujarPieza(pieza) {
             lado / 2,
             altura / 3
         );
-
     }
 
 
@@ -654,7 +698,6 @@ function dibujarPieza(pieza) {
 
 
     ctx.restore();
-
 }
 
 
@@ -681,7 +724,6 @@ function dibujar() {
 
         }
     );
-
 }
 
 
@@ -715,20 +757,19 @@ function buscarPieza(x, y) {
             );
 
 
+        // Detecta si el toque está sobre la pieza.
+
         if (
             distancia <
             pieza.lado * 0.65
         ) {
 
             return pieza;
-
         }
-
     }
 
 
     return null;
-
 }
 
 
@@ -754,18 +795,16 @@ function intentarColocar(pieza) {
                 pieza.objetivoY,
                 2
             )
-
         );
 
+
+    // Si está suficientemente cerca
+    // de su posición original, se acomoda.
 
     if (
         distancia <
         DISTANCIA_COLOCACION
     ) {
-
-        // -----------------------------
-        // SE ACOMODA SOLA
-        // -----------------------------
 
         pieza.x =
             pieza.objetivoX;
@@ -786,9 +825,7 @@ function intentarColocar(pieza) {
 
 
         verificarPiezas();
-
     }
-
 }
 
 
@@ -810,7 +847,6 @@ function verificarPiezas() {
         mostrarMensaje(
             "1 DE 4"
         );
-
     }
 
 
@@ -819,7 +855,6 @@ function verificarPiezas() {
         mostrarMensaje(
             "2 DE 4"
         );
-
     }
 
 
@@ -828,13 +863,11 @@ function verificarPiezas() {
         mostrarMensaje(
             "CASI..."
         );
-
     }
 
 
-    // -----------------------------
-    // ÚLTIMA PIEZA
-    // -----------------------------
+    // Cuando las cuatro piezas están colocadas,
+    // el triángulo vuelve a desarmarse.
 
     if (cantidad === 4) {
 
@@ -847,9 +880,7 @@ function verificarPiezas() {
             romperNuevamente,
             700
         );
-
     }
-
 }
 
 
@@ -884,6 +915,8 @@ function romperNuevamente() {
                         true;
 
 
+                    // Nueva dirección de salida.
+
                     const angulo =
                         (
                             indice *
@@ -911,6 +944,8 @@ function romperNuevamente() {
                         distancia;
 
 
+                    // Nueva velocidad.
+
                     const velocidad =
                         0.45 +
                         Math.random() *
@@ -925,7 +960,6 @@ function romperNuevamente() {
                     pieza.vy =
                         Math.sin(angulo) *
                         velocidad;
-
                 }
             );
 
@@ -940,7 +974,6 @@ function romperNuevamente() {
         },
         500
     );
-
 }
 
 
@@ -974,17 +1007,14 @@ canvas.addEventListener(
             return;
 
 
-        // =================================
-        // PRIMER TOQUE
-        // =================================
+        // Primer toque:
+        // desarma el triángulo.
 
         if (!juegoIniciado) {
 
             desarmar();
 
 
-            // La pieza tocada queda
-            // inmediatamente disponible
             piezaSeleccionada =
                 pieza;
 
@@ -1006,13 +1036,10 @@ canvas.addEventListener(
 
 
             return;
-
         }
 
 
-        // =================================
-        // AGARRAR UNA PIEZA
-        // =================================
+        // Selecciona una pieza para moverla.
 
         piezaSeleccionada =
             pieza;
@@ -1025,8 +1052,7 @@ canvas.addEventListener(
             y - pieza.y;
 
 
-        // Si estaba colocada,
-        // vuelve a estar libre
+        // Una pieza colocada vuelve a estar libre.
 
         pieza.colocada =
             false;
@@ -1042,7 +1068,6 @@ canvas.addEventListener(
         canvas.setPointerCapture(
             event.pointerId
         );
-
     }
 );
 
@@ -1076,10 +1101,8 @@ canvas.addEventListener(
         piezaSeleccionada.x =
             x - offsetX;
 
-
         piezaSeleccionada.y =
             y - offsetY;
-
     }
 );
 
@@ -1101,8 +1124,8 @@ canvas.addEventListener(
         );
 
 
-        // Si no quedó colocada,
-        // vuelve a moverse
+        // Si no se colocó,
+        // vuelve a moverse.
 
         if (
             !piezaSeleccionada.colocada
@@ -1111,24 +1134,24 @@ canvas.addEventListener(
             piezaSeleccionada.libre =
                 true;
 
+
             piezaSeleccionada.vx =
                 (
                     Math.random() -
                     0.5
                 ) * 0.5;
 
+
             piezaSeleccionada.vy =
                 (
                     Math.random() -
                     0.5
                 ) * 0.5;
-
         }
 
 
         piezaSeleccionada =
             null;
-
     }
 );
 
@@ -1170,13 +1193,11 @@ function mostrarMensaje(texto) {
 
                     mensaje.textContent =
                         "RECONSTRUÍ EL TRIÁNGULO";
-
                 }
 
             },
             1200
         );
-
 }
 
 
@@ -1195,7 +1216,6 @@ function animar() {
     requestAnimationFrame(
         animar
     );
-
 }
 
 
@@ -1206,253 +1226,3 @@ function animar() {
 ajustarCanvas();
 
 animar();
-function colisiones() {
-
-    // Al inicio las piezas están formando
-    // el triángulo, por eso no hay colisiones.
-    if (!juegoIniciado)
-        return;
-
-
-    for (let i = 0; i < piezas.length; i++) {
-
-        for (let j = i + 1; j < piezas.length; j++) {
-
-            const a = piezas[i];
-            const b = piezas[j];
-
-
-            // =====================================
-            // DISTANCIA ENTRE CENTROS
-            // =====================================
-
-            const dx = b.x - a.x;
-            const dy = b.y - a.y;
-
-            const distancia = Math.sqrt(
-                dx * dx +
-                dy * dy
-            );
-
-
-            if (distancia === 0)
-                continue;
-
-
-            // =====================================
-            // DISTANCIA MÍNIMA
-            // =====================================
-
-            const distanciaMinima =
-                a.lado * 0.82;
-
-
-            // Si todavía no se están tocando
-            if (distancia >= distanciaMinima)
-                continue;
-
-
-            // =====================================
-            // DIRECCIÓN DEL EMPUJE
-            // =====================================
-
-            const nx = dx / distancia;
-            const ny = dy / distancia;
-
-
-            const penetracion =
-                distanciaMinima - distancia;
-
-
-            // =====================================
-            // LAS DOS PIEZAS ESTÁN LIBRES
-            // =====================================
-
-            if (
-                a.libre &&
-                b.libre
-            ) {
-
-                // Las separamos para evitar
-                // que se atraviesen.
-
-                a.x -=
-                    nx *
-                    penetracion *
-                    0.5;
-
-                a.y -=
-                    ny *
-                    penetracion *
-                    0.5;
-
-
-                b.x +=
-                    nx *
-                    penetracion *
-                    0.5;
-
-                b.y +=
-                    ny *
-                    penetracion *
-                    0.5;
-
-
-                // =================================
-                // EMPUJE
-                // =================================
-
-                const fuerza = 0.12;
-
-
-                a.vx -=
-                    nx *
-                    fuerza;
-
-                a.vy -=
-                    ny *
-                    fuerza;
-
-
-                b.vx +=
-                    nx *
-                    fuerza;
-
-                b.vy +=
-                    ny *
-                    fuerza;
-
-            }
-
-
-            // =====================================
-            // A ESTÁ SIENDO ARRASTRADA
-            // B ESTÁ LIBRE
-            // =====================================
-
-            else if (
-                a === piezaSeleccionada &&
-                b.libre
-            ) {
-
-                // La pieza B recibe el empuje.
-
-                b.x +=
-                    nx *
-                    penetracion;
-
-                b.y +=
-                    ny *
-                    penetracion;
-
-
-                b.vx +=
-                    nx *
-                    0.18;
-
-                b.vy +=
-                    ny *
-                    0.18;
-
-            }
-
-
-            // =====================================
-            // B ESTÁ SIENDO ARRASTRADA
-            // A ESTÁ LIBRE
-            // =====================================
-
-            else if (
-                b === piezaSeleccionada &&
-                a.libre
-            ) {
-
-                // La pieza A recibe el empuje.
-
-                a.x -=
-                    nx *
-                    penetracion;
-
-                a.y -=
-                    ny *
-                    penetracion;
-
-
-                a.vx -=
-                    nx *
-                    0.18;
-
-                a.vy -=
-                    ny *
-                    0.18;
-
-            }
-
-
-            // =====================================
-            // A LIBRE / B COLOCADA
-            // =====================================
-
-            else if (
-                a.libre &&
-                b.colocada &&
-                b !== piezaSeleccionada
-            ) {
-
-                // La pieza libre no puede atravesar
-                // la pieza colocada.
-
-                a.x -=
-                    nx *
-                    penetracion;
-
-                a.y -=
-                    ny *
-                    penetracion;
-
-
-                a.vx -=
-                    nx *
-                    0.12;
-
-                a.vy -=
-                    ny *
-                    0.12;
-
-            }
-
-
-            // =====================================
-            // B LIBRE / A COLOCADA
-            // =====================================
-
-            else if (
-                b.libre &&
-                a.colocada &&
-                a !== piezaSeleccionada
-            ) {
-
-                b.x +=
-                    nx *
-                    penetracion;
-
-                b.y +=
-                    ny *
-                    penetracion;
-
-
-                b.vx +=
-                    nx *
-                    0.12;
-
-                b.vy +=
-                    ny *
-                    0.12;
-
-            }
-
-        }
-
-    }
-
-}

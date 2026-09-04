@@ -5,11 +5,21 @@
 
     <meta charset="UTF-8">
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Permite que la página se adapte a celulares,
+         tablets y computadoras -->
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>Colaboración</title>
 
+
     <style>
+
+        /* =====================================================
+           CONFIGURACIÓN GENERAL
+        ===================================================== */
 
         * {
             margin: 0;
@@ -17,207 +27,363 @@
             box-sizing: border-box;
         }
 
+
+        /* =====================================================
+           HTML Y BODY
+        ===================================================== */
+
+        html,
         body {
 
+            /* La página ocupa toda la pantalla */
+            width: 100%;
+            height: 100%;
+
+        }
+
+
+        /* =====================================================
+           CUERPO DE LA PÁGINA
+        ===================================================== */
+
+        body {
+
+            /* Color gris exterior */
             background: #D9D9D9;
 
+            /* Evita que aparezcan barras de desplazamiento */
             overflow: hidden;
 
+            /* Tipografía general */
             font-family: Arial, sans-serif;
 
         }
 
+
+        /* =====================================================
+           ÁREA PRINCIPAL DEL JUEGO
+        ===================================================== */
+
         #juego {
 
+            /* Ancho del área del juego */
             width: 95vw;
+
+            /* Alto del área del juego */
             height: 95vh;
 
+            /* Centra el juego y deja margen alrededor */
             margin: 2.5vh auto;
 
+            /* Fondo azul oscuro */
             background: #060C1A;
 
+            /* Permite colocar la navegación encima */
             position: relative;
 
+            /* Oculta elementos que salgan del área */
             overflow: hidden;
 
         }
 
+
+        /* =====================================================
+           CANVAS
+        ===================================================== */
+
         canvas {
 
+            /* El canvas se comporta como bloque */
             display: block;
 
+            /* Ocupa todo el juego */
             width: 100%;
             height: 100%;
 
+            /* Evita que el navegador haga scroll
+               al tocar o arrastrar */
             touch-action: none;
 
         }
 
 
-        /* =========================
+        /* =====================================================
            NAVEGACIÓN
-        ========================= */
+        ===================================================== */
 
         #navegacion {
 
+            /* La navegación se coloca encima del canvas */
             position: absolute;
 
+            /* Distancia desde arriba */
             top: 18px;
+
+            /* Centrado horizontal */
             left: 50%;
 
             transform: translateX(-50%);
 
+            /* Ocupa casi todo el ancho */
+            width: 94%;
+
+            /* Coloca las flechas y los puntos en fila */
             display: flex;
 
+            /* Centra verticalmente los elementos */
             align-items: center;
 
-            gap: 15px;
+            /*
+             La primera flecha queda a la izquierda,
+             los puntos en el centro y la segunda
+             flecha a la derecha.
+            */
+            justify-content: space-between;
 
-            z-index: 1000;
+            /* La navegación queda sobre el canvas */
+            z-index: 20;
+
+            /*
+             La navegación completa no bloquea
+             la interacción con el juego.
+            */
+            pointer-events: none;
 
         }
 
 
-        /* =========================
-           PROGRESO
-        ========================= */
+        /* =====================================================
+           INDICADORES DE PROGRESO
+        ===================================================== */
 
         #progreso {
 
+            /* Los puntos se colocan horizontalmente */
             display: flex;
 
+            /* Centra verticalmente los puntos */
             align-items: center;
 
+            /* Espacio entre cada punto */
             gap: 7px;
 
         }
 
+
+        /* =====================================================
+           PUNTOS
+        ===================================================== */
+
         #progreso span {
 
+            /* Permite controlar tamaño */
             display: block;
 
+            /* Tamaño de cada punto */
             width: 9px;
             height: 9px;
 
+            /* Hace que sean círculos */
             border-radius: 50%;
 
+            /* Borde */
             border: 1px solid #C4CEE5;
 
+            /* Sin relleno */
             background: transparent;
 
+            /* Los inactivos tienen menor presencia */
             opacity: 0.45;
 
         }
 
-        /* SEXTO ACTIVO */
+
+        /* =====================================================
+           PUNTO ACTIVO
+           COLABORACIÓN ES EL SEXTO
+        ===================================================== */
 
         #progreso span.activo {
 
+            /* Rellenamos el punto activo */
             background: #C4CEE5;
 
+            /* Opacidad completa */
             opacity: 1;
 
         }
 
 
-        /* =========================
+        /* =====================================================
            FLECHAS
-        ========================= */
+        ===================================================== */
 
         #navegacion button {
 
+            /* Quitamos el borde */
             border: none;
 
+            /* Fondo transparente */
             background: transparent;
 
+            /* Color de las flechas */
             color: #C4CEE5;
 
+            /* Tamaño de las flechas */
             font-size: 32px;
 
+            /* Muestra la mano al pasar por encima */
             cursor: pointer;
 
+            /* Quitamos espacios internos */
             padding: 0;
 
+            /* Tamaño del botón */
             width: 30px;
             height: 35px;
 
+            /* Centra la flecha dentro del botón */
             display: flex;
 
             align-items: center;
-
             justify-content: center;
 
+            /*
+             MUY IMPORTANTE:
+
+             La navegación tiene:
+             pointer-events: none;
+
+             Por eso tenemos que volver a activar
+             los eventos solamente para los botones.
+
+             De esta forma las flechas sí reciben
+             los clics y los toques.
+            */
+            pointer-events: auto;
+
+            /* Permite controlar la posición */
             position: relative;
 
+            /* Coloca los botones por encima */
             z-index: 1001;
 
         }
 
+
+        /* =====================================================
+           EFECTO DE LAS FLECHAS AL PASAR EL MOUSE
+        ===================================================== */
+
         #navegacion button:hover {
 
+            /* Hace que la flecha se vuelva un poco
+               más transparente */
             opacity: 0.6;
 
         }
 
 
-        /* =========================
+        /* =====================================================
+           EFECTO AL PRESIONAR UNA FLECHA
+        ===================================================== */
+
+        #navegacion button:active {
+
+            /* Hace un pequeño cambio visual
+               al hacer clic */
+            opacity: 0.4;
+
+        }
+
+
+        /* =====================================================
            TÍTULO
-        ========================= */
+        ===================================================== */
 
         #titulo {
 
+            /* Posición absoluta dentro del juego */
             position: absolute;
 
+            /* Distancia superior */
             top: 25px;
+
+            /* Centrado horizontal */
             left: 50%;
 
             transform: translateX(-50%);
 
+            /* Color del texto */
             color: white;
 
+            /* Tamaño */
             font-size: 18px;
 
+            /* Separación entre letras */
             letter-spacing: 5px;
 
+            /* Transparencia */
             opacity: 0.8;
 
+            /*
+             No permite que el título interfiera
+             con los círculos.
+            */
             pointer-events: none;
 
+            /* Se coloca encima del canvas */
             z-index: 10;
 
         }
 
 
-        /* =========================
+        /* =====================================================
            MENSAJE
-        ========================= */
+        ===================================================== */
 
         #mensaje {
 
+            /* Posición absoluta */
             position: absolute;
 
+            /* Distancia desde abajo */
             bottom: 25px;
+
+            /* Centrado horizontal */
             left: 50%;
 
             transform: translateX(-50%);
 
+            /* Color */
             color: white;
 
+            /* Tamaño */
             font-size: 14px;
 
+            /* Separación entre letras */
             letter-spacing: 3px;
 
+            /* Transparencia */
             opacity: 0.7;
 
+            /*
+             No interfiere con los círculos
+             ni con el mouse/touch.
+            */
             pointer-events: none;
 
+            /* Centrado */
             text-align: center;
 
+            /* Evita que el texto salte de línea */
             white-space: nowrap;
 
+            /* Se coloca encima */
             z-index: 10;
 
         }
+
 
     </style>
 
@@ -226,64 +392,94 @@
 
 <body>
 
+
+    <!-- =====================================================
+         ÁREA PRINCIPAL DEL JUEGO
+    ===================================================== -->
+
     <main id="juego">
 
 
-        <!-- NAVEGACIÓN -->
+        <!-- =================================================
+             NAVEGACIÓN SUPERIOR
+        ================================================= -->
 
         <div id="navegacion">
 
 
-            <!-- VOLVER A EMPATÍA -->
+            <!-- =============================================
+                 FLECHA IZQUIERDA
+                 VUELVE A EMPATÍA
+            ============================================== -->
 
             <button
                 type="button"
-                onclick="window.location.href='circulos2.html'">
+                onclick="window.location.href='circulos2.html'"
+                aria-label="Volver a Empatía"
+            >
 
                 ‹
 
             </button>
 
 
-            <!-- 9 PUNTOS -->
+            <!-- =============================================
+                 INDICADORES DE PROGRESO
+            ============================================== -->
 
             <div id="progreso">
 
-                <!-- 1 MEMORIA -->
+
+                <!-- 1 - MEMORIA -->
                 <span></span>
 
-                <!-- 2 HERENCIA -->
+
+                <!-- 2 - HERENCIA -->
                 <span></span>
 
-                <!-- 3 CADUCIDAD -->
+
+                <!-- 3 - CADUCIDAD -->
                 <span></span>
 
-                <!-- 4 IDENTIDAD -->
+
+                <!-- 4 - IDENTIDAD -->
                 <span></span>
 
-                <!-- 5 EMPATÍA -->
+
+                <!-- 5 - EMPATÍA -->
                 <span></span>
 
-                <!-- 6 COLABORACIÓN -->
+
+                <!-- 6 - COLABORACIÓN
+                     ESTE ES EL PUNTO ACTIVO -->
                 <span class="activo"></span>
 
-                <!-- 7 INCERTIDUMBRE -->
+
+                <!-- 7 - INCERTIDUMBRE -->
                 <span></span>
 
-                <!-- 8 DESPRENDIMIENTO -->
+
+                <!-- 8 - DESPRENDIMIENTO -->
                 <span></span>
 
-                <!-- 9 EXPECTATIVA -->
+
+                <!-- 9 - EXPECTATIVA -->
                 <span></span>
+
 
             </div>
 
 
-            <!-- AVANZAR A INCERTIDUMBRE -->
+            <!-- =============================================
+                 FLECHA DERECHA
+                 AVANZA A INCERTIDUMBRE
+            ============================================== -->
 
             <button
                 type="button"
-                onclick="window.location.href='triangulos.html'">
+                onclick="window.location.href='triangulos.html'"
+                aria-label="Avanzar a Incertidumbre"
+            >
 
                 ›
 
@@ -293,25 +489,35 @@
         </div>
 
 
-        <!-- JUEGO -->
+        <!-- =================================================
+             CANVAS DEL JUEGO
+        ================================================= -->
 
         <canvas id="canvas"></canvas>
 
 
-        <div id="titulo">
-           
-        </div>
+        <!-- =================================================
+             TÍTULO
+             Se mantiene vacío.
+        ================================================= -->
+
+        <div id="titulo"></div>
 
 
-        <div id="mensaje">
-            
-        </div>
+        <!-- =================================================
+             MENSAJE
+             Se mantiene vacío.
+        ================================================= -->
+
+        <div id="mensaje"></div>
 
 
     </main>
 
 
-    <!-- JAVASCRIPT DEL JUEGO -->
+    <!-- =====================================================
+         JAVASCRIPT DE COLABORACIÓN
+    ===================================================== -->
 
     <script src="circulos3.js"></script>
 

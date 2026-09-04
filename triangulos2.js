@@ -1,11 +1,7 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-
-// =====================================
-// PALETA
-// =====================================
-
+// Colores utilizados por los triángulos.
 const colores = [
     "#202D64",
     "#2B538E",
@@ -13,32 +9,19 @@ const colores = [
     "#D9D9D9"
 ];
 
-
-// =====================================
-// CONFIGURACIÓN
-// =====================================
-
+// Configuración del movimiento y desprendimiento.
 const VELOCIDAD_BASE = 0.45;
-
 const VELOCIDAD_HIJOS = 0.65;
-
 const FUERZA_COLISION = 0.35;
-
 const INTERVALO_DESPRENDIMIENTO = 700;
 
-
-// =====================================
-// CANVAS
-// =====================================
-
+// Canvas.
 function ajustarCanvas() {
-
     const rect =
         canvas.getBoundingClientRect();
 
     canvas.width = rect.width;
     canvas.height = rect.height;
-
 }
 
 window.addEventListener(
@@ -48,18 +31,10 @@ window.addEventListener(
 
 ajustarCanvas();
 
-
-// =====================================
-// ARRAY
-// =====================================
-
+// Guarda todos los triángulos.
 let triangulos = [];
 
-
-// =====================================
-// CREAR TRIÁNGULO
-// =====================================
-
+// Crea un triángulo con sus características.
 function crearTriangulo(
     x,
     y,
@@ -67,15 +42,12 @@ function crearTriangulo(
     esHijo = false,
     color = null
 ) {
-
     const velocidad =
         esHijo
             ? VELOCIDAD_HIJOS
             : VELOCIDAD_BASE;
 
-
     return {
-
         x: x,
         y: y,
 
@@ -87,9 +59,7 @@ function crearTriangulo(
             (Math.random() - 0.5) *
             velocidad,
 
-
         tamaño: tamaño,
-
 
         color:
             color ||
@@ -100,55 +70,36 @@ function crearTriangulo(
                 )
             ],
 
-
-        // =============================
-        // RESPIRACIÓN
-        // =============================
-
+        // Fase para generar la respiración.
         fase:
             Math.random() *
             Math.PI *
             2,
 
-
-        // Los hijos laten más rápido
-
+        // Los hijos tienen un latido más rápido.
         velocidadLatido:
             esHijo
-                ? 0.13 + Math.random() * 0.07
-                : 0.025 + Math.random() * 0.015,
-
+                ? 0.13 +
+                  Math.random() * 0.07
+                : 0.025 +
+                  Math.random() * 0.015,
 
         amplitudLatido:
             esHijo
                 ? 0.13
                 : 0.06,
 
-
-        // =============================
-        // TIPO
-        // =============================
-
         esHijo: esHijo,
 
         vivo: true
-
     };
-
 }
 
-
-// =====================================
-// 4 TRIÁNGULOS GRANDES INICIALES
-// =====================================
-
+// Crea los 4 triángulos grandes iniciales.
 function crearIniciales() {
-
     triangulos = [];
 
-
     const posiciones = [
-
         {
             x: canvas.width * 0.25,
             y: canvas.height * 0.30
@@ -168,36 +119,30 @@ function crearIniciales() {
             x: canvas.width * 0.70,
             y: canvas.height * 0.70
         }
-
     ];
-
 
     posiciones.forEach(
         posicion => {
 
             triangulos.push(
-
                 crearTriangulo(
                     posicion.x,
                     posicion.y,
-                    58,
+
+                    // Ahora tienen el mismo tamaño
+                    // que los triángulos de Incertidumbre.
+                    120,
+
                     false
                 )
-
             );
-
         }
     );
-
 }
 
 crearIniciales();
 
-
-// =====================================
-// MOVIMIENTO
-// =====================================
-
+// Movimiento de los triángulos.
 function moverTriangulos() {
 
     triangulos.forEach(
@@ -206,49 +151,39 @@ function moverTriangulos() {
             if (!triangulo.vivo)
                 return;
 
-
-            // ==========================
-            // MOVIMIENTO
-            // ==========================
-
+            // Movimiento.
             triangulo.x +=
                 triangulo.vx;
 
             triangulo.y +=
                 triangulo.vy;
 
-
-            // ==========================
-            // LATIDO
-            // ==========================
-
+            // Respiración.
             triangulo.fase +=
                 triangulo.velocidadLatido;
 
-
-            // ==========================
-            // BORDES
-            // ==========================
-
+            // Límites del canvas.
             const margen =
                 triangulo.tamaño *
                 0.7;
 
-
+            // Borde izquierdo.
             if (
-                triangulo.x - margen < 0
+                triangulo.x -
+                    margen <
+                0
             ) {
 
                 triangulo.x =
                     margen;
 
                 triangulo.vx *= -1;
-
             }
 
-
+            // Borde derecho.
             if (
-                triangulo.x + margen >
+                triangulo.x +
+                    margen >
                 canvas.width
             ) {
 
@@ -257,24 +192,25 @@ function moverTriangulos() {
                     margen;
 
                 triangulo.vx *= -1;
-
             }
 
-
+            // Borde superior.
             if (
-                triangulo.y - margen < 0
+                triangulo.y -
+                    margen <
+                0
             ) {
 
                 triangulo.y =
                     margen;
 
                 triangulo.vy *= -1;
-
             }
 
-
+            // Borde inferior.
             if (
-                triangulo.y + margen >
+                triangulo.y +
+                    margen >
                 canvas.height
             ) {
 
@@ -283,19 +219,12 @@ function moverTriangulos() {
                     margen;
 
                 triangulo.vy *= -1;
-
             }
-
         }
     );
-
 }
 
-
-// =====================================
-// COLISIONES
-// =====================================
-
+// Detecta las colisiones entre los triángulos.
 function colisiones() {
 
     for (
@@ -316,13 +245,11 @@ function colisiones() {
             const b =
                 triangulos[j];
 
-
             if (
                 !a.vivo ||
                 !b.vivo
             )
                 continue;
-
 
             const dx =
                 b.x - a.x;
@@ -330,13 +257,11 @@ function colisiones() {
             const dy =
                 b.y - a.y;
 
-
             const distancia =
                 Math.sqrt(
                     dx * dx +
                     dy * dy
                 );
-
 
             const distanciaMinima =
                 (
@@ -344,11 +269,10 @@ function colisiones() {
                     b.tamaño
                 ) * 0.45;
 
-
             if (
                 distancia > 0 &&
                 distancia <
-                distanciaMinima
+                    distanciaMinima
             ) {
 
                 const nx =
@@ -357,11 +281,7 @@ function colisiones() {
                 const ny =
                     dy / distancia;
 
-
-                // ======================
-                // EMPUJE
-                // ======================
-
+                // Empuja los triángulos al chocar.
                 a.vx -=
                     nx *
                     FUERZA_COLISION *
@@ -371,7 +291,6 @@ function colisiones() {
                     ny *
                     FUERZA_COLISION *
                     0.02;
-
 
                 b.vx +=
                     nx *
@@ -383,15 +302,10 @@ function colisiones() {
                     FUERZA_COLISION *
                     0.02;
 
-
-                // ======================
-                // SEPARACIÓN
-                // ======================
-
+                // Evita que queden superpuestos.
                 const separacion =
                     distanciaMinima -
                     distancia;
-
 
                 a.x -=
                     nx *
@@ -403,7 +317,6 @@ function colisiones() {
                     separacion *
                     0.5;
 
-
                 b.x +=
                     nx *
                     separacion *
@@ -413,20 +326,12 @@ function colisiones() {
                     ny *
                     separacion *
                     0.5;
-
             }
-
         }
-
     }
-
 }
 
-
-// =====================================
-// CREAR TRIÁNGULO DESPRENDIDO
-// =====================================
-
+// Crea un triángulo que se desprende de un padre.
 function desprenderTriangulo(
     padre
 ) {
@@ -434,19 +339,15 @@ function desprenderTriangulo(
     if (!padre.vivo)
         return;
 
-
-    // ================================
-    // TAMAÑO ALEATORIO
-    // ================================
-
+    // Tamaños de los triángulos desprendidos.
+    // Son más grandes que antes.
     const tamaños = [
-        12,
-        18,
-        24,
-        30,
-        36
+        45,
+        50,
+        55,
+        60,
+        65
     ];
-
 
     const tamaño =
         tamaños[
@@ -456,38 +357,27 @@ function desprenderTriangulo(
             )
         ];
 
-
-    // ================================
-    // DIRECCIÓN ALEATORIA
-    // ================================
-
+    // Dirección aleatoria del desprendimiento.
     const angulo =
         Math.random() *
         Math.PI *
         2;
 
-
     const distancia =
         padre.tamaño *
         0.7;
-
 
     const x =
         padre.x +
         Math.cos(angulo) *
         distancia;
 
-
     const y =
         padre.y +
         Math.sin(angulo) *
         distancia;
 
-
-    // ================================
-    // CREAR HIJO
-    // ================================
-
+    // El hijo conserva el color del padre.
     const hijo =
         crearTriangulo(
             x,
@@ -497,40 +387,32 @@ function desprenderTriangulo(
             padre.color
         );
 
-
-    // ================================
-    // SALE DESPRENDIÉNDOSE
-    // ================================
-
+    // El hijo sale disparado desde el padre.
     hijo.vx =
         Math.cos(angulo) *
         (
             0.4 +
-            Math.random() *
-            0.5
+            Math.random() * 0.5
         );
 
     hijo.vy =
         Math.sin(angulo) *
         (
             0.4 +
-            Math.random() *
-            0.5
+            Math.random() * 0.5
         );
 
-
+    // Se agrega el nuevo triángulo.
+    // No se modifica la cantidad ni la lógica
+    // original de desprendimiento.
     triangulos.push(hijo);
-
 }
 
-
-// =====================================
-// DESPRENDIMIENTO AUTOMÁTICO
-// =====================================
-
+// Desprendimiento automático.
 setInterval(
     function() {
 
+        // Busca solamente los padres.
         const padres =
             triangulos.filter(
                 triangulo =>
@@ -538,37 +420,28 @@ setInterval(
                     !triangulo.esHijo
             );
 
-
         padres.forEach(
             padre => {
 
-                // Cada padre puede
-                // desprender con cierta
-                // probabilidad
-
+                // Se mantiene la misma probabilidad
+                // original de desprendimiento.
                 if (
-                    Math.random() < 0.75
+                    Math.random() <
+                    0.75
                 ) {
 
                     desprenderTriangulo(
                         padre
                     );
-
                 }
-
             }
         );
-
 
     },
     INTERVALO_DESPRENDIMIENTO
 );
 
-
-// =====================================
-// DIBUJAR TRIÁNGULO
-// =====================================
-
+// Dibuja cada triángulo.
 function dibujarTriangulo(
     triangulo
 ) {
@@ -576,17 +449,12 @@ function dibujarTriangulo(
     if (!triangulo.vivo)
         return;
 
-
-    // =================================
-    // LATIDO
-    // =================================
-
+    // Genera el latido orgánico.
     const latido =
         Math.sin(
             triangulo.fase
         ) *
         triangulo.amplitudLatido;
-
 
     const tamaño =
         triangulo.tamaño *
@@ -595,66 +463,48 @@ function dibujarTriangulo(
             latido
         );
 
-
+    // Altura de un triángulo equilátero.
     const altura =
         tamaño *
         Math.sqrt(3) /
         2;
 
-
     ctx.save();
-
 
     ctx.translate(
         triangulo.x,
         triangulo.y
     );
 
-
-    // =================================
-    // TRIÁNGULO
-    // =================================
-
     ctx.beginPath();
 
-
+    // Triángulo equilátero centrado.
     ctx.moveTo(
         0,
-        -altura * 0.65
+        -altura * 2 / 3
     );
-
 
     ctx.lineTo(
-        -tamaño * 0.5,
-        altura * 0.35
+        -tamaño / 2,
+        altura / 3
     );
-
 
     ctx.lineTo(
-        tamaño * 0.5,
-        altura * 0.35
+        tamaño / 2,
+        altura / 3
     );
-
 
     ctx.closePath();
-
 
     ctx.fillStyle =
         triangulo.color;
 
-
     ctx.fill();
 
-
     ctx.restore();
-
 }
 
-
-// =====================================
-// DIBUJAR
-// =====================================
-
+// Dibuja todos los triángulos.
 function dibujar() {
 
     ctx.clearRect(
@@ -664,30 +514,21 @@ function dibujar() {
         canvas.height
     );
 
-
     triangulos.forEach(
         triangulo =>
             dibujarTriangulo(
                 triangulo
             )
     );
-
 }
 
-
-// =====================================
-// BUSCAR TRIÁNGULO TOCADO
-// =====================================
-
+// Busca solamente los triángulos hijos.
 function buscarTriangulo(
     x,
     y
 ) {
 
-    // Revisamos primero
-    // los pequeños que están
-    // arriba visualmente
-
+    // Revisa primero los últimos creados.
     for (
         let i =
             triangulos.length - 1;
@@ -698,16 +539,13 @@ function buscarTriangulo(
         const triangulo =
             triangulos[i];
 
-
         if (!triangulo.vivo)
             continue;
 
-
-        // Los padres NO desaparecen
-
+        // Los padres no pueden tocarse
+        // para eliminarlos.
         if (!triangulo.esHijo)
             continue;
-
 
         const dx =
             x - triangulo.x;
@@ -715,11 +553,9 @@ function buscarTriangulo(
         const dy =
             y - triangulo.y;
 
-
         const radio =
             triangulo.tamaño *
             0.75;
-
 
         if (
             Math.sqrt(
@@ -729,21 +565,14 @@ function buscarTriangulo(
         ) {
 
             return triangulo;
-
         }
-
     }
 
-
     return null;
-
 }
 
-
-// =====================================
-// TOCAR TRIÁNGULO
-// =====================================
-
+// Al tocar un triángulo desprendido,
+// este desaparece.
 canvas.addEventListener(
     "pointerdown",
     function(event) {
@@ -751,16 +580,13 @@ canvas.addEventListener(
         const rect =
             canvas.getBoundingClientRect();
 
-
         const x =
             event.clientX -
             rect.left;
 
-
         const y =
             event.clientY -
             rect.top;
-
 
         const triangulo =
             buscarTriangulo(
@@ -768,24 +594,13 @@ canvas.addEventListener(
                 y
             );
 
-
         if (triangulo) {
 
-            // ==========================
-            // DESAPARECE DE UNA
-            // ==========================
-
+            // El hijo desaparece.
             triangulo.vivo =
                 false;
 
-
-            mostrarMensaje(
-                "DESAPARECIÓ"
-            );
-
-
-            // Lo eliminamos del array
-
+            // Se elimina del array.
             setTimeout(
                 function() {
 
@@ -793,7 +608,6 @@ canvas.addEventListener(
                         triangulos.indexOf(
                             triangulo
                         );
-
 
                     if (
                         indice !== -1
@@ -803,63 +617,16 @@ canvas.addEventListener(
                             indice,
                             1
                         );
-
                     }
 
                 },
                 50
             );
-
         }
-
     }
 );
 
-
-// =====================================
-// MENSAJE
-// =====================================
-
-let mensajeTimer;
-
-
-function mostrarMensaje(
-    texto
-) {
-
-    const mensaje =
-        document.getElementById(
-            "mensaje"
-        );
-
-
-    mensaje.textContent =
-        texto;
-
-
-    clearTimeout(
-        mensajeTimer
-    );
-
-
-    mensajeTimer =
-        setTimeout(
-            function() {
-
-                mensaje.textContent =
-                    "";
-
-            },
-            700
-        );
-
-}
-
-
-// =====================================
-// ANIMACIÓN
-// =====================================
-
+// Bucle principal de animación.
 function animar() {
 
     moverTriangulos();
@@ -871,8 +638,6 @@ function animar() {
     requestAnimationFrame(
         animar
     );
-
 }
-
 
 animar();
