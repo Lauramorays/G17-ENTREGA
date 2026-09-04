@@ -1,10 +1,46 @@
+
+// ============================================================
+// CADUCIDAD
+// ============================================================
+// Este juego pertenece al mismo sistema que MEMORIA y HERENCIA.
+//
+// SISTEMA:
+// - Comienza con 4 cuadrados.
+// - Los cuadrados se mueven solos.
+// - Tienen cuerpo físico.
+// - Chocan entre sí.
+// - Mantienen movimiento orgánico y respiración.
+// - La interacción es exclusivamente táctil.
+//
+// INTERACCIÓN:
+// - Se toca y arrastra un cuadrado.
+// - Al hacerlo chocar contra otro cuadrado,
+//   ambos comienzan a perder propiedades.
+// - La pérdida es mucho más visible que en la versión anterior.
+// - Pierden:
+//      • tamaño
+//      • opacidad
+//      • grosor del borde
+// - Si continúan chocando, se degradan.
+// - Cuando un cuadrado queda completamente agotado,
+//   desaparece.
+//
+// No hay mouse.
+// No hay texto necesario para comprender la interacción.
+// ============================================================
+
+
+// ============================================================
+// CANVAS
+// ============================================================
+
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
 
-// =====================================================
-// COLORES
-// =====================================================
+// ============================================================
+// COLORES DEL SISTEMA
+// ============================================================
 
 const colores = [
     "#D9D9D9",
@@ -14,272 +50,608 @@ const colores = [
 ];
 
 
-// =====================================================
+// ============================================================
 // CONFIGURACIÓN
-// =====================================================
+// ============================================================
 
-const TAMAÑO_INICIAL = 105;
-const TAMAÑO_MINIMO = 12;
+// Tamaño inicial de los cuadrados.
+const TAMAÑO_INICIAL = 110;
 
-const PERDIDA_TAMAÑO = 0.045;
-const PERDIDA_OPACIDAD = 0.00045;
-const PERDIDA_LINEA = 0.0008;
-
-const VELOCIDAD_MAXIMA = 0.45;
+// Tamaño mínimo antes de desaparecer.
+const TAMAÑO_MINIMO = 10;
 
 
-// =====================================================
+// ------------------------------------------------------------
+// PÉRDIDA DE PROPIEDADES
+// ------------------------------------------------------------
+// Estos valores son deliberadamente mayores que los anteriores.
+// La intención es que el usuario pueda VER claramente
+// que el objeto está perdiendo su estado.
+//
+// La pérdida ocurre por cada cuadro de animación mientras
+// existe contacto entre dos cuadrados y uno está siendo tocado.
+
+const PERDIDA_TAMAÑO = 0.22;
+
+const PERDIDA_OPACIDAD = 0.0035;
+
+const PERDIDA_LINEA = 0.018;
+
+
+// ------------------------------------------------------------
+// VELOCIDAD
+// ------------------------------------------------------------
+// Mismo criterio que el inicio:
+// velocidad aleatoria basada en 1.5.
+
+const VELOCIDAD_BASE = 1.5;
+
+
+// ------------------------------------------------------------
+// FÍSICA
+// ------------------------------------------------------------
+
+// Rebote utilizado cuando los cuerpos chocan.
+const REBOTE = 0.8;
+
+
+// ------------------------------------------------------------
+// CONTACTO
+// ------------------------------------------------------------
+// Tiempo que debe mantenerse un contacto para que
+// la pérdida se intensifique.
+
+const CONTACTO_INTENSO = 12;
+
+
+// ============================================================
 // VARIABLES
-// =====================================================
+// ============================================================
 
 let cuadrados = [];
 
+
+// Cuadrado que está siendo manipulado.
 let cuadradoSeleccionado = null;
-let punteroActivo = null;
 
 
-// =====================================================
+// Identificador del dedo que lo está manipulando.
+let dedoActivo = null;
+
+
+// ============================================================
 // AJUSTAR CANVAS
-// =====================================================
+// ============================================================
+// El tamaño interno del canvas coincide con el tamaño visible.
 
 function ajustarCanvas() {
 
-    const rect = canvas.getBoundingClientRect();
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
 
-    canvas.width = rect.width;
-    canvas.height = rect.height;
 }
 
 
-// =====================================================
+// ============================================================
 // CREAR CUADRADOS
-// =====================================================
+// ============================================================
 
 function crearCuadrados() {
 
     cuadrados = [];
 
+
+    // Las cuatro posiciones iniciales.
+    //
+    // Se distribuyen en cuatro zonas del espacio,
+    // dejando el centro libre para que puedan encontrarse.
+
     const posiciones = [
-        { x: 0.27, y: 0.30 },
-        { x: 0.73, y: 0.30 },
-        { x: 0.27, y: 0.68 },
-        { x: 0.73, y: 0.68 }
+
+        {
+            x: 0.27,
+            y: 0.30
+        },
+
+        {
+            x: 0.73,
+            y: 0.30
+        },
+
+        {
+            x: 0.27,
+            y: 0.68
+        },
+
+        {
+            x: 0.73,
+            y: 0.68
+        }
+
     ];
+
 
     for (let i = 0; i < 4; i++) {
 
         cuadrados.push({
 
-            x: canvas.width * posiciones[i].x,
-            y: canvas.height * posiciones[i].y,
+            // ------------------------------------------------
+            // POSICIÓN
+            // ------------------------------------------------
 
-            ultimoX: canvas.width * posiciones[i].x,
-            ultimoY: canvas.height * posiciones[i].y,
+            x:
+                canvas.width *
+                posiciones[i].x,
 
-            tamaño: TAMAÑO_INICIAL,
+            y:
+                canvas.height *
+                posiciones[i].y,
 
-            color: colores[i],
+
+            // ------------------------------------------------
+            // TAMAÑO
+            // ------------------------------------------------
+
+            tamaño:
+                TAMAÑO_INICIAL,
+
+
+            // ------------------------------------------------
+            // COLOR
+            // ------------------------------------------------
+
+            color:
+                colores[i],
+
+
+            // ------------------------------------------------
+            // PROPIEDADES
+            // ------------------------------------------------
 
             opacidad: 1,
 
             linea: 3,
 
-            vx: (Math.random() - 0.5) * VELOCIDAD_MAXIMA,
-            vy: (Math.random() - 0.5) * VELOCIDAD_MAXIMA,
 
-            fase: Math.random() * Math.PI * 2,
+            // ------------------------------------------------
+            // MOVIMIENTO
+            // ------------------------------------------------
+            // Igual que el sistema del inicio.
+
+            vx:
+                (Math.random() - 0.5) *
+                VELOCIDAD_BASE,
+
+            vy:
+                (Math.random() - 0.5) *
+                VELOCIDAD_BASE,
+
+
+            // ------------------------------------------------
+            // RESPIRACIÓN
+            // ------------------------------------------------
+
+            fase:
+                Math.random() *
+                Math.PI *
+                2,
 
             velocidadRespiracion:
-                0.015 + Math.random() * 0.01,
+                0.0015 +
+                Math.random() *
+                0.001,
+
+
+            // ------------------------------------------------
+            // ESTADOS
+            // ------------------------------------------------
 
             seleccionado: false,
 
-            puntero: null,
+            agotado: false,
+
+            desapareciendo: false,
+
+
+            // Indica si actualmente está tocando
+            // a otro cuadrado.
 
             chocando: false,
 
-            caducando: false,
 
-            agotado: false,
+            // Acumulador de tiempo de contacto.
 
-            desapareciendo: false
+            tiempoContacto: 0
 
         });
+
     }
+
 }
 
 
-// =====================================================
-// DISTANCIA ENTRE DOS CUADRADOS
-// =====================================================
+// ============================================================
+// CONTROLAR BORDES
+// ============================================================
+// El cuerpo del cuadrado no puede atravesar el borde.
 
-function distancia(a, b) {
+function controlarBordes(cuadrado) {
 
-    const dx = a.x - b.x;
-    const dy = a.y - b.y;
+    const radio =
+        cuadrado.tamaño / 2;
 
-    return Math.sqrt(dx * dx + dy * dy);
+
+    if (cuadrado.x - radio < 0) {
+
+        cuadrado.x = radio;
+
+        cuadrado.vx =
+            Math.abs(cuadrado.vx);
+
+    }
+
+
+    if (
+        cuadrado.x + radio >
+        canvas.width
+    ) {
+
+        cuadrado.x =
+            canvas.width - radio;
+
+        cuadrado.vx =
+            -Math.abs(cuadrado.vx);
+
+    }
+
+
+    if (cuadrado.y - radio < 0) {
+
+        cuadrado.y = radio;
+
+        cuadrado.vy =
+            Math.abs(cuadrado.vy);
+
+    }
+
+
+    if (
+        cuadrado.y + radio >
+        canvas.height
+    ) {
+
+        cuadrado.y =
+            canvas.height - radio;
+
+        cuadrado.vy =
+            -Math.abs(cuadrado.vy);
+
+    }
+
 }
 
 
-// =====================================================
-// MOVIMIENTO NATURAL
-// =====================================================
+// ============================================================
+// MOVIMIENTO
+// ============================================================
 
 function moverCuadrados() {
 
     for (const cuadrado of cuadrados) {
 
+        // Un cuadrado manipulado por el dedo
+        // no se mueve automáticamente.
+
         if (
             cuadrado.seleccionado ||
             cuadrado.desapareciendo
         ) {
+
             continue;
+
         }
 
 
-        // Movimiento suave y orgánico
+        // ----------------------------------------------------
+        // RESPIRACIÓN / MOVIMIENTO ORGÁNICO
+        // ----------------------------------------------------
 
-        cuadrado.fase += cuadrado.velocidadRespiracion;
+        cuadrado.fase +=
+            cuadrado.velocidadRespiracion;
 
+
+        // Pequeñas variaciones de dirección.
+        // Esto evita un movimiento completamente mecánico.
 
         cuadrado.vx +=
-            Math.sin(cuadrado.fase) * 0.002;
+            Math.sin(
+                cuadrado.fase
+            ) * 0.001;
+
 
         cuadrado.vy +=
-            Math.cos(cuadrado.fase * 0.8) * 0.002;
+            Math.cos(
+                cuadrado.fase * 0.8
+            ) * 0.001;
 
 
-        // Limitar velocidad
+        // ----------------------------------------------------
+        // LIMITAR VELOCIDAD
+        // ----------------------------------------------------
 
-        cuadrado.vx = Math.max(
-            -VELOCIDAD_MAXIMA,
-            Math.min(
-                VELOCIDAD_MAXIMA,
-                cuadrado.vx
-            )
-        );
+        const velocidad =
+            Math.sqrt(
+                cuadrado.vx *
+                cuadrado.vx +
 
-        cuadrado.vy = Math.max(
-            -VELOCIDAD_MAXIMA,
-            Math.min(
-                VELOCIDAD_MAXIMA,
+                cuadrado.vy *
                 cuadrado.vy
-            )
-        );
+            );
 
 
-        cuadrado.x += cuadrado.vx;
-        cuadrado.y += cuadrado.vy;
+        if (
+            velocidad >
+            VELOCIDAD_BASE
+        ) {
 
+            cuadrado.vx =
+                (cuadrado.vx / velocidad) *
+                VELOCIDAD_BASE;
 
-        // Mantener dentro de la pantalla
+            cuadrado.vy =
+                (cuadrado.vy / velocidad) *
+                VELOCIDAD_BASE;
 
-        const mitad = cuadrado.tamaño / 2;
-
-
-        if (cuadrado.x - mitad < 0) {
-
-            cuadrado.x = mitad;
-            cuadrado.vx *= -1;
         }
 
 
-        if (cuadrado.x + mitad > canvas.width) {
+        // ----------------------------------------------------
+        // MOVER
+        // ----------------------------------------------------
 
-            cuadrado.x = canvas.width - mitad;
-            cuadrado.vx *= -1;
-        }
+        cuadrado.x +=
+            cuadrado.vx;
 
-
-        if (cuadrado.y - mitad < 0) {
-
-            cuadrado.y = mitad;
-            cuadrado.vy *= -1;
-        }
+        cuadrado.y +=
+            cuadrado.vy;
 
 
-        if (cuadrado.y + mitad > canvas.height) {
+        // ----------------------------------------------------
+        // BORDES
+        // ----------------------------------------------------
 
-            cuadrado.y = canvas.height - mitad;
-            cuadrado.vy *= -1;
-        }
+        controlarBordes(cuadrado);
+
     }
+
 }
 
 
-// =====================================================
+// ============================================================
+// DISTANCIA ENTRE CUADRADOS
+// ============================================================
+
+function distancia(a, b) {
+
+    const dx =
+        b.x - a.x;
+
+    const dy =
+        b.y - a.y;
+
+
+    return Math.sqrt(
+        dx * dx +
+        dy * dy
+    );
+
+}
+
+
+// ============================================================
+// APLICAR CADUCIDAD
+// ============================================================
+// Esta es la parte central de la experiencia.
+//
+// Cuanto más tiempo permanecen chocando mientras
+// el usuario manipula un cuadrado, más propiedades pierden.
+//
+// La pérdida es ahora bastante más rápida para que
+// el fenómeno sea perceptible visualmente.
+
+function aplicarCaducidad(cuadrado, intensidad = 1) {
+
+    if (
+        cuadrado.agotado ||
+        cuadrado.desapareciendo
+    ) {
+
+        return;
+
+    }
+
+
+    // --------------------------------------------------------
+    // PERDER TAMAÑO
+    // --------------------------------------------------------
+
+    cuadrado.tamaño -=
+        PERDIDA_TAMAÑO *
+        intensidad;
+
+
+    // --------------------------------------------------------
+    // PERDER OPACIDAD
+    // --------------------------------------------------------
+
+    cuadrado.opacidad -=
+        PERDIDA_OPACIDAD *
+        intensidad;
+
+
+    // --------------------------------------------------------
+    // PERDER GROSOR
+    // --------------------------------------------------------
+
+    cuadrado.linea -=
+        PERDIDA_LINEA *
+        intensidad;
+
+
+    // --------------------------------------------------------
+    // LÍMITES
+    // --------------------------------------------------------
+
+    if (
+        cuadrado.tamaño <
+        TAMAÑO_MINIMO
+    ) {
+
+        cuadrado.tamaño =
+            TAMAÑO_MINIMO;
+
+    }
+
+
+    if (
+        cuadrado.opacidad <
+        0.03
+    ) {
+
+        cuadrado.opacidad =
+            0.03;
+
+    }
+
+
+    if (
+        cuadrado.linea <
+        0.4
+    ) {
+
+        cuadrado.linea =
+            0.4;
+
+    }
+
+
+    // --------------------------------------------------------
+    // AGOTAMIENTO
+    // --------------------------------------------------------
+    // Cuando prácticamente perdió todas sus propiedades,
+    // comienza la desaparición.
+
+    if (
+        cuadrado.tamaño <=
+            TAMAÑO_MINIMO &&
+        cuadrado.opacidad <=
+            0.03
+    ) {
+
+        cuadrado.agotado = true;
+
+    }
+
+}
+
+
+// ============================================================
 // COLISIONES
-// =====================================================
+// ============================================================
+// Se utiliza un cuerpo físico circular para cada cuadrado.
+//
+// Esto evita que los cuadrados simplemente se atraviesen.
+//
+// IMPORTANTE:
+// La caducidad solamente ocurre cuando el usuario
+// está manipulando al menos uno de los cuadrados.
 
 function detectarColisiones() {
 
-    // Primero limpiamos estados
+    // --------------------------------------------------------
+    // REINICIAR ESTADOS
+    // --------------------------------------------------------
 
     for (const cuadrado of cuadrados) {
 
         cuadrado.chocando = false;
-        cuadrado.caducando = false;
+
     }
 
 
-    // Revisamos todos los pares
+    // --------------------------------------------------------
+    // REVISAR PARES
+    // --------------------------------------------------------
 
-    for (let i = 0; i < cuadrados.length; i++) {
+    for (
+        let i = 0;
+        i < cuadrados.length;
+        i++
+    ) {
 
-        for (let j = i + 1; j < cuadrados.length; j++) {
+        for (
+            let j = i + 1;
+            j < cuadrados.length;
+            j++
+        ) {
 
-            const a = cuadrados[i];
-            const b = cuadrados[j];
+            const a =
+                cuadrados[i];
+
+            const b =
+                cuadrados[j];
 
 
             if (
                 a.desapareciendo ||
                 b.desapareciendo
             ) {
+
                 continue;
+
             }
 
 
-            const d = distancia(a, b);
+            // ------------------------------------------------
+            // DISTANCIA
+            // ------------------------------------------------
 
-            const radioA = a.tamaño / 2;
-            const radioB = b.tamaño / 2;
+            const d =
+                distancia(a, b);
 
-            const distanciaChoque =
+
+            // ------------------------------------------------
+            // CUERPOS
+            // ------------------------------------------------
+            // El tamaño visual determina el cuerpo físico.
+
+            const radioA =
+                a.tamaño / 2;
+
+            const radioB =
+                b.tamaño / 2;
+
+
+            const distanciaMinima =
                 radioA + radioB;
 
 
-            // ¿Están tocándose?
+            // ------------------------------------------------
+            // ¿HAY CONTACTO?
+            // ------------------------------------------------
 
-            if (d < distanciaChoque) {
+            if (
+                d <
+                distanciaMinima
+            ) {
 
                 a.chocando = true;
                 b.chocando = true;
 
 
-                // =================================================
-                // IMPORTANTE:
-                // SOLO CADUCAN SI EL USUARIO ESTÁ MANIPULANDO
-                // ALGUNO DE LOS CUADRADOS
-                // =================================================
-
-                if (
-                    a.seleccionado ||
-                    b.seleccionado
-                ) {
-
-                    a.caducando = true;
-                    b.caducando = true;
-
-                    aplicarCaducidad(a);
-                    aplicarCaducidad(b);
-                }
-
-
-                // =================================================
-                // SEPARAR LOS CUADRADOS
-                // =================================================
+                // ------------------------------------------------
+                // SEPARAR LOS CUERPOS
+                // ------------------------------------------------
 
                 if (d === 0) {
 
@@ -288,160 +660,263 @@ function detectarColisiones() {
                 } else {
 
                     const diferencia =
-                        distanciaChoque - d;
+                        distanciaMinima - d;
+
 
                     const nx =
-                        (b.x - a.x) / d;
+                        (b.x - a.x) /
+                        d;
+
 
                     const ny =
-                        (b.y - a.y) / d;
+                        (b.y - a.y) /
+                        d;
 
 
-                    if (!a.seleccionado) {
+                    // El cuadrado que está siendo
+                    // manipulado permanece bajo el dedo.
 
-                        a.x -= nx * diferencia * 0.5;
-                        a.y -= ny * diferencia * 0.5;
+                    if (
+                        !a.seleccionado
+                    ) {
+
+                        a.x -=
+                            nx *
+                            diferencia *
+                            0.5;
+
+                        a.y -=
+                            ny *
+                            diferencia *
+                            0.5;
+
                     }
 
 
-                    if (!b.seleccionado) {
+                    if (
+                        !b.seleccionado
+                    ) {
 
-                        b.x += nx * diferencia * 0.5;
-                        b.y += ny * diferencia * 0.5;
+                        b.x +=
+                            nx *
+                            diferencia *
+                            0.5;
+
+                        b.y +=
+                            ny *
+                            diferencia *
+                            0.5;
+
                     }
+
                 }
 
 
-                // Rebote natural
+                // ------------------------------------------------
+                // CADUCIDAD
+                // ------------------------------------------------
+                // Si al menos uno está siendo manipulado,
+                // ambos pierden propiedades.
 
-                if (!a.seleccionado) {
+                if (
+                    a.seleccionado ||
+                    b.seleccionado
+                ) {
 
-                    a.vx *= -1;
-                    a.vy *= -1;
+                    a.tiempoContacto += 1;
+                    b.tiempoContacto += 1;
+
+
+                    // ------------------------------------------------
+                    // INTENSIDAD
+                    // ------------------------------------------------
+                    // Cuanto más tiempo permanecen juntos,
+                    // más rápida se vuelve la degradación.
+
+                    let intensidad = 1;
+
+
+                    if (
+                        a.tiempoContacto >
+                        CONTACTO_INTENSO
+                    ) {
+
+                        intensidad = 1.8;
+
+                    }
+
+
+                    if (
+                        a.tiempoContacto >
+                        CONTACTO_INTENSO * 2
+                    ) {
+
+                        intensidad = 2.5;
+
+                    }
+
+
+                    if (
+                        a.tiempoContacto >
+                        CONTACTO_INTENSO * 4
+                    ) {
+
+                        intensidad = 3.2;
+
+                    }
+
+
+                    aplicarCaducidad(
+                        a,
+                        intensidad
+                    );
+
+
+                    aplicarCaducidad(
+                        b,
+                        intensidad
+                    );
+
                 }
 
 
-                if (!b.seleccionado) {
+                // ------------------------------------------------
+                // REBOTE
+                // ------------------------------------------------
+                // El objeto manipulado no rebota.
+                // El otro objeto sí responde físicamente.
 
-                    b.vx *= -1;
-                    b.vy *= -1;
+                if (
+                    !a.seleccionado
+                ) {
+
+                    a.vx *= -REBOTE;
+                    a.vy *= -REBOTE;
+
                 }
+
+
+                if (
+                    !b.seleccionado
+                ) {
+
+                    b.vx *= -REBOTE;
+                    b.vy *= -REBOTE;
+
+                }
+
             }
+
         }
+
     }
+
 }
 
 
-// =====================================================
-// CADUCIDAD
-// =====================================================
+// ============================================================
+// ACTUALIZAR TIEMPO DE CONTACTO
+// ============================================================
+// Si los cuadrados dejan de tocarse,
+// el acumulador vuelve lentamente a cero.
+//
+// Esto evita que un choque anterior mantenga
+// permanentemente la intensidad máxima.
 
-function aplicarCaducidad(cuadrado) {
+function actualizarContacto() {
 
-    if (cuadrado.agotado) {
-        return;
+    for (const cuadrado of cuadrados) {
+
+        if (
+            !cuadrado.chocando
+        ) {
+
+            cuadrado.tiempoContacto =
+                Math.max(
+                    0,
+                    cuadrado.tiempoContacto - 0.5
+                );
+
+        }
+
     }
 
-
-    // Reducir tamaño
-
-    cuadrado.tamaño -= PERDIDA_TAMAÑO;
-
-
-    // Reducir opacidad
-
-    cuadrado.opacidad -= PERDIDA_OPACIDAD;
-
-
-    // Reducir grosor
-
-    cuadrado.linea -= PERDIDA_LINEA;
-
-
-    // Límites
-
-    if (cuadrado.tamaño < TAMAÑO_MINIMO) {
-
-        cuadrado.tamaño = TAMAÑO_MINIMO;
-    }
-
-
-    if (cuadrado.opacidad < 0.08) {
-
-        cuadrado.opacidad = 0.08;
-    }
-
-
-    if (cuadrado.linea < 1) {
-
-        cuadrado.linea = 1;
-    }
-
-
-    // Se agotó
-
-    if (
-        cuadrado.tamaño <= TAMAÑO_MINIMO &&
-        cuadrado.opacidad <= 0.08
-    ) {
-
-        cuadrado.agotado = true;
-    }
-
-
-    const mensaje =
-        document.getElementById("mensaje");
-
-
-    if (mensaje) {
-
-        mensaje.textContent =
-            "PERDIENDO PROPIEDADES...";
-
-        mensaje.style.opacity = "0.7";
-    }
 }
 
 
-// =====================================================
-// DESAPARICIÓN
-// =====================================================
+// ============================================================
+// ACTUALIZAR DESAPARICIÓN
+// ============================================================
 
 function actualizarDesaparicion() {
 
     for (const cuadrado of cuadrados) {
 
-        if (!cuadrado.desapareciendo) {
-            continue;
+        // Si llegó al agotamiento,
+        // empieza a desaparecer.
+
+        if (
+            cuadrado.agotado &&
+            !cuadrado.desapareciendo
+        ) {
+
+            cuadrado.desapareciendo =
+                true;
+
         }
 
 
-        cuadrado.opacidad -= 0.025;
+        if (
+            !cuadrado.desapareciendo
+        ) {
 
-        cuadrado.tamaño -= 0.5;
+            continue;
+
+        }
 
 
-        if (cuadrado.opacidad <= 0) {
+        // ----------------------------------------------------
+        // DESAPARICIÓN
+        // ----------------------------------------------------
+
+        cuadrado.opacidad -=
+            0.018;
+
+
+        cuadrado.tamaño -=
+            0.35;
+
+
+        if (
+            cuadrado.opacidad <= 0 ||
+            cuadrado.tamaño <= 0
+        ) {
 
             cuadrado.opacidad = 0;
+
             cuadrado.tamaño = 0;
+
         }
+
     }
 
 
-    // Eliminar cuadrados completamente desaparecidos
+    // --------------------------------------------------------
+    // ELIMINAR COMPLETAMENTE
+    // --------------------------------------------------------
 
     cuadrados =
         cuadrados.filter(
             cuadrado =>
                 cuadrado.opacidad > 0
         );
+
 }
 
 
-// =====================================================
+// ============================================================
 // DIBUJAR CUADRADO
-// =====================================================
+// ============================================================
 
 function dibujarCuadrado(cuadrado) {
 
@@ -449,12 +924,18 @@ function dibujarCuadrado(cuadrado) {
         cuadrado.opacidad <= 0 ||
         cuadrado.tamaño <= 0
     ) {
+
         return;
+
     }
 
 
     ctx.save();
 
+
+    // --------------------------------------------------------
+    // POSICIÓN
+    // --------------------------------------------------------
 
     ctx.translate(
         cuadrado.x,
@@ -462,34 +943,53 @@ function dibujarCuadrado(cuadrado) {
     );
 
 
-    // =================================================
-    // EFECTO DE RESPIRACIÓN
-    // =================================================
+    // --------------------------------------------------------
+    // RESPIRACIÓN
+    // --------------------------------------------------------
+    // Incluso durante la caducidad,
+    // el objeto conserva un pequeño comportamiento orgánico.
 
     let respiracion =
         1 +
-        Math.sin(cuadrado.fase) * 0.035;
+        Math.sin(
+            cuadrado.fase
+        ) *
+        0.025;
 
 
-    if (cuadrado.caducando) {
+    // Cuando está chocando, la respiración
+    // se vuelve un poco más pequeña.
+
+    if (
+        cuadrado.chocando
+    ) {
 
         respiracion =
             1 +
-            Math.sin(cuadrado.fase) * 0.015;
+            Math.sin(
+                cuadrado.fase
+            ) *
+            0.015;
+
     }
 
 
     const tamaño =
-        cuadrado.tamaño * respiracion;
+        cuadrado.tamaño *
+        respiracion;
 
 
-    // =================================================
-    // CUADRADO RELLENO
-    // =================================================
+    // --------------------------------------------------------
+    // OPACIDAD
+    // --------------------------------------------------------
 
     ctx.globalAlpha =
         cuadrado.opacidad;
 
+
+    // --------------------------------------------------------
+    // CUADRADO
+    // --------------------------------------------------------
 
     ctx.fillStyle =
         cuadrado.color;
@@ -504,12 +1004,13 @@ function dibujarCuadrado(cuadrado) {
         tamaño,
 
         tamaño
+
     );
 
 
-    // =================================================
+    // --------------------------------------------------------
     // BORDE
-    // =================================================
+    // --------------------------------------------------------
 
     ctx.strokeStyle =
         cuadrado.color;
@@ -520,7 +1021,8 @@ function dibujarCuadrado(cuadrado) {
 
 
     ctx.globalAlpha =
-        cuadrado.opacidad * 0.9;
+        cuadrado.opacidad *
+        0.9;
 
 
     ctx.strokeRect(
@@ -532,51 +1034,37 @@ function dibujarCuadrado(cuadrado) {
         tamaño,
 
         tamaño
+
     );
 
 
-    // =================================================
-    // INDICADOR DE SELECCIÓN
-    // =================================================
+    // --------------------------------------------------------
+    // EFECTO DE CONTACTO
+    // --------------------------------------------------------
+    // Cuando hay un choque activo,
+    // aparece un brillo muy leve.
+    //
+    // No se agrega ningún indicador textual.
 
-    if (cuadrado.seleccionado) {
+    if (
+        cuadrado.chocando
+    ) {
 
         ctx.globalAlpha =
-            0.35;
+            cuadrado.opacidad *
+            0.22;
 
 
-        ctx.lineWidth = 2;
+        ctx.shadowBlur =
+            15;
+
+
+        ctx.shadowColor =
+            cuadrado.color;
 
 
         ctx.strokeStyle =
-            "#FFFFFF";
-
-
-        ctx.strokeRect(
-
-            -tamaño / 2 - 8,
-
-            -tamaño / 2 - 8,
-
-            tamaño + 16,
-
-            tamaño + 16
-        );
-    }
-
-
-    // =================================================
-    // INDICADOR DE CHOQUE
-    // =================================================
-
-    if (cuadrado.chocando) {
-
-        ctx.globalAlpha =
-            0.15;
-
-
-        ctx.strokeStyle =
-            "#FFFFFF";
+            cuadrado.color;
 
 
         ctx.lineWidth = 3;
@@ -591,7 +1079,52 @@ function dibujarCuadrado(cuadrado) {
             tamaño + 8,
 
             tamaño + 8
+
         );
+
+
+        ctx.shadowBlur = 0;
+
+    }
+
+
+    // --------------------------------------------------------
+    // INDICADOR TÁCTIL
+    // --------------------------------------------------------
+    // Cuando el usuario está agarrando un cuadrado,
+    // aparece un pequeño cambio visual.
+    //
+    // No es un botón ni una interfaz:
+    // es una respuesta física al contacto.
+
+    if (
+        cuadrado.seleccionado
+    ) {
+
+        ctx.globalAlpha =
+            cuadrado.opacidad *
+            0.25;
+
+
+        ctx.strokeStyle =
+            "#FFFFFF";
+
+
+        ctx.lineWidth = 2;
+
+
+        ctx.strokeRect(
+
+            -tamaño / 2 - 7,
+
+            -tamaño / 2 - 7,
+
+            tamaño + 14,
+
+            tamaño + 14
+
+        );
+
     }
 
 
@@ -599,12 +1132,13 @@ function dibujarCuadrado(cuadrado) {
 
 
     ctx.globalAlpha = 1;
+
 }
 
 
-// =====================================================
+// ============================================================
 // DIBUJAR TODO
-// =====================================================
+// ============================================================
 
 function dibujar() {
 
@@ -616,18 +1150,31 @@ function dibujar() {
     );
 
 
-    for (const cuadrado of cuadrados) {
+    for (
+        const cuadrado of cuadrados
+    ) {
 
-        dibujarCuadrado(cuadrado);
+        dibujarCuadrado(
+            cuadrado
+        );
+
     }
+
 }
 
 
-// =====================================================
+// ============================================================
 // BUSCAR CUADRADO TOCADO
-// =====================================================
+// ============================================================
 
-function obtenerCuadradoEnPosicion(x, y) {
+function obtenerCuadradoEnPosicion(
+    x,
+    y
+) {
+
+    // Recorremos desde el último
+    // para detectar correctamente
+    // el objeto que esté arriba.
 
     for (
         let i = cuadrados.length - 1;
@@ -639,8 +1186,12 @@ function obtenerCuadradoEnPosicion(x, y) {
             cuadrados[i];
 
 
-        if (cuadrado.desapareciendo) {
+        if (
+            cuadrado.desapareciendo
+        ) {
+
             continue;
+
         }
 
 
@@ -649,121 +1200,202 @@ function obtenerCuadradoEnPosicion(x, y) {
 
 
         if (
-            x >= cuadrado.x - mitad &&
-            x <= cuadrado.x + mitad &&
-            y >= cuadrado.y - mitad &&
-            y <= cuadrado.y + mitad
+
+            x >=
+                cuadrado.x - mitad &&
+
+            x <=
+                cuadrado.x + mitad &&
+
+            y >=
+                cuadrado.y - mitad &&
+
+            y <=
+                cuadrado.y + mitad
+
         ) {
 
             return cuadrado;
+
         }
+
     }
 
 
     return null;
+
 }
 
 
-// =====================================================
-// POINTER DOWN
-// =====================================================
+// ============================================================
+// OBTENER POSICIÓN DE TOUCH
+// ============================================================
+
+function obtenerPosicionTouch(touch) {
+
+    const rect =
+        canvas.getBoundingClientRect();
+
+
+    return {
+
+        x:
+            (touch.clientX - rect.left) *
+            canvas.width /
+            rect.width,
+
+        y:
+            (touch.clientY - rect.top) *
+            canvas.height /
+            rect.height
+
+    };
+
+}
+
+
+// ============================================================
+// TOUCH START
+// ============================================================
+// El dedo toca un cuadrado y comienza a arrastrarlo.
 
 canvas.addEventListener(
-    "pointerdown",
+
+    "touchstart",
+
     function (evento) {
 
-        const rect =
-            canvas.getBoundingClientRect();
+        evento.preventDefault();
 
 
-        const x =
-            evento.clientX - rect.left;
+        // Solamente utilizamos el primer dedo.
+        // Esta experiencia trabaja con arrastre individual.
 
+        if (
+            cuadradoSeleccionado
+        ) {
 
-        const y =
-            evento.clientY - rect.top;
-
-
-        const cuadrado =
-            obtenerCuadradoEnPosicion(x, y);
-
-
-        if (!cuadrado) {
             return;
+
         }
 
 
-        // Capturar el puntero
+        const touch =
+            evento.changedTouches[0];
 
-        canvas.setPointerCapture(
-            evento.pointerId
-        );
 
+        const posicion =
+            obtenerPosicionTouch(
+                touch
+            );
+
+
+        const cuadrado =
+            obtenerCuadradoEnPosicion(
+                posicion.x,
+                posicion.y
+            );
+
+
+        if (
+            !cuadrado
+        ) {
+
+            return;
+
+        }
+
+
+        // Guardar cuadrado.
 
         cuadradoSeleccionado =
             cuadrado;
 
 
-        punteroActivo =
-            evento.pointerId;
+        dedoActivo =
+            touch.identifier;
 
 
         cuadrado.seleccionado =
             true;
 
 
-        cuadrado.puntero =
-            evento.pointerId;
-
-
-        // Detener movimiento automático
+        // Detener movimiento automático.
 
         cuadrado.vx = 0;
         cuadrado.vy = 0;
 
+    },
 
-        const mensaje =
-            document.getElementById("mensaje");
-
-
-        if (mensaje) {
-
-            mensaje.textContent =
-                "HACÉ QUE SE TOQUEN";
-
-            mensaje.style.opacity =
-                "0.7";
-        }
+    {
+        passive: false
     }
+
 );
 
 
-// =====================================================
-// POINTER MOVE
-// =====================================================
+// ============================================================
+// TOUCH MOVE
+// ============================================================
+// El cuadrado sigue directamente al dedo.
 
 canvas.addEventListener(
-    "pointermove",
+
+    "touchmove",
+
     function (evento) {
 
+        evento.preventDefault();
+
+
         if (
-            cuadradoSeleccionado === null ||
-            punteroActivo !== evento.pointerId
+            !cuadradoSeleccionado
         ) {
+
             return;
+
         }
 
 
-        const rect =
-            canvas.getBoundingClientRect();
+        let touchEncontrado =
+            null;
 
 
-        const x =
-            evento.clientX - rect.left;
+        // Buscar específicamente
+        // el dedo que inició la interacción.
+
+        for (
+            const touch of evento.touches
+        ) {
+
+            if (
+                touch.identifier ===
+                dedoActivo
+            ) {
+
+                touchEncontrado =
+                    touch;
+
+                break;
+
+            }
+
+        }
 
 
-        const y =
-            evento.clientY - rect.top;
+        if (
+            !touchEncontrado
+        ) {
+
+            return;
+
+        }
+
+
+        const posicion =
+            obtenerPosicionTouch(
+                touchEncontrado
+            );
 
 
         const cuadrado =
@@ -774,14 +1406,18 @@ canvas.addEventListener(
             cuadrado.tamaño / 2;
 
 
-        // Mantenerlo dentro de la pantalla
+        // ----------------------------------------------------
+        // POSICIÓN
+        // ----------------------------------------------------
+        // El objeto sigue al dedo,
+        // pero nunca puede salir del canvas.
 
         cuadrado.x =
             Math.max(
                 mitad,
                 Math.min(
                     canvas.width - mitad,
-                    x
+                    posicion.x
                 )
             );
 
@@ -791,152 +1427,203 @@ canvas.addEventListener(
                 mitad,
                 Math.min(
                     canvas.height - mitad,
-                    y
+                    posicion.y
                 )
             );
+
+    },
+
+    {
+        passive: false
     }
+
 );
 
 
-// =====================================================
-// POINTER UP
-// =====================================================
+// ============================================================
+// FINALIZAR TOUCH
+// ============================================================
 
-canvas.addEventListener(
-    "pointerup",
-    function (evento) {
+function terminarTouch(evento) {
+
+    if (
+        !cuadradoSeleccionado
+    ) {
+
+        return;
+
+    }
+
+
+    let perteneceAlDedo =
+        false;
+
+
+    for (
+        const touch of evento.changedTouches
+    ) {
 
         if (
-            cuadradoSeleccionado === null ||
-            punteroActivo !== evento.pointerId
+            touch.identifier ===
+            dedoActivo
         ) {
-            return;
-        }
 
-
-        const cuadrado =
-            cuadradoSeleccionado;
-
-
-        cuadrado.seleccionado =
-            false;
-
-
-        cuadrado.puntero =
-            null;
-
-
-        // =================================================
-        // SI ESTÁ AGOTADO, DESAPARECE
-        // =================================================
-
-        if (cuadrado.agotado) {
-
-            cuadrado.desapareciendo =
+            perteneceAlDedo =
                 true;
 
+            break;
 
-            const mensaje =
-                document.getElementById("mensaje");
-
-
-            if (mensaje) {
-
-                mensaje.textContent =
-                    "CADUCÓ";
-            }
-
-        } else {
-
-            // Volver a moverse
-
-            cuadrado.vx =
-                (Math.random() - 0.5)
-                * VELOCIDAD_MAXIMA;
-
-
-            cuadrado.vy =
-                (Math.random() - 0.5)
-                * VELOCIDAD_MAXIMA;
-
-
-            const mensaje =
-                document.getElementById("mensaje");
-
-
-            if (mensaje) {
-
-                mensaje.textContent =
-                    "TOCÁ Y HACÉ CHOCAR";
-            }
         }
 
-
-        cuadradoSeleccionado =
-            null;
-
-
-        punteroActivo =
-            null;
     }
-);
 
 
-// =====================================================
-// CANCELAR POINTER
-// =====================================================
+    if (
+        !perteneceAlDedo
+    ) {
 
-canvas.addEventListener(
-    "pointercancel",
-    function (evento) {
+        return;
 
-        if (
-            cuadradoSeleccionado === null ||
-            punteroActivo !== evento.pointerId
-        ) {
-            return;
-        }
-
-
-        cuadradoSeleccionado.seleccionado =
-            false;
-
-
-        cuadradoSeleccionado.puntero =
-            null;
-
-
-        cuadradoSeleccionado =
-            null;
-
-
-        punteroActivo =
-            null;
     }
-);
 
 
-// =====================================================
-// ANIMACIÓN
-// =====================================================
+    const cuadrado =
+        cuadradoSeleccionado;
 
-function animar() {
 
-    moverCuadrados();
+    cuadrado.seleccionado =
+        false;
 
-    detectarColisiones();
 
-    actualizarDesaparicion();
+    // --------------------------------------------------------
+    // SI ESTÁ AGOTADO
+    // --------------------------------------------------------
 
-    dibujar();
+    if (
+        cuadrado.agotado
+    ) {
 
-    requestAnimationFrame(animar);
+        cuadrado.desapareciendo =
+            true;
+
+    } else {
+
+        // ----------------------------------------------------
+        // VOLVER AL MOVIMIENTO
+        // ----------------------------------------------------
+
+        cuadrado.vx =
+            (Math.random() - 0.5) *
+            VELOCIDAD_BASE;
+
+
+        cuadrado.vy =
+            (Math.random() - 0.5) *
+            VELOCIDAD_BASE;
+
+    }
+
+
+    cuadradoSeleccionado =
+        null;
+
+
+    dedoActivo =
+        null;
+
 }
 
 
-// =====================================================
-// INICIAR
-// =====================================================
+// ============================================================
+// TOUCH END
+// ============================================================
+
+canvas.addEventListener(
+
+    "touchend",
+
+    function (evento) {
+
+        evento.preventDefault();
+
+        terminarTouch(evento);
+
+    },
+
+    {
+        passive: false
+    }
+
+);
+
+
+// ============================================================
+// TOUCH CANCEL
+// ============================================================
+
+canvas.addEventListener(
+
+    "touchcancel",
+
+    function (evento) {
+
+        evento.preventDefault();
+
+        terminarTouch(evento);
+
+    },
+
+    {
+        passive: false
+    }
+
+);
+
+
+// ============================================================
+// ANIMACIÓN
+// ============================================================
+
+function animar() {
+
+    // Actualizar movimiento.
+
+    moverCuadrados();
+
+
+    // Detectar cuerpos que chocan.
+
+    detectarColisiones();
+
+
+    // Reducir lentamente los contactos
+    // que ya terminaron.
+
+    actualizarContacto();
+
+
+    // Eliminar objetos agotados.
+
+    actualizarDesaparicion();
+
+
+    // Dibujar.
+
+    dibujar();
+
+
+    // Continuar animación.
+
+    requestAnimationFrame(
+        animar
+    );
+
+}
+
+
+// ============================================================
+// INICIO
+// ============================================================
 
 ajustarCanvas();
 
@@ -945,14 +1632,29 @@ crearCuadrados();
 animar();
 
 
-// =====================================================
-// REDIMENSIONAR VENTANA
-// =====================================================
+// ============================================================
+// RESIZE
+// ============================================================
 
 window.addEventListener(
     "resize",
     function () {
 
         ajustarCanvas();
+
+        // Volver a contener los cuadrados
+        // después de cambiar el tamaño.
+
+        cuadrados.forEach(
+            cuadrado => {
+
+                controlarBordes(
+                    cuadrado
+                );
+
+            }
+        );
+
     }
 );
+
