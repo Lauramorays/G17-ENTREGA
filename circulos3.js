@@ -34,10 +34,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const FUERZA_COLISION = 0.7;
 
-    // Cantidad de conexiones necesarias
-    // para crear un nuevo círculo.
 
-    const CONEXIONES_NUEVO_CIRCULO = 4;
+    // Cantidad inicial de dedos
+
+    let dedosNecesarios = 2;
+
+
+    // Máximo de dedos que puede pedir el juego
+
+    const MAXIMO_DEDOs = 5;
 
 
     // =====================================================
@@ -46,11 +51,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let circulos = [];
 
-    let conexiones = [];
-
-    let contadorConexiones = 0;
-
     const dedos = new Map();
+
+    let colaboracionActiva = false;
+
+    let colaboracionCompletada = false;
 
 
     // =====================================================
@@ -129,17 +134,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
         circulos = [];
 
-        conexiones = [];
-
-        contadorConexiones = 0;
-
 
         const posiciones = [
 
-            [0.25, 0.30],
-            [0.75, 0.30],
-            [0.25, 0.70],
-            [0.75, 0.70]
+            [0.20, 0.30],
+            [0.80, 0.30],
+            [0.20, 0.70],
+            [0.80, 0.70]
 
         ];
 
@@ -375,6 +376,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 circulo.y +=
                     circulo.vy;
 
+
+                // Movimiento orgánico
 
                 circulo.faseX +=
                     circulo.velocidadOrganica;
@@ -686,102 +689,165 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // =====================================================
-    // CONECTAR DOS CÍRCULOS
+    // OBTENER CÍRCULOS PRESIONADOS
     // =====================================================
 
-    function conectarCirculos(
-        circuloA,
-        circuloB
-    ) {
+    function obtenerCirculosPresionados() {
 
-        // Evitar conectar un círculo consigo mismo
+        const resultado = [];
+
+
+        dedos.forEach(
+            dato => {
+
+                if (
+                    !resultado.includes(
+                        dato.circulo
+                    )
+                ) {
+
+                    resultado.push(
+                        dato.circulo
+                    );
+
+                }
+
+            }
+        );
+
+
+        return resultado;
+
+    }
+
+
+    // =====================================================
+    // COMPROBAR COLABORACIÓN
+    // =====================================================
+
+    function comprobarColaboracion() {
+
+        const circulosPresionados =
+            obtenerCirculosPresionados();
+
+
+        // Todavía no hay suficientes dedos
 
         if (
-            circuloA === circuloB
+            circulosPresionados.length <
+            dedosNecesarios
         ) {
 
-            return;
+            colaboracionActiva =
+                false;
 
-        }
-
-
-        // Revisar si ya existe esa conexión
-
-        const existe =
-            conexiones.some(
-                conexion =>
-
-                    (
-                        conexion.a === circuloA &&
-                        conexion.b === circuloB
-                    )
-
-                    ||
-
-                    (
-                        conexion.a === circuloB &&
-                        conexion.b === circuloA
-                    )
-            );
-
-
-        if (existe) {
+            colaboracionCompletada =
+                false;
 
             return;
 
         }
 
 
-        // Crear nueva conexión
+        // Ya tenemos la cantidad necesaria
 
-        conexiones.push({
+        if (
+            circulosPresionados.length ===
+            dedosNecesarios
+        ) {
 
-            a:
-                circuloA,
+            if (
+                !colaboracionActiva
+            ) {
 
-            b:
-                circuloB,
+                colaboracionActiva =
+                    true;
 
-            progreso:
-                0
+                colaboracionCompletada =
+                    false;
 
-        });
-
-
-        contadorConexiones++;
+            }
 
 
-        // Animación de conexión
+            if (
+                !colaboracionCompletada
+            ) {
+
+                completarColaboracion(
+                    circulosPresionados
+                );
+
+            }
+
+        }
+
+    }
+
+
+    // =====================================================
+    // COMPLETAR COLABORACIÓN
+    // =====================================================
+
+    function completarColaboracion(
+        circulosPresionados
+    ) {
+
+        colaboracionCompletada =
+            true;
+
+
+        // ---------------------------------------------
+        // Crear conexiones entre todos los círculos
+        // presionados
+        // ---------------------------------------------
+
+        // Las conexiones NO se guardan.
+        // Se dibujan mientras los dedos estén activos.
+
 
         mensaje.textContent =
-            "SE CREÓ UNA CONEXIÓN";
+            "COLABORACIÓN " +
+            dedosNecesarios +
+            " / " +
+            dedosNecesarios;
 
+
+        // ---------------------------------------------
+        // Aparece un nuevo círculo
+        // ---------------------------------------------
 
         setTimeout(
             function () {
 
+                crearNuevoCirculo();
+
+
+                // Aumentar la dificultad
+
+                if (
+                    dedosNecesarios <
+                    MAXIMO_DEDOs
+                ) {
+
+                    dedosNecesarios++;
+
+                }
+
+
+                colaboracionActiva =
+                    false;
+
+                colaboracionCompletada =
+                    false;
+
+
                 mensaje.textContent =
-                    "DOS DEDOS · CONECTÁ";
+                    dedosNecesarios +
+                    " DEDOS · CONECTÁ";
 
             },
-            1200
+            700
         );
-
-
-        // Cada 4 conexiones
-        // aparece un nuevo círculo.
-
-        if (
-            contadorConexiones >=
-            CONEXIONES_NUEVO_CIRCULO
-        ) {
-
-            crearNuevoCirculo();
-
-            contadorConexiones =
-                0;
-
-        }
 
     }
 
@@ -805,12 +871,12 @@ document.addEventListener("DOMContentLoaded", function () {
             );
 
 
-        // Buscar una posición libre
-
         let x;
+
         let y;
 
-        let intentos = 0;
+        let intentos =
+            0;
 
 
         do {
@@ -822,6 +888,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     canvas.width -
                     radio * 2
                 );
+
 
             y =
                 radio +
@@ -846,9 +913,6 @@ document.addEventListener("DOMContentLoaded", function () {
         );
 
 
-        // El color se elige
-        // nuevamente de la paleta.
-
         const color =
             colores[
                 circulos.length %
@@ -857,26 +921,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
         crearCirculo(
+
             x,
+
             y,
+
             color,
+
             radio
+
         );
 
 
         mensaje.textContent =
-            "UNA NUEVA PRESENCIA";
-
-
-        setTimeout(
-            function () {
-
-                mensaje.textContent =
-                    "DOS DEDOS · CONECTÁ";
-
-            },
-            1600
-        );
+            "NUEVA PRESENCIA";
 
     }
 
@@ -949,6 +1007,10 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
 
+            // -----------------------------------------
+            // Guardar dedo
+            // -----------------------------------------
+
             dedos.set(
                 e.pointerId,
                 {
@@ -971,43 +1033,7 @@ document.addEventListener("DOMContentLoaded", function () {
             );
 
 
-            // Revisar si hay dos dedos
-            // sobre dos círculos diferentes.
-
-            const dedosActivos =
-                Array.from(
-                    dedos.values()
-                );
-
-
-            if (
-                dedosActivos.length >= 2
-            ) {
-
-                const dedoA =
-                    dedosActivos[
-                        dedosActivos.length - 2
-                    ];
-
-                const dedoB =
-                    dedosActivos[
-                        dedosActivos.length - 1
-                    ];
-
-
-                if (
-                    dedoA.circulo !==
-                    dedoB.circulo
-                ) {
-
-                    conectarCirculos(
-                        dedoA.circulo,
-                        dedoB.circulo
-                    );
-
-                }
-
-            }
+            comprobarColaboracion();
 
 
             e.preventDefault();
@@ -1048,6 +1074,45 @@ document.addEventListener("DOMContentLoaded", function () {
                 posicion.y;
 
 
+            // Si el dedo se mueve demasiado
+            // fuera del círculo original,
+            // deja de contar como presión.
+
+            const dx =
+                posicion.x -
+                dato.circulo.x;
+
+            const dy =
+                posicion.y -
+                dato.circulo.y;
+
+
+            const distancia =
+                Math.sqrt(
+                    dx * dx +
+                    dy * dy
+                );
+
+
+            if (
+                distancia >
+                dato.circulo.radio * 1.5
+            ) {
+
+                dedos.delete(
+                    e.pointerId
+                );
+
+
+                colaboracionActiva =
+                    false;
+
+                colaboracionCompletada =
+                    false;
+
+            }
+
+
             e.preventDefault();
 
         }
@@ -1060,9 +1125,30 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function terminarDedo(e) {
 
+        if (
+            !dedos.has(
+                e.pointerId
+            )
+        ) {
+
+            return;
+
+        }
+
+
         dedos.delete(
             e.pointerId
         );
+
+
+        // Al soltar cualquier dedo
+        // desaparece la colaboración.
+
+        colaboracionActiva =
+            false;
+
+        colaboracionCompletada =
+            false;
 
     }
 
@@ -1085,121 +1171,160 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function dibujarConexiones() {
 
-        conexiones.forEach(
-            conexion => {
-
-                const a =
-                    conexion.a;
-
-                const b =
-                    conexion.b;
+        const circulosPresionados =
+            obtenerCirculosPresionados();
 
 
-                const dx =
-                    b.x - a.x;
+        // Solo dibujar si tenemos exactamente
+        // la cantidad de dedos necesaria.
 
-                const dy =
-                    b.y - a.y;
+        if (
+            circulosPresionados.length !==
+            dedosNecesarios
+        ) {
 
+            return;
 
-                const distancia =
-                    Math.sqrt(
-                        dx * dx +
-                        dy * dy
-                    );
-
-
-                const cantidad =
-                    Math.max(
-                        4,
-                        Math.floor(
-                            distancia / 14
-                        )
-                    );
+        }
 
 
-                // -----------------------------------------
-                // Círculos pequeños
-                // -----------------------------------------
+        // -------------------------------------------------
+        // Conectar cada círculo con el siguiente
+        // -------------------------------------------------
 
-                for (
-                    let i = 1;
-                    i < cantidad;
-                    i++
-                ) {
+        for (
+            let i = 0;
+            i <
+            circulosPresionados.length - 1;
+            i++
+        ) {
 
-                    const porcentaje =
-                        i /
-                        cantidad;
+            const a =
+                circulosPresionados[i];
 
-
-                    const x =
-                        a.x +
-                        dx *
-                        porcentaje;
-
-                    const y =
-                        a.y +
-                        dy *
-                        porcentaje;
+            const b =
+                circulosPresionados[i + 1];
 
 
-                    // Opacidad menor
-                    // cuanto más lejos del origen.
+            dibujarConexion(
+                a,
+                b
+            );
 
-                    const opacidad =
-                        0.18 +
-                        (
-                            0.18 *
-                            (
-                                1 -
-                                porcentaje
-                            )
-                        );
-
-
-                    const radio =
-                        2.5;
-
-
-                    ctx.save();
-
-
-                    ctx.globalAlpha =
-                        opacidad;
-
-
-                    ctx.beginPath();
-
-
-                    ctx.arc(
-                        x,
-                        y,
-                        radio,
-                        0,
-                        Math.PI * 2
-                    );
-
-
-                    ctx.fillStyle =
-                        "#D9D9D9";
-
-
-                    ctx.fill();
-
-
-                    ctx.restore();
-
-                }
-
-            }
-        );
+        }
 
     }
 
 
     // =====================================================
-    // DIBUJAR CÍRCULOS
+    // DIBUJAR UNA CONEXIÓN
+    // =====================================================
+
+    function dibujarConexion(
+        a,
+        b
+    ) {
+
+        const dx =
+            b.x - a.x;
+
+        const dy =
+            b.y - a.y;
+
+
+        const distancia =
+            Math.sqrt(
+                dx * dx +
+                dy * dy
+            );
+
+
+        const cantidad =
+            Math.max(
+                4,
+                Math.floor(
+                    distancia / 14
+                )
+            );
+
+
+        // Pequeños círculos
+
+        for (
+            let i = 1;
+            i < cantidad;
+            i++
+        ) {
+
+            const porcentaje =
+                i /
+                cantidad;
+
+
+            const x =
+                a.x +
+                dx *
+                porcentaje;
+
+
+            const y =
+                a.y +
+                dy *
+                porcentaje;
+
+
+            // Opacidad baja
+
+            const opacidad =
+                0.12 +
+                0.16 *
+                (
+                    1 -
+                    porcentaje
+                );
+
+
+            ctx.save();
+
+
+            ctx.globalAlpha =
+                opacidad;
+
+
+            ctx.beginPath();
+
+
+            ctx.arc(
+
+                x,
+
+                y,
+
+                2.5,
+
+                0,
+
+                Math.PI * 2
+
+            );
+
+
+            ctx.fillStyle =
+                "#D9D9D9";
+
+
+            ctx.fill();
+
+
+            ctx.restore();
+
+        }
+
+    }
+
+
+    // =====================================================
+    // DIBUJAR CÍRCULO
     // =====================================================
 
     function dibujarCirculo(
@@ -1233,7 +1358,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
         let escala =
             1;
-
 
         let opacidad =
             1;
@@ -1303,8 +1427,11 @@ document.addEventListener("DOMContentLoaded", function () {
         ctx.clearRect(
 
             0,
+
             0,
+
             canvas.width,
+
             canvas.height
 
         );
@@ -1314,13 +1441,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
         detectarColisiones();
 
-
-        // Primero conexiones
-
         dibujarConexiones();
 
-
-        // Después círculos
 
         circulos.forEach(
             circulo => {
@@ -1331,6 +1453,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
             }
         );
+
+
+        // Mientras haya suficientes círculos,
+        // revisar continuamente la colaboración.
+
+        if (
+            dedos.size >=
+            dedosNecesarios
+        ) {
+
+            comprobarColaboracion();
+
+        }
 
 
         requestAnimationFrame(
@@ -1345,6 +1480,9 @@ document.addEventListener("DOMContentLoaded", function () {
     // =====================================================
 
     ajustarCanvas();
+
+    mensaje.textContent =
+        "2 DEDOS · CONECTÁ";
 
     animar();
 
