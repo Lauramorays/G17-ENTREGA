@@ -53,6 +53,117 @@
 
         }
 
+
+        /* =========================
+           NAVEGACIÓN
+        ========================= */
+
+        #navegacion {
+
+            position: absolute;
+
+            top: 18px;
+            left: 50%;
+
+            transform: translateX(-50%);
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 15px;
+
+            z-index: 1000;
+
+        }
+
+
+        /* =========================
+           PROGRESO
+        ========================= */
+
+        #progreso {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 7px;
+
+        }
+
+        #progreso span {
+
+            display: block;
+
+            width: 9px;
+            height: 9px;
+
+            border-radius: 50%;
+
+            border: 1px solid #C4CEE5;
+
+            background: transparent;
+
+            opacity: 0.45;
+
+        }
+
+        /* SEXTO ACTIVO */
+
+        #progreso span.activo {
+
+            background: #C4CEE5;
+
+            opacity: 1;
+
+        }
+
+
+        /* =========================
+           FLECHAS
+        ========================= */
+
+        #navegacion button {
+
+            border: none;
+
+            background: transparent;
+
+            color: #C4CEE5;
+
+            font-size: 32px;
+
+            cursor: pointer;
+
+            padding: 0;
+
+            width: 30px;
+            height: 35px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            position: relative;
+
+            z-index: 1001;
+
+        }
+
+        #navegacion button:hover {
+
+            opacity: 0.6;
+
+        }
+
+
+        /* =========================
+           TÍTULO
+        ========================= */
+
         #titulo {
 
             position: absolute;
@@ -75,6 +186,11 @@
             z-index: 10;
 
         }
+
+
+        /* =========================
+           MENSAJE
+        ========================= */
 
         #mensaje {
 
@@ -112,20 +228,93 @@
 
     <main id="juego">
 
+
+        <!-- NAVEGACIÓN -->
+
+        <div id="navegacion">
+
+
+            <!-- VOLVER A EMPATÍA -->
+
+            <button
+                type="button"
+                onclick="window.location.href='circulos2.html'">
+
+                ‹
+
+            </button>
+
+
+            <!-- 9 PUNTOS -->
+
+            <div id="progreso">
+
+                <!-- 1 MEMORIA -->
+                <span></span>
+
+                <!-- 2 HERENCIA -->
+                <span></span>
+
+                <!-- 3 CADUCIDAD -->
+                <span></span>
+
+                <!-- 4 IDENTIDAD -->
+                <span></span>
+
+                <!-- 5 EMPATÍA -->
+                <span></span>
+
+                <!-- 6 COLABORACIÓN -->
+                <span class="activo"></span>
+
+                <!-- 7 INCERTIDUMBRE -->
+                <span></span>
+
+                <!-- 8 DESPRENDIMIENTO -->
+                <span></span>
+
+                <!-- 9 EXPECTATIVA -->
+                <span></span>
+
+            </div>
+
+
+            <!-- AVANZAR A INCERTIDUMBRE -->
+
+            <button
+                type="button"
+                onclick="window.location.href='triangulos.html'">
+
+                ›
+
+            </button>
+
+
+        </div>
+
+
+        <!-- JUEGO -->
+
         <canvas id="canvas"></canvas>
 
+
         <div id="titulo">
-            COLABORACIÓN
+           
         </div>
 
+
         <div id="mensaje">
-            DOS DEDOS · CONECTÁ
+            
         </div>
+
 
     </main>
 
 
+    <!-- JAVASCRIPT DEL JUEGO -->
+
     <script src="circulos3.js"></script>
+
 
 </body>
 

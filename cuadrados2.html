@@ -2,12 +2,14 @@
 <html lang="es">
 
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Herencia</title>
 
     <style>
+
         * {
             margin: 0;
             padding: 0;
@@ -23,7 +25,9 @@
             width: 95vw;
             height: 95vh;
             margin: 2.5vh auto;
+
             background: #060C1A;
+
             position: relative;
             overflow: hidden;
         }
@@ -34,16 +38,221 @@
             height: 100%;
             touch-action: none;
         }
+
+
+        /* =========================
+           NAVEGACIÓN
+        ========================= */
+
+        #navegacion {
+            position: absolute;
+
+            top: 18px;
+            left: 50%;
+
+            transform: translateX(-50%);
+
+            display: flex;
+            align-items: center;
+
+            gap: 15px;
+
+            z-index: 1000;
+        }
+
+
+        /* =========================
+           CÍRCULOS DE PROGRESO
+        ========================= */
+
+        #progreso {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        #progreso span {
+            display: block;
+
+            width: 9px;
+            height: 9px;
+
+            border-radius: 50%;
+
+            border: 1px solid #C4CEE5;
+
+            background: transparent;
+
+            opacity: 0.45;
+        }
+
+        /* SEGUNDO CÍRCULO ACTIVO */
+
+        #progreso span.activo {
+            background: #C4CEE5;
+            opacity: 1;
+        }
+
+
+        /* =========================
+           FLECHAS
+        ========================= */
+
+        #navegacion button {
+
+            border: none;
+
+            background: transparent;
+
+            color: #C4CEE5;
+
+            font-size: 32px;
+
+            cursor: pointer;
+
+            padding: 0;
+
+            width: 30px;
+            height: 35px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            position: relative;
+
+            z-index: 1001;
+        }
+
+        #navegacion button:hover {
+            opacity: 0.6;
+        }
+
     </style>
+
 </head>
+
 
 <body>
 
+
     <main id="juego">
+
+
+        <!-- =========================
+             NAVEGACIÓN
+        ========================= -->
+
+        <div id="navegacion">
+
+
+            <!-- VOLVER AL CUADRADO 1 -->
+
+            <button
+                id="anterior"
+                type="button">
+                ‹
+            </button>
+
+
+            <!-- =========================
+                 PROGRESO
+            ========================= -->
+
+            <div id="progreso">
+
+                <!-- 1 - Cuadrados -->
+                <span></span>
+
+                <!-- 2 - Herencia -->
+                <span class="activo"></span>
+
+                <!-- 3 - Caducidad -->
+                <span></span>
+
+                <!-- 4 - Identidad -->
+                <span></span>
+
+                <!-- 5 - Empatía -->
+                <span></span>
+
+                <!-- 6 - Colaboración -->
+                <span></span>
+
+                <!-- 7 - Incertidumbre -->
+                <span></span>
+
+                <!-- 8 - Desprendimiento -->
+                <span></span>
+
+                <!-- 9 - Expectativa -->
+                <span></span>
+
+            </div>
+
+
+            <!-- AVANZAR AL CUADRADO 3 -->
+
+            <button
+                id="siguiente"
+                type="button">
+                ›
+            </button>
+
+
+        </div>
+
+
+        <!-- =========================
+             CANVAS DEL JUEGO
+        ========================= -->
+
         <canvas id="canvas"></canvas>
+
+
     </main>
+
+
+    <!-- =========================
+         JAVASCRIPT DEL JUEGO
+    ========================= -->
 
     <script src="cuadrados2.js"></script>
 
+
+    <!-- =========================
+         NAVEGACIÓN
+    ========================= -->
+
+    <script>
+
+        const botonAnterior =
+            document.getElementById("anterior");
+
+        const botonSiguiente =
+            document.getElementById("siguiente");
+
+
+        /* VOLVER A CUADRADOS 1 */
+
+        botonAnterior.addEventListener("click", function () {
+
+            window.location.href = "cuadrados.html";
+
+        });
+
+
+        /* AVANZAR A CUADRADOS 3 */
+
+        botonSiguiente.addEventListener("click", function () {
+
+            window.location.href = "cuadrados3.html";
+
+        });
+
+    </script>
+
+
 </body>
+
 </html>

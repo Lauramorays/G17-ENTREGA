@@ -1562,9 +1562,7 @@ document.addEventListener("DOMContentLoaded", function () {
     ajustarCanvas();
 
 
-    mensaje.textContent =
-        "2 DEDOS · CONECTÁ";
-
+   
 
     animar();
 

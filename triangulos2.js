@@ -847,7 +847,7 @@ function mostrarMensaje(
             function() {
 
                 mensaje.textContent =
-                    "TOCÁ LOS TRIÁNGULOS";
+                    "";
 
             },
             700

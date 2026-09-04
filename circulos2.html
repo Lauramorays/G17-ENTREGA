@@ -49,55 +49,115 @@
 
         }
 
-        #titulo {
+
+        /* =========================
+           NAVEGACIÓN
+        ========================= */
+
+        #navegacion {
 
             position: absolute;
 
-            top: 25px;
+            top: 18px;
             left: 50%;
 
             transform: translateX(-50%);
 
-            color: white;
+            display: flex;
 
-            font-size: 18px;
+            align-items: center;
 
-            letter-spacing: 5px;
+            gap: 15px;
 
-            opacity: 0.8;
-
-            pointer-events: none;
-
-            z-index: 10;
+            z-index: 1000;
 
         }
 
-        #mensaje {
 
-            position: absolute;
+        /* =========================
+           CÍRCULOS DE PROGRESO
+        ========================= */
 
-            bottom: 25px;
-            left: 50%;
+        #progreso {
 
-            transform: translateX(-50%);
+            display: flex;
 
-            color: white;
+            align-items: center;
 
-            font-size: 14px;
-
-            letter-spacing: 3px;
-
-            opacity: 0.7;
-
-            pointer-events: none;
-
-            text-align: center;
-
-            white-space: nowrap;
-
-            z-index: 10;
+            gap: 7px;
 
         }
+
+
+        #progreso span {
+
+            display: block;
+
+            width: 9px;
+            height: 9px;
+
+            border-radius: 50%;
+
+            border: 1px solid #C4CEE5;
+
+            background: transparent;
+
+            opacity: 0.45;
+
+        }
+
+
+        /* QUINTO CÍRCULO ACTIVO */
+
+        #progreso span.activo {
+
+            background: #C4CEE5;
+
+            opacity: 1;
+
+        }
+
+
+        /* =========================
+           FLECHAS
+        ========================= */
+
+        #navegacion button {
+
+            border: none;
+
+            background: transparent;
+
+            color: #C4CEE5;
+
+            font-size: 32px;
+
+            cursor: pointer;
+
+            padding: 0;
+
+            width: 30px;
+            height: 35px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            position: relative;
+
+            z-index: 1001;
+
+        }
+
+
+        #navegacion button:hover {
+
+            opacity: 0.6;
+
+        }
+
 
     </style>
 
@@ -106,22 +166,94 @@
 
 <body>
 
+
     <main id="juego">
+
+
+        <!-- =========================
+             NAVEGACIÓN
+        ========================= -->
+
+        <div id="navegacion">
+
+
+            <!-- VOLVER A IDENTIDAD -->
+
+            <button
+                type="button"
+                onclick="window.location.href='circulos.html'">
+
+                ‹
+
+            </button>
+
+
+            <!-- =========================
+                 9 CÍRCULOS
+            ========================= -->
+
+            <div id="progreso">
+
+                <!-- 1 MEMORIA -->
+                <span></span>
+
+                <!-- 2 HERENCIA -->
+                <span></span>
+
+                <!-- 3 CADUCIDAD -->
+                <span></span>
+
+                <!-- 4 IDENTIDAD -->
+                <span></span>
+
+                <!-- 5 EMPATÍA -->
+                <span class="activo"></span>
+
+                <!-- 6 COLABORACIÓN -->
+                <span></span>
+
+                <!-- 7 INCERTIDUMBRE -->
+                <span></span>
+
+                <!-- 8 DESPRENDIMIENTO -->
+                <span></span>
+
+                <!-- 9 EXPECTATIVA -->
+                <span></span>
+
+            </div>
+
+
+            <!-- AVANZAR A COLABORACIÓN -->
+
+            <button
+                type="button"
+                onclick="window.location.href='circulos3.html'">
+
+                ›
+
+            </button>
+
+
+        </div>
+
+
+        <!-- =========================
+             JUEGO
+        ========================= -->
 
         <canvas id="canvas"></canvas>
 
-        <div id="titulo">
-            EMPATÍA
-        </div>
-
-        <div id="mensaje">
-            DOS DEDOS · MANTENÉ LA ATENCIÓN
-        </div>
 
     </main>
 
 
+    <!-- =========================
+         JAVASCRIPT DEL JUEGO
+    ========================= -->
+
     <script src="circulos2.js"></script>
+
 
 </body>
 

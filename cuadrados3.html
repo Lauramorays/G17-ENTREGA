@@ -1,8 +1,8 @@
-
 <!DOCTYPE html>
 <html lang="es">
 
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -44,7 +44,115 @@
             touch-action: none;
         }
 
+
+        /* =========================
+           NAVEGACIÓN
+        ========================= */
+
+        #navegacion {
+
+            position: absolute;
+
+            top: 18px;
+            left: 50%;
+
+            transform: translateX(-50%);
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 15px;
+
+            z-index: 1000;
+        }
+
+
+        /* =========================
+           CÍRCULOS DE PROGRESO
+        ========================= */
+
+        #progreso {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 7px;
+        }
+
+
+        #progreso span {
+
+            display: block;
+
+            width: 9px;
+            height: 9px;
+
+            border-radius: 50%;
+
+            border: 1px solid #C4CEE5;
+
+            background: transparent;
+
+            opacity: 0.45;
+        }
+
+
+        /* TERCER CÍRCULO ACTIVO */
+
+        #progreso span.activo {
+
+            background: #C4CEE5;
+
+            opacity: 1;
+        }
+
+
+        /* =========================
+           FLECHAS
+        ========================= */
+
+        #navegacion button {
+
+            border: none;
+
+            background: transparent;
+
+            color: #C4CEE5;
+
+            font-size: 32px;
+
+            cursor: pointer;
+
+            padding: 0;
+
+            width: 30px;
+            height: 35px;
+
+            display: flex;
+
+            align-items: center;
+            justify-content: center;
+
+            position: relative;
+
+            z-index: 1001;
+        }
+
+
+        #navegacion button:hover {
+
+            opacity: 0.6;
+        }
+
+
+        /* =========================
+           MENSAJE
+        ========================= */
+
         #mensaje {
+
             position: absolute;
 
             bottom: 25px;
@@ -65,27 +173,109 @@
             text-align: center;
 
             white-space: nowrap;
+
+            z-index: 10;
         }
 
     </style>
 
 </head>
 
+
 <body>
+
 
     <main id="juego">
 
+
+        <!-- =========================
+             NAVEGACIÓN
+        ========================= -->
+
+        <div id="navegacion">
+
+
+            <!-- VOLVER A HERENCIA -->
+
+            <button
+                type="button"
+                onclick="window.location.href='cuadrados2.html'">
+
+                ‹
+
+            </button>
+
+
+            <!-- =========================
+                 9 CÍRCULOS
+            ========================= -->
+
+            <div id="progreso">
+
+                <!-- 1 MEMORIA -->
+                <span></span>
+
+                <!-- 2 HERENCIA -->
+                <span></span>
+
+                <!-- 3 CADUCIDAD -->
+                <span class="activo"></span>
+
+                <!-- 4 IDENTIDAD -->
+                <span></span>
+
+                <!-- 5 EMPATÍA -->
+                <span></span>
+
+                <!-- 6 COLABORACIÓN -->
+                <span></span>
+
+                <!-- 7 INCERTIDUMBRE -->
+                <span></span>
+
+                <!-- 8 DESPRENDIMIENTO -->
+                <span></span>
+
+                <!-- 9 EXPECTATIVA -->
+                <span></span>
+
+            </div>
+
+
+            <!-- AVANZAR A IDENTIDAD -->
+
+            <button
+                type="button"
+                onclick="window.location.href='circulos.html'">
+
+                ›
+
+            </button>
+
+
+        </div>
+
+
+        <!-- =========================
+             JUEGO
+        ========================= -->
+
         <canvas id="canvas"></canvas>
 
-        <div id="mensaje">
-            TOCÁ Y HACÉ CHOCAR
-        </div>
+
+       
+
 
     </main>
 
+
+    <!-- =========================
+         JAVASCRIPT DEL JUEGO
+    ========================= -->
+
     <script src="cuadrados3.js"></script>
+
 
 </body>
 
 </html>
-
