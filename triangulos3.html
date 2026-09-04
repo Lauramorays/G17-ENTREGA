@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Expectativa</title>
+
+    <style>
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+
+            background: #D9D9D9;
+
+            overflow: hidden;
+
+            font-family: Arial, sans-serif;
+
+        }
+
+        #juego {
+
+            width: 95vw;
+            height: 95vh;
+
+            margin: 2.5vh auto;
+
+            background: #060C1A;
+
+            position: relative;
+
+            overflow: hidden;
+
+        }
+
+        canvas {
+
+            display: block;
+
+            width: 100%;
+            height: 100%;
+
+            touch-action: none;
+
+        }
+
+        #titulo {
+
+            position: absolute;
+
+            top: 25px;
+            left: 50%;
+
+            transform: translateX(-50%);
+
+            color: white;
+
+            font-size: 18px;
+
+            letter-spacing: 5px;
+
+            opacity: 0.8;
+
+            pointer-events: none;
+
+            z-index: 10;
+
+        }
+
+        #mensaje {
+
+            position: absolute;
+
+            bottom: 25px;
+            left: 50%;
+
+            transform: translateX(-50%);
+
+            color: white;
+
+            font-size: 14px;
+
+            letter-spacing: 3px;
+
+            opacity: 0.7;
+
+            pointer-events: none;
+
+            text-align: center;
+
+            white-space: nowrap;
+
+            z-index: 10;
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+    <main id="juego">
+
+        <canvas id="canvas"></canvas>
+
+        <div id="titulo">
+            EXPECTATIVA
+        </div>
+
+        <div id="mensaje">
+            TOCÁ UNA PIEZA
+        </div>
+
+    </main>
+
+
+    <script src="triangulos3.js"></script>
+
+</body>
+
+</html>
