@@ -14,22 +14,27 @@ document.addEventListener("DOMContentLoaded", function () {
         "#2B538E"
     ];
 
-    const TAMAÑO_PADRE = 110;
-    const MAX_HIJOS = 3;
+    const TAMAÑO_INICIAL = 110;
 
-    // Cuánto se achica el padre al tener hijos
-    const REDUCCION_PADRE = 0.82;
+    // Tamaño máximo de una familia
+    const MAX_GENERACIONES = 3;
 
-    // Distancia necesaria para generar hijos
-    const ESTIRAMIENTO_NECESARIO = 1.45;
+    // Distancia entre los dos dedos necesaria para separar
+    const DISTANCIA_SEPARACION = 180;
 
-    // Fuerza de separación entre cuerpos
-    const FUERZA_COLISION = 0.8;
+    // Cuánto puede estirarse antes de separarse
+    const ESTIRAMIENTO_MAXIMO = 1.65;
+
+    // Fuerza de las colisiones
+    const FUERZA_COLISION = 0.45;
 
     let figuras = [];
-    let figuraEstirada = null;
-    let punteroActivo = null;
 
+    // Dos dedos activos
+    let dedos = new Map();
+
+    // Figura que se está estirando
+    let figuraEstirada = null;
 
     // =====================================================
     // CANVAS
@@ -41,7 +46,7 @@ document.addEventListener("DOMContentLoaded", function () {
         canvas.height = canvas.clientHeight;
 
         if (figuras.length === 0) {
-            crearPadres();
+            crearFigurasIniciales();
         }
     }
 
@@ -49,10 +54,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // =====================================================
-    // CREAR PADRES
+    // CREAR LAS 4 FIGURAS INICIALES
     // =====================================================
 
-    function crearPadres() {
+    function crearFigurasIniciales() {
 
         figuras = [];
 
@@ -65,73 +70,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
         for (let i = 0; i < 4; i++) {
 
-            const figura = {
+            const figura = crearFigura({
                 x: canvas.width * posiciones[i][0],
                 y: canvas.height * posiciones[i][1],
-
-                tamaño: TAMAÑO_PADRE,
-
+                tamaño: TAMAÑO_INICIAL,
                 color: colores[i],
-
-                opacidad: 1,
-
-                grosor: 5,
-
-                // -------------------------
-                // MOVIMIENTO
-                // -------------------------
-
-                vx: (Math.random() - 0.5) * 0.35,
-                vy: (Math.random() - 0.5) * 0.35,
-
-                faseMovimientoX: Math.random() * Math.PI * 2,
-                faseMovimientoY: Math.random() * Math.PI * 2,
-
-                velocidadMovimiento:
-                    0.004 + Math.random() * 0.004,
-
-                // -------------------------
-                // RESPIRACIÓN
-                // -------------------------
-
-                faseRespiracion:
-                    Math.random() * Math.PI * 2,
-
-                velocidadRespiracion:
-                    0.012 + Math.random() * 0.006,
-
-                intensidadRespiracion:
-                    0.045 + Math.random() * 0.025,
-
-                // -------------------------
-                // ESTIRAMIENTO
-                // -------------------------
-
-                estirando: false,
-
-                puntero: null,
-
-                escalaX: 1,
-                escalaY: 1,
-
-                // -------------------------
-                // HERENCIA
-                // -------------------------
-
                 generacion: 0,
-
-                padre: null,
-
-                hijos: [],
-
-                // -------------------------
-                // CONTROL
-                // -------------------------
-
-                puedeReproducirse: true,
-
-                creandoHijos: false
-            };
+                padre: null
+            });
 
             figuras.push(figura);
         }
@@ -139,7 +85,108 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // =====================================================
-    // RADIO FÍSICO
+    // CREAR UNA FIGURA
+    // =====================================================
+
+    function crearFigura(datos) {
+
+        return {
+
+            // -------------------------------------------------
+            // POSICIÓN
+            // -------------------------------------------------
+
+            x: datos.x,
+            y: datos.y,
+
+            tamaño: datos.tamaño,
+
+            color: datos.color,
+
+            opacidad: datos.opacidad ?? 1,
+
+            grosor: datos.grosor ?? 4,
+
+
+            // -------------------------------------------------
+            // MOVIMIENTO
+            // -------------------------------------------------
+
+            vx:
+                datos.vx ??
+                (Math.random() - 0.5) * 0.35,
+
+            vy:
+                datos.vy ??
+                (Math.random() - 0.5) * 0.35,
+
+            faseMovimientoX:
+                Math.random() * Math.PI * 2,
+
+            faseMovimientoY:
+                Math.random() * Math.PI * 2,
+
+            velocidadMovimiento:
+                0.004 + Math.random() * 0.004,
+
+
+            // -------------------------------------------------
+            // RESPIRACIÓN
+            // -------------------------------------------------
+
+            faseRespiracion:
+                Math.random() * Math.PI * 2,
+
+            velocidadRespiracion:
+                0.012 + Math.random() * 0.006,
+
+            intensidadRespiracion:
+                0.045 + Math.random() * 0.02,
+
+
+            // -------------------------------------------------
+            // ESTIRAMIENTO
+            // -------------------------------------------------
+
+            estirando: false,
+
+            escalaX: 1,
+            escalaY: 1,
+
+            anguloEstiramiento: 0,
+
+
+            // -------------------------------------------------
+            // HERENCIA
+            // -------------------------------------------------
+
+            generacion:
+                datos.generacion,
+
+            padre:
+                datos.padre,
+
+            hijos: [],
+
+            puedeReproducirse:
+                datos.generacion < MAX_GENERACIONES,
+
+
+            // -------------------------------------------------
+            // SEPARACIÓN
+            // -------------------------------------------------
+
+            separando: false,
+
+            progresoSeparacion: 0,
+
+            hijosCreados: false
+        };
+    }
+
+
+    // =====================================================
+    // RADIO
     // =====================================================
 
     function radioFigura(figura) {
@@ -156,16 +203,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
         figuras.forEach(figura => {
 
-            if (figura.estirando) {
+            // Mientras se manipula no tiene movimiento libre
+            if (figura.estirando || figura.separando) {
                 return;
             }
 
-            // Movimiento principal
             figura.x += figura.vx;
             figura.y += figura.vy;
 
 
-            // Pequeñas variaciones orgánicas
+            // Movimiento orgánico
+
             figura.faseMovimientoX +=
                 figura.velocidadMovimiento;
 
@@ -174,15 +222,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
             figura.x +=
-                Math.sin(figura.faseMovimientoX) * 0.10;
+                Math.sin(figura.faseMovimientoX) * 0.08;
 
             figura.y +=
-                Math.cos(figura.faseMovimientoY) * 0.10;
+                Math.cos(figura.faseMovimientoY) * 0.08;
 
 
-            // =================================================
+            // -------------------------------------------------
             // BORDES
-            // =================================================
+            // -------------------------------------------------
 
             const radio = radioFigura(figura);
 
@@ -190,28 +238,34 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 figura.x = radio;
 
-                figura.vx = Math.abs(figura.vx);
+                figura.vx =
+                    Math.abs(figura.vx);
             }
 
             if (figura.x + radio > canvas.width) {
 
-                figura.x = canvas.width - radio;
+                figura.x =
+                    canvas.width - radio;
 
-                figura.vx = -Math.abs(figura.vx);
+                figura.vx =
+                    -Math.abs(figura.vx);
             }
 
             if (figura.y - radio < 0) {
 
                 figura.y = radio;
 
-                figura.vy = Math.abs(figura.vy);
+                figura.vy =
+                    Math.abs(figura.vy);
             }
 
             if (figura.y + radio > canvas.height) {
 
-                figura.y = canvas.height - radio;
+                figura.y =
+                    canvas.height - radio;
 
-                figura.vy = -Math.abs(figura.vy);
+                figura.vy =
+                    -Math.abs(figura.vy);
             }
         });
     }
@@ -230,81 +284,110 @@ document.addEventListener("DOMContentLoaded", function () {
                 const a = figuras[i];
                 const b = figuras[j];
 
+                if (a.separando || b.separando) {
+                    continue;
+                }
+
                 const dx = b.x - a.x;
                 const dy = b.y - a.y;
 
                 const distancia =
                     Math.sqrt(dx * dx + dy * dy);
 
-                const radioA = radioFigura(a);
-                const radioB = radioFigura(b);
-
                 const distanciaMinima =
-                    radioA + radioB;
+                    radioFigura(a) +
+                    radioFigura(b);
 
-
-                // No están tocándose
                 if (distancia >= distanciaMinima) {
                     continue;
                 }
 
-
-                // Evitar división por cero
                 let nx = 1;
                 let ny = 0;
 
                 if (distancia > 0) {
 
-                    nx = dx / distancia;
-                    ny = dy / distancia;
+                    nx =
+                        dx / distancia;
+
+                    ny =
+                        dy / distancia;
                 }
 
-
-                // Cuánto se están metiendo
                 const penetracion =
                     distanciaMinima - distancia;
 
 
-                // =================================================
-                // SEPARACIÓN FÍSICA
-                // =================================================
+                // Separación física
 
                 if (!a.estirando && !b.estirando) {
 
-                    a.x -= nx * penetracion * 0.5;
-                    a.y -= ny * penetracion * 0.5;
+                    a.x -=
+                        nx *
+                        penetracion *
+                        0.5;
 
-                    b.x += nx * penetracion * 0.5;
-                    b.y += ny * penetracion * 0.5;
+                    a.y -=
+                        ny *
+                        penetracion *
+                        0.5;
+
+                    b.x +=
+                        nx *
+                        penetracion *
+                        0.5;
+
+                    b.y +=
+                        ny *
+                        penetracion *
+                        0.5;
                 }
 
                 else if (a.estirando) {
 
-                    b.x += nx * penetracion;
-                    b.y += ny * penetracion;
+                    b.x +=
+                        nx *
+                        penetracion;
+
+                    b.y +=
+                        ny *
+                        penetracion;
                 }
 
                 else if (b.estirando) {
 
-                    a.x -= nx * penetracion;
-                    a.y -= ny * penetracion;
+                    a.x -=
+                        nx *
+                        penetracion;
+
+                    a.y -=
+                        ny *
+                        penetracion;
                 }
 
 
-                // =================================================
-                // REBOTE SUAVE
-                // =================================================
+                // Rebote suave
 
                 if (!a.estirando) {
 
-                    a.vx -= nx * FUERZA_COLISION;
-                    a.vy -= ny * FUERZA_COLISION;
+                    a.vx -=
+                        nx *
+                        FUERZA_COLISION;
+
+                    a.vy -=
+                        ny *
+                        FUERZA_COLISION;
                 }
 
                 if (!b.estirando) {
 
-                    b.vx += nx * FUERZA_COLISION;
-                    b.vy += ny * FUERZA_COLISION;
+                    b.vx +=
+                        nx *
+                        FUERZA_COLISION;
+
+                    b.vy +=
+                        ny *
+                        FUERZA_COLISION;
                 }
             }
         }
@@ -321,13 +404,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
             const figura = figuras[i];
 
-            const dx = x - figura.x;
-            const dy = y - figura.y;
+            const dx =
+                x - figura.x;
+
+            const dy =
+                y - figura.y;
 
             const distancia =
                 Math.sqrt(dx * dx + dy * dy);
 
-            if (distancia <= radioFigura(figura)) {
+            if (
+                distancia <=
+                radioFigura(figura) * 1.2
+            ) {
+
                 return figura;
             }
         }
@@ -337,367 +427,679 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // =====================================================
-    // CREAR HIJOS
+    // OBTENER DISTANCIA ENTRE LOS DOS DEDOS
     // =====================================================
 
-    function crearHijos(padre) {
+    function distanciaDedos() {
 
-        if (!padre.puedeReproducirse) {
-            return;
+        const puntos =
+            Array.from(dedos.values());
+
+        if (puntos.length < 2) {
+            return 0;
         }
 
-        if (padre.hijos.length >= MAX_HIJOS) {
-            return;
-        }
-
-        padre.puedeReproducirse = false;
-        padre.creandoHijos = true;
-
-
-        // =================================================
-        // EL PADRE SE ACHICA
-        // =================================================
-
-        padre.tamaño *= REDUCCION_PADRE;
-
-
-        // =================================================
-        // CANTIDAD DE HIJOS
-        // =================================================
-
-        const cantidad =
-            MAX_HIJOS - padre.hijos.length;
-
-
-        for (let i = 0; i < cantidad; i++) {
-
-            const angulo =
-                (Math.PI * 2 / cantidad) * i;
-
-            const distancia =
-                padre.tamaño * 0.85;
-
-
-            // Pequeña diferencia entre hermanos
-            const variacion =
-                0.90 + Math.random() * 0.15;
-
-
-            const tamañoHijo =
-                padre.tamaño *
-                0.50 *
-                variacion;
-
-
-            const hijo = {
-
-                // -------------------------
-                // POSICIÓN
-                // -------------------------
-
-                x:
-                    padre.x +
-                    Math.cos(angulo) * distancia,
-
-                y:
-                    padre.y +
-                    Math.sin(angulo) * distancia,
-
-
-                // -------------------------
-                // CARACTERÍSTICAS HEREDADAS
-                // -------------------------
-
-                tamaño: tamañoHijo,
-
-                color: padre.color,
-
-                opacidad:
-                    padre.opacidad *
-                    (0.78 + Math.random() * 0.12),
-
-                grosor:
-                    padre.grosor *
-                    (0.85 + Math.random() * 0.10),
-
-
-                // -------------------------
-                // MOVIMIENTO
-                // -------------------------
-
-                vx:
-                    padre.vx +
-                    (Math.random() - 0.5) * 0.45,
-
-                vy:
-                    padre.vy +
-                    (Math.random() - 0.5) * 0.45,
-
-
-                faseMovimientoX:
-                    Math.random() * Math.PI * 2,
-
-                faseMovimientoY:
-                    Math.random() * Math.PI * 2,
-
-                velocidadMovimiento:
-                    0.004 +
-                    Math.random() * 0.006,
-
-
-                // -------------------------
-                // RESPIRACIÓN
-                // -------------------------
-
-                faseRespiracion:
-                    Math.random() * Math.PI * 2,
-
-                velocidadRespiracion:
-                    0.012 +
-                    Math.random() * 0.008,
-
-                intensidadRespiracion:
-                    0.04 +
-                    Math.random() * 0.025,
-
-
-                // -------------------------
-                // ESTIRAMIENTO
-                // -------------------------
-
-                estirando: false,
-
-                puntero: null,
-
-                escalaX: 1,
-                escalaY: 1,
-
-
-                // -------------------------
-                // GENERACIÓN
-                // -------------------------
-
-                generacion:
-                    padre.generacion + 1,
-
-                padre: padre,
-
-                hijos: [],
-
-                puedeReproducirse: true,
-
-                creandoHijos: false
-            };
-
-
-            padre.hijos.push(hijo);
-
-            figuras.push(hijo);
-        }
-
-
-        padre.creandoHijos = false;
-    }
-
-
-    // =====================================================
-    // ESTIRAMIENTO
-    // =====================================================
-
-    function actualizarEstiramiento(x, y) {
-
-        if (!figuraEstirada) {
-            return;
-        }
-
-        const figura = figuraEstirada;
+        const a = puntos[0];
+        const b = puntos[1];
 
         const dx =
-            x - figura.x;
+            b.x - a.x;
 
         const dy =
-            y - figura.y;
+            b.y - a.y;
 
-        const distancia =
-            Math.sqrt(dx * dx + dy * dy);
-
-
-        // =================================================
-        // FACTOR DE ESTIRAMIENTO
-        // =================================================
-
-        const factor =
-            Math.min(
-                distancia / figura.tamaño,
-                2
-            );
-
-
-        // Dirección
-        const angulo =
-            Math.atan2(dy, dx);
-
-
-        /*
-            El cuadrado se estira hacia
-            donde llevamos el dedo.
-        */
-
-        figura.escalaX =
-            1 + factor * 0.65;
-
-        figura.escalaY =
-            Math.max(
-                0.60,
-                1 - factor * 0.20
-            );
-
-
-        // =================================================
-        // GENERAR HIJOS
-        // =================================================
-
-        if (
-            factor >= ESTIRAMIENTO_NECESARIO &&
-            figura.puedeReproducirse
-        ) {
-
-            crearHijos(figura);
-        }
+        return Math.sqrt(
+            dx * dx +
+            dy * dy
+        );
     }
 
 
     // =====================================================
-    // POINTER DOWN
+    // CENTRO DE LOS DOS DEDOS
     // =====================================================
 
-    canvas.addEventListener("pointerdown", function (e) {
+    function centroDedos() {
 
-        const rect =
-            canvas.getBoundingClientRect();
+        const puntos =
+            Array.from(dedos.values());
 
-        const x =
-            e.clientX - rect.left;
+        if (puntos.length < 2) {
+            return null;
+        }
 
-        const y =
-            e.clientY - rect.top;
+        return {
+
+            x:
+                (puntos[0].x +
+                    puntos[1].x) / 2,
+
+            y:
+                (puntos[0].y +
+                    puntos[1].y) / 2
+        };
+    }
 
 
-        const figura =
-            buscarFigura(x, y);
+    // =====================================================
+    // COMENZAR ESTIRAMIENTO
+    // =====================================================
 
+    function comenzarEstiramiento() {
+
+        if (dedos.size !== 2) {
+            return;
+        }
+
+        const puntos =
+            Array.from(dedos.values());
+
+        // Buscar una figura debajo de alguno
+        // de los dos dedos
+
+        let figura = null;
+
+        for (const punto of puntos) {
+
+            const encontrada =
+                buscarFigura(
+                    punto.x,
+                    punto.y
+                );
+
+            if (encontrada) {
+
+                figura = encontrada;
+                break;
+            }
+        }
 
         if (!figura) {
             return;
         }
 
+        if (!figura.puedeReproducirse) {
+            return;
+        }
 
         figuraEstirada = figura;
 
-        punteroActivo = e.pointerId;
-
         figura.estirando = true;
 
-        figura.puntero = e.pointerId;
+        figura.escalaX = 1;
 
-        canvas.setPointerCapture(e.pointerId);
+        figura.escalaY = 1;
 
-        e.preventDefault();
-    });
-
-
-    // =====================================================
-    // POINTER MOVE
-    // =====================================================
-
-    canvas.addEventListener("pointermove", function (e) {
-
-        if (
-            figuraEstirada === null ||
-            punteroActivo !== e.pointerId
-        ) {
-            return;
-        }
-
-
-        const rect =
-            canvas.getBoundingClientRect();
-
-        const x =
-            e.clientX - rect.left;
-
-        const y =
-            e.clientY - rect.top;
-
-
-        actualizarEstiramiento(x, y);
-
-        e.preventDefault();
-    });
-
-
-    // =====================================================
-    // POINTER UP
-    // =====================================================
-
-    function terminarEstiramiento(e) {
-
-        if (
-            figuraEstirada === null ||
-            punteroActivo !== e.pointerId
-        ) {
-            return;
-        }
-
-
-        figuraEstirada.estirando = false;
-
-        figuraEstirada.puntero = null;
-
-        figuraEstirada.escalaX = 1;
-
-        figuraEstirada.escalaY = 1;
-
-
-        figuraEstirada = null;
-
-        punteroActivo = null;
+        figura.anguloEstiramiento = 0;
     }
 
 
-    canvas.addEventListener(
-        "pointerup",
-        terminarEstiramiento
-    );
+    // =====================================================
+    // ACTUALIZAR ESTIRAMIENTO
+    // =====================================================
+
+    function actualizarEstiramiento() {
+
+        if (!figuraEstirada) {
+            return;
+        }
+
+        if (dedos.size !== 2) {
+            return;
+        }
+
+        const figura =
+            figuraEstirada;
+
+        const puntos =
+            Array.from(dedos.values());
+
+        const distancia =
+            distanciaDedos();
+
+        const centro =
+            centroDedos();
+
+
+        // -------------------------------------------------
+        // DIRECCIÓN ENTRE LOS DEDOS
+        // -------------------------------------------------
+
+        const dx =
+            puntos[1].x -
+            puntos[0].x;
+
+        const dy =
+            puntos[1].y -
+            puntos[0].y;
+
+        const angulo =
+            Math.atan2(dy, dx);
+
+
+        figura.anguloEstiramiento =
+            angulo;
+
+
+        // -------------------------------------------------
+        // FACTOR DE ESTIRAMIENTO
+        // -------------------------------------------------
+
+        const factor =
+            Math.min(
+                distancia /
+                DISTANCIA_SEPARACION,
+                ESTIRAMIENTO_MAXIMO
+            );
+
+
+        // -------------------------------------------------
+        // EL CUADRADO SE ESTIRA
+        // -------------------------------------------------
+
+        figura.escalaX =
+            1 +
+            (factor - 0.3) *
+            0.75;
+
+        figura.escalaX =
+            Math.max(
+                1,
+                figura.escalaX
+            );
+
+        figura.escalaY =
+            1 -
+            Math.min(
+                (factor - 0.3) * 0.25,
+                0.25
+            );
+
+
+        // -------------------------------------------------
+        // SIGUE EL CENTRO DE LOS DEDOS
+        // -------------------------------------------------
+
+        if (centro) {
+
+            figura.x +=
+                (centro.x - figura.x) *
+                0.12;
+
+            figura.y +=
+                (centro.y - figura.y) *
+                0.12;
+        }
+
+
+        // -------------------------------------------------
+        // CUANDO LLEGA AL LÍMITE
+        // RECIÉN AHÍ SE SEPARA
+        // -------------------------------------------------
+
+        if (
+            distancia >=
+            DISTANCIA_SEPARACION
+        ) {
+
+            separarFigura(figura);
+        }
+    }
+
+
+    // =====================================================
+    // SEPARAR Y CREAR HIJOS
+    // =====================================================
+
+    function separarFigura(padre) {
+
+        if (
+            padre.separando ||
+            padre.hijosCreados
+        ) {
+            return;
+        }
+
+        padre.separando = true;
+
+        padre.hijosCreados = true;
+
+        padre.estirando = false;
+
+
+        // Volver a cuadrado
+        padre.escalaX = 1;
+        padre.escalaY = 1;
+
+
+        // -------------------------------------------------
+        // SI YA ES LA ÚLTIMA GENERACIÓN
+        // -------------------------------------------------
+
+        if (
+            padre.generacion >=
+            MAX_GENERACIONES
+        ) {
+
+            padre.separando = false;
+
+            padre.hijosCreados = false;
+
+            padre.puedeReproducirse = false;
+
+            return;
+        }
+
+
+        // -------------------------------------------------
+        // CREAR DOS HIJOS
+        // -------------------------------------------------
+
+        const tamañoHijo =
+            padre.tamaño * 0.62;
+
+        const angulo =
+            padre.anguloEstiramiento;
+
+
+        const separacion =
+            padre.tamaño * 0.75;
+
+
+        const posiciones = [
+
+            {
+                x:
+                    padre.x +
+                    Math.cos(angulo) *
+                    separacion,
+
+                y:
+                    padre.y +
+                    Math.sin(angulo) *
+                    separacion
+            },
+
+            {
+                x:
+                    padre.x -
+                    Math.cos(angulo) *
+                    separacion,
+
+                y:
+                    padre.y -
+                    Math.sin(angulo) *
+                    separacion
+            }
+        ];
+
+
+        for (let i = 0; i < 2; i++) {
+
+            // -------------------------------------------------
+            // HERENCIA
+            // -------------------------------------------------
+
+            const hijo =
+                crearFigura({
+
+                    x:
+                        padre.x,
+
+                    y:
+                        padre.y,
+
+                    tamaño:
+                        tamañoHijo *
+                        (
+                            0.94 +
+                            Math.random() * 0.10
+                        ),
+
+                    // MISMO COLOR DEL PADRE
+                    color:
+                        padre.color,
+
+                    // Hereda opacidad
+                    opacidad:
+                        padre.opacidad *
+                        (
+                            0.92 +
+                            Math.random() * 0.06
+                        ),
+
+                    // Hereda grosor
+                    grosor:
+                        padre.grosor *
+                        (
+                            0.92 +
+                            Math.random() * 0.08
+                        ),
+
+                    // Hereda movimiento
+                    vx:
+                        padre.vx +
+                        (Math.random() - 0.5) *
+                        0.20,
+
+                    vy:
+                        padre.vy +
+                        (Math.random() - 0.5) *
+                        0.20,
+
+                    generacion:
+                        padre.generacion + 1,
+
+                    padre:
+                        padre
+                });
+
+
+            // Guardamos la relación
+            padre.hijos.push(hijo);
+
+            figuras.push(hijo);
+
+
+            // -------------------------------------------------
+            // ANIMACIÓN DE NACIMIENTO
+            // -------------------------------------------------
+
+            hijo.separando = true;
+
+            hijo.progresoSeparacion = 0;
+
+            hijo.destinoX =
+                posiciones[i].x;
+
+            hijo.destinoY =
+                posiciones[i].y;
+        }
+
+
+        // El padre queda como elemento de la generación anterior
+        padre.puedeReproducirse = false;
+
+        figuraEstirada = null;
+
+        dedos.clear();
+    }
+
+
+    // =====================================================
+    // ANIMAR SEPARACIÓN
+    // =====================================================
+
+    function actualizarSeparaciones() {
+
+        figuras.forEach(figura => {
+
+            if (!figura.separando) {
+                return;
+            }
+
+            figura.progresoSeparacion += 0.035;
+
+            const progreso =
+                Math.min(
+                    figura.progresoSeparacion,
+                    1
+                );
+
+
+            // Movimiento suave
+            const suavizado =
+                1 -
+                Math.pow(
+                    1 - progreso,
+                    3
+                );
+
+
+            figura.x =
+                figura.x +
+                (
+                    figura.destinoX -
+                    figura.x
+                ) *
+                0.12;
+
+            figura.y =
+                figura.y +
+                (
+                    figura.destinoY -
+                    figura.y
+                ) *
+                0.12;
+
+
+            // Al terminar
+            if (progreso >= 1) {
+
+                figura.x =
+                    figura.destinoX;
+
+                figura.y =
+                    figura.destinoY;
+
+                figura.separando = false;
+            }
+        });
+    }
+
+
+    // =====================================================
+    // TOUCH START
+    // =====================================================
 
     canvas.addEventListener(
-        "pointercancel",
-        terminarEstiramiento
+        "touchstart",
+        function (e) {
+
+            e.preventDefault();
+
+            const rect =
+                canvas.getBoundingClientRect();
+
+
+            for (
+                let i = 0;
+                i < e.changedTouches.length;
+                i++
+            ) {
+
+                const touch =
+                    e.changedTouches[i];
+
+                dedos.set(
+                    touch.identifier,
+                    {
+
+                        x:
+                            touch.clientX -
+                            rect.left,
+
+                        y:
+                            touch.clientY -
+                            rect.top
+                    }
+                );
+            }
+
+
+            // SOLO CUANDO HAY DOS DEDOS
+            if (dedos.size === 2) {
+
+                comenzarEstiramiento();
+            }
+
+        },
+        {
+            passive: false
+        }
     );
 
 
     // =====================================================
-    // DIBUJAR FIGURA
+    // TOUCH MOVE
+    // =====================================================
+
+    canvas.addEventListener(
+        "touchmove",
+        function (e) {
+
+            e.preventDefault();
+
+            const rect =
+                canvas.getBoundingClientRect();
+
+
+            for (
+                let i = 0;
+                i < e.changedTouches.length;
+                i++
+            ) {
+
+                const touch =
+                    e.changedTouches[i];
+
+                if (
+                    dedos.has(
+                        touch.identifier
+                    )
+                ) {
+
+                    dedos.set(
+                        touch.identifier,
+                        {
+
+                            x:
+                                touch.clientX -
+                                rect.left,
+
+                            y:
+                                touch.clientY -
+                                rect.top
+                        }
+                    );
+                }
+            }
+
+
+            actualizarEstiramiento();
+
+        },
+        {
+            passive: false
+        }
+    );
+
+
+    // =====================================================
+    // TOUCH END
+    // =====================================================
+
+    canvas.addEventListener(
+        "touchend",
+        function (e) {
+
+            e.preventDefault();
+
+
+            for (
+                let i = 0;
+                i < e.changedTouches.length;
+                i++
+            ) {
+
+                dedos.delete(
+                    e.changedTouches[i].identifier
+                );
+            }
+
+
+            // Si soltamos antes del límite
+            // vuelve suavemente a su forma original
+
+            if (
+                figuraEstirada &&
+                dedos.size < 2
+            ) {
+
+                figuraEstirada.estirando =
+                    false;
+
+                figuraEstirada.escalaX =
+                    1;
+
+                figuraEstirada.escalaY =
+                    1;
+
+                figuraEstirada =
+                    null;
+            }
+
+        },
+        {
+            passive: false
+        }
+    );
+
+
+    // =====================================================
+    // TOUCH CANCEL
+    // =====================================================
+
+    canvas.addEventListener(
+        "touchcancel",
+        function () {
+
+            dedos.clear();
+
+            if (figuraEstirada) {
+
+                figuraEstirada.estirando =
+                    false;
+
+                figuraEstirada.escalaX =
+                    1;
+
+                figuraEstirada.escalaY =
+                    1;
+            }
+
+            figuraEstirada = null;
+        }
+    );
+
+
+    // =====================================================
+    // DIBUJAR
     // =====================================================
 
     function dibujarFigura(figura) {
 
         // Respiración
+
         figura.faseRespiracion +=
             figura.velocidadRespiracion;
 
 
         const respiracion =
             1 +
-            Math.sin(figura.faseRespiracion) *
+            Math.sin(
+                figura.faseRespiracion
+            ) *
             figura.intensidadRespiracion;
 
 
         const tamaño =
-            figura.tamaño * respiracion;
+            figura.tamaño *
+            respiracion;
 
 
         ctx.save();
+
 
         ctx.translate(
             figura.x,
@@ -705,9 +1107,18 @@ document.addEventListener("DOMContentLoaded", function () {
         );
 
 
-        // =================================================
-        // ESTIRAMIENTO
-        // =================================================
+        // Durante el estiramiento
+        // rotamos el eje del cuadrado
+
+        if (figura.estirando) {
+
+            ctx.rotate(
+                figura.anguloEstiramiento
+            );
+        }
+
+
+        // Escala
 
         ctx.scale(
             figura.escalaX,
@@ -715,17 +1126,13 @@ document.addEventListener("DOMContentLoaded", function () {
         );
 
 
-        // =================================================
-        // OPACIDAD
-        // =================================================
-
         ctx.globalAlpha =
             figura.opacidad;
 
 
-        // =================================================
+        // -------------------------------------------------
         // CUADRADO
-        // =================================================
+        // -------------------------------------------------
 
         ctx.fillStyle =
             figura.color;
@@ -739,15 +1146,16 @@ document.addEventListener("DOMContentLoaded", function () {
         );
 
 
-        // =================================================
+        // -------------------------------------------------
         // BORDE
-        // =================================================
+        // -------------------------------------------------
 
         ctx.strokeStyle =
             figura.color;
 
         ctx.lineWidth =
             figura.grosor;
+
 
         ctx.strokeRect(
             -tamaño / 2,
@@ -762,7 +1170,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // =====================================================
-    // ANIMACIÓN
+    // ANIMACIÓN PRINCIPAL
     // =====================================================
 
     function animar() {
@@ -783,15 +1191,19 @@ document.addEventListener("DOMContentLoaded", function () {
         resolverColisiones();
 
 
-        // 3. Dibujar
-        figuras.forEach(figura => {
-
-            dibujarFigura(figura);
-
-        });
+        // 3. Separaciones
+        actualizarSeparaciones();
 
 
-        requestAnimationFrame(animar);
+        // 4. Dibujar
+        figuras.forEach(
+            dibujarFigura
+        );
+
+
+        requestAnimationFrame(
+            animar
+        );
     }
 
 

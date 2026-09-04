@@ -1,11 +1,12 @@
-
 document.addEventListener("DOMContentLoaded", function () {
+
+
+    // ==========================================
+    // CONTENEDOR
+    // ==========================================
 
     const contenedor =
         document.getElementById("contenedor");
-
-    const mensaje =
-        document.getElementById("mensaje");
 
 
     // ==========================================
@@ -13,15 +14,17 @@ document.addEventListener("DOMContentLoaded", function () {
     // ==========================================
 
     const colores = [
+
         "#D9D9D9",
         "#8BB2D3",
         "#202D64",
         "#2B538E"
+
     ];
 
 
     // ==========================================
-    // VARIABLES
+    // VARIABLES DEL JUEGO
     // ==========================================
 
     let cantidadCuadrados = 4;
@@ -34,12 +37,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let jugando = false;
 
+    let mostrandoSecuencia = false;
+
+    let juegoIniciado = false;
+
 
     // ==========================================
     // CREAR CUADRADOS
     // ==========================================
 
     function crearCuadrados() {
+
 
         contenedor.innerHTML = "";
 
@@ -52,15 +60,20 @@ document.addEventListener("DOMContentLoaded", function () {
             i++
         ) {
 
+
             const cuadrado =
                 document.createElement("div");
 
 
-            cuadrado.classList.add("cuadrado");
+            cuadrado.classList.add(
+                "cuadrado"
+            );
 
 
             const color =
-                colores[i % colores.length];
+                colores[
+                    i % colores.length
+                ];
 
 
             cuadrado.style.setProperty(
@@ -71,18 +84,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
             cuadrado.style.backgroundColor =
                 color;
-
-
-            // Sin borde
-
-            cuadrado.style.border =
-                "none";
-
-            cuadrado.style.outline =
-                "none";
-
-            cuadrado.style.boxShadow =
-                "none";
 
 
             cuadrado.dataset.numero =
@@ -101,17 +102,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 y: 0,
 
-                // MOVIMIENTO LENTO
+                tamaño: 120,
+
+
+                // Movimiento
 
                 vx:
                     (Math.random() - 0.5)
-                    * 0.5,
+                    * 0.45,
 
                 vy:
                     (Math.random() - 0.5)
-                    * 0.5,
+                    * 0.45,
 
-                tamaño: 120,
+
+                // Respiración
 
                 fase:
                     Math.random()
@@ -124,19 +129,26 @@ document.addEventListener("DOMContentLoaded", function () {
                     * 0.001,
 
                 intensidad:
-                    3 +
+                    2 +
                     Math.random()
-                    * 3,
+                    * 2,
+
+
+                // Empuje
 
                 empujeX: 0,
 
                 empujeY: 0,
+
+
+                // Rotación
 
                 rotacion:
                     (Math.random() - 0.5)
                     * 8,
 
                 rotacionObjetivo: 0
+
             };
 
 
@@ -164,7 +176,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
 
-        actualizarGrid();
+        actualizarTamaño();
 
         posicionarCuadrados();
 
@@ -172,64 +184,42 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // ==========================================
-    // GRID
+    // TAMAÑO
     // ==========================================
 
-    function actualizarGrid() {
+    function actualizarTamaño() {
 
-        if (cantidadCuadrados <= 4) {
 
-            cuadrados.forEach(
-                function (c) {
+        let tamaño;
 
-                    c.tamaño = 120;
 
-                    c.elemento.style.width =
-                        "120px";
+        if (cantidadCuadrados <= 9) {
 
-                    c.elemento.style.height =
-                        "120px";
-
-                }
-            );
-
-        }
-
-        else if (cantidadCuadrados <= 9) {
-
-            cuadrados.forEach(
-                function (c) {
-
-                    c.tamaño = 120;
-
-                    c.elemento.style.width =
-                        "120px";
-
-                    c.elemento.style.height =
-                        "120px";
-
-                }
-            );
+            tamaño = 120;
 
         }
 
         else {
 
-            cuadrados.forEach(
-                function (c) {
-
-                    c.tamaño = 100;
-
-                    c.elemento.style.width =
-                        "100px";
-
-                    c.elemento.style.height =
-                        "100px";
-
-                }
-            );
+            tamaño = 100;
 
         }
+
+
+        cuadrados.forEach(
+            function (cuadrado) {
+
+                cuadrado.tamaño =
+                    tamaño;
+
+                cuadrado.elemento.style.width =
+                    tamaño + "px";
+
+                cuadrado.elemento.style.height =
+                    tamaño + "px";
+
+            }
+        );
 
     }
 
@@ -240,8 +230,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function posicionarCuadrados() {
 
+
         const ancho =
             contenedor.clientWidth;
+
 
         const alto =
             contenedor.clientHeight;
@@ -277,6 +269,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const centroX =
             ancho / 2;
 
+
         const centroY =
             alto / 2;
 
@@ -284,8 +277,10 @@ document.addEventListener("DOMContentLoaded", function () {
         cuadrados.forEach(
             function (cuadrado, i) {
 
+
                 const columna =
                     i % columnas;
+
 
                 const fila =
                     Math.floor(
@@ -293,38 +288,38 @@ document.addEventListener("DOMContentLoaded", function () {
                     );
 
 
-                const totalColumnas =
-                    Math.min(
-                        columnas,
-                        cantidadCuadrados
-                    );
-
-
                 const x =
-                    centroX +
+                    centroX
+                    +
                     (
                         columna -
-                        (totalColumnas - 1) / 2
+                        (columnas - 1) / 2
                     )
-                    * espacioX
+                    *
+                    espacioX
                     -
                     cuadrado.tamaño / 2;
 
 
                 const y =
-                    centroY +
+                    centroY
+                    +
                     (
                         fila -
                         (filas - 1) / 2
                     )
-                    * espacioY
+                    *
+                    espacioY
                     -
                     cuadrado.tamaño / 2;
 
 
-                cuadrado.x = x;
+                cuadrado.x =
+                    x;
 
-                cuadrado.y = y;
+
+                cuadrado.y =
+                    y;
 
             }
         );
@@ -333,30 +328,24 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // ==========================================
-    // NUEVA RONDA
+    // GENERAR PRIMERA SECUENCIA
     // ==========================================
 
-    function nuevaRonda() {
+    function iniciarJuego() {
+
+
+        secuencia = [];
 
         posicionJugador = 0;
 
         jugando = false;
 
+        mostrandoSecuencia = false;
 
-        const nuevoNumero =
-            Math.floor(
-                Math.random()
-                * cantidadCuadrados
-            );
+        juegoIniciado = true;
 
 
-        secuencia.push(
-            nuevoNumero
-        );
-
-
-        mensaje.textContent =
-            "MIRÁ LA SECUENCIA";
+        agregarPaso();
 
 
         setTimeout(
@@ -365,7 +354,29 @@ document.addEventListener("DOMContentLoaded", function () {
                 mostrarSecuencia();
 
             },
-            600
+            800
+        );
+
+    }
+
+
+    // ==========================================
+    // AGREGAR PASO
+    // ==========================================
+
+    function agregarPaso() {
+
+
+        const numero =
+            Math.floor(
+                Math.random()
+                *
+                cantidadCuadrados
+            );
+
+
+        secuencia.push(
+            numero
         );
 
     }
@@ -377,7 +388,29 @@ document.addEventListener("DOMContentLoaded", function () {
 
     async function mostrarSecuencia() {
 
+
+        if (
+            mostrandoSecuencia
+        ) {
+
+            return;
+
+        }
+
+
+        mostrandoSecuencia =
+            true;
+
+
         jugando = false;
+
+
+        posicionJugador = 0;
+
+
+        // Pequeña pausa antes de comenzar
+
+        await esperar(500);
 
 
         for (
@@ -385,6 +418,7 @@ document.addEventListener("DOMContentLoaded", function () {
             i < secuencia.length;
             i++
         ) {
+
 
             const numero =
                 secuencia[i];
@@ -395,18 +429,19 @@ document.addEventListener("DOMContentLoaded", function () {
             );
 
 
-            await esperar(250);
+            await esperar(180);
 
         }
 
 
-        posicionJugador = 0;
+        mostrandoSecuencia =
+            false;
+
 
         jugando = true;
 
 
-        mensaje.textContent =
-            "REPETÍ LA SECUENCIA";
+        posicionJugador = 0;
 
     }
 
@@ -417,8 +452,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function encenderCuadrado(numero) {
 
+
         return new Promise(
             function (resolve) {
+
 
                 const cuadrado =
                     cuadrados[numero];
@@ -433,36 +470,29 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
 
 
-                // ==================================
-                // BRILLO
-                // ==================================
+                // Encender
 
                 cuadrado.elemento.classList.add(
                     "activo"
                 );
 
 
-                // Frenar suavemente mientras
-                // muestra la secuencia
-
-                cuadrado.vx *= 0.5;
-
-                cuadrado.vy *= 0.5;
-
+                // Pequeño movimiento
 
                 cuadrado.rotacionObjetivo =
                     (
                         Math.random()
                         - 0.5
                     )
-                    * 12;
+                    *
+                    10;
 
+
+                // Duración de la luz
 
                 setTimeout(
                     function () {
 
-
-                        // Quitar brillo
 
                         cuadrado.elemento.classList.remove(
                             "activo"
@@ -479,12 +509,12 @@ document.addEventListener("DOMContentLoaded", function () {
                                 resolve();
 
                             },
-                            120
+                            100
                         );
 
 
                     },
-                    700
+                    600
                 );
 
             }
@@ -498,6 +528,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // ==========================================
 
     function esperar(tiempo) {
+
 
         return new Promise(
             function (resolve) {
@@ -519,8 +550,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function tocarCuadrado(numero) {
 
-        if (!jugando) {
+
+        // Si estamos mostrando la secuencia
+        // no se puede tocar
+
+        if (
+            !jugando ||
+            mostrandoSecuencia
+        ) {
+
             return;
+
         }
 
 
@@ -528,27 +568,20 @@ document.addEventListener("DOMContentLoaded", function () {
             cuadrados[numero];
 
 
-        // Pequeño destello al tocar
+        if (!cuadrado) {
+
+            return;
+
+        }
+
+
+        // ==================================
+        // DESTELLO
+        // ==================================
 
         cuadrado.elemento.classList.add(
             "activo"
         );
-
-
-        cuadrado.vx +=
-            (
-                Math.random()
-                - 0.5
-            )
-            * 0.5;
-
-
-        cuadrado.vy +=
-            (
-                Math.random()
-                - 0.5
-            )
-            * 0.5;
 
 
         cuadrado.rotacionObjetivo =
@@ -556,7 +589,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 Math.random()
                 - 0.5
             )
-            * 15;
+            *
+            12;
 
 
         setTimeout(
@@ -574,87 +608,81 @@ document.addEventListener("DOMContentLoaded", function () {
         );
 
 
-        // ======================================
-        // CORRECTO
-        // ======================================
+        // ==================================
+        // COMPROBAR
+        // ==================================
 
         if (
-            numero ===
+            numero !==
             secuencia[posicionJugador]
         ) {
 
-            posicionJugador++;
+            perder();
 
-
-            if (
-                posicionJugador ===
-                secuencia.length
-            ) {
-
-                jugando = false;
-
-
-                mensaje.textContent =
-                    "¡MUY BIEN!";
-
-
-                // ==================================
-                // APARECE OTRO
-                // ==================================
-
-                if (
-                    secuencia.length ===
-                    cantidadCuadrados
-                ) {
-
-                    setTimeout(
-                        function () {
-
-                            cantidadCuadrados++;
-
-
-                            crearCuadrados();
-
-
-                            mensaje.textContent =
-                                "¡APARECIÓ OTRO!";
-
-
-                            setTimeout(
-                                function () {
-
-                                    nuevaRonda();
-
-                                },
-                                1000
-                            );
-
-                        },
-                        700
-                    );
-
-                }
-
-                else {
-
-                    setTimeout(
-                        function () {
-
-                            nuevaRonda();
-
-                        },
-                        1000
-                    );
-
-                }
-
-            }
+            return;
 
         }
 
-        else {
 
-            error();
+        // Correcto
+
+        posicionJugador++;
+
+
+        // ==================================
+        // TODA LA SECUENCIA CORRECTA
+        // ==================================
+
+        if (
+            posicionJugador >=
+            secuencia.length
+        ) {
+
+
+            jugando = false;
+
+
+            // ==================================
+            // ¿HAY QUE AGREGAR CUADRADO?
+            // ==================================
+
+            if (
+                secuencia.length >=
+                cantidadCuadrados
+            ) {
+
+
+                setTimeout(
+                    function () {
+
+                        agregarCuadrado();
+
+                    },
+                    700
+                );
+
+
+            }
+
+            else {
+
+
+                // ==================================
+                // SIGUIENTE RONDA
+                // ==================================
+
+                setTimeout(
+                    function () {
+
+                        agregarPaso();
+
+                        mostrarSecuencia();
+
+                    },
+                    900
+                );
+
+            }
 
         }
 
@@ -662,17 +690,102 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // ==========================================
-    // ERROR
+    // AGREGAR CUADRADO
     // ==========================================
 
-    function error() {
+    function agregarCuadrado() {
+
+
+        // Máximo de cuadrados
+
+        if (
+            cantidadCuadrados >= 12
+        ) {
+
+            // Seguimos jugando
+            // sin agregar más
+
+            setTimeout(
+                function () {
+
+                    agregarPaso();
+
+                    mostrarSecuencia();
+
+                },
+                800
+            );
+
+            return;
+
+        }
+
+
+        // ==================================
+        // AUMENTAR
+        // ==================================
+
+        cantidadCuadrados++;
+
+
+        // ==================================
+        // CREAR NUEVAMENTE
+        // ==================================
+
+        crearCuadrados();
+
+
+        // ==================================
+        // NUEVA SECUENCIA
+        // ==================================
+
+        secuencia = [];
+
+
+        posicionJugador = 0;
+
+
+        // Primero mostramos
+        // la nueva secuencia
+
+        setTimeout(
+            function () {
+
+                agregarPaso();
+
+                mostrarSecuencia();
+
+            },
+            900
+        );
+
+    }
+
+
+    // ==========================================
+    // PERDER
+    // ==========================================
+
+    function perder() {
+
+
+        if (
+            !jugando
+        ) {
+
+            return;
+
+        }
+
 
         jugando = false;
 
+        mostrandoSecuencia = false;
 
-        mensaje.textContent =
-            "TE EQUIVOCASTE";
 
+        // ==================================
+        // DESTELLO DE ERROR
+        // ==================================
 
         cuadrados.forEach(
             function (cuadrado) {
@@ -681,13 +794,27 @@ document.addEventListener("DOMContentLoaded", function () {
                     "activo"
                 );
 
-                cuadrado.vx *= -1.3;
 
-                cuadrado.vy *= -1.3;
+                cuadrado.vx *= -1.4;
+
+                cuadrado.vy *= -1.4;
+
+
+                cuadrado.rotacionObjetivo =
+                    (
+                        Math.random()
+                        - 0.5
+                    )
+                    *
+                    20;
 
             }
         );
 
+
+        // ==================================
+        // QUITAR LUZ
+        // ==================================
 
         setTimeout(
             function () {
@@ -699,70 +826,56 @@ document.addEventListener("DOMContentLoaded", function () {
                             "activo"
                         );
 
+                        cuadrado.rotacionObjetivo =
+                            0;
+
                     }
                 );
 
             },
-            400
+            350
         );
 
+
+        // ==================================
+        // PERDER UN CUADRADO
+        // ==================================
 
         setTimeout(
             function () {
 
-                if (
-                    cantidadCuadrados > 0
-                ) {
 
-                    cantidadCuadrados--;
-
-                }
-
-
-                secuencia = [];
-
-                posicionJugador = 0;
+                cantidadCuadrados--;
 
 
                 // ==================================
-                // FIN DEL JUEGO
+                // LLEGÓ A CERO
                 // ==================================
 
                 if (
-                    cantidadCuadrados === 0
+                    cantidadCuadrados <= 0
                 ) {
 
-                    mensaje.textContent =
-                        "FIN DEL JUEGO";
+
+                    cantidadCuadrados = 4;
+
+
+                    secuencia = [];
+
+
+                    posicionJugador = 0;
+
+
+                    crearCuadrados();
 
 
                     setTimeout(
                         function () {
 
-                            cantidadCuadrados = 4;
-
-                            secuencia = [];
-
-                            posicionJugador = 0;
-
-                            crearCuadrados();
-
-
-                            mensaje.textContent =
-                                "NUEVAMENTE";
-
-
-                            setTimeout(
-                                function () {
-
-                                    nuevaRonda();
-
-                                },
-                                1000
-                            );
+                            iniciarJuego();
 
                         },
-                        1500
+                        1000
                     );
 
 
@@ -771,17 +884,29 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
 
 
+                // ==================================
+                // QUEDAN CUADRADOS
+                // ==================================
+
+                secuencia = [];
+
+
+                posicionJugador = 0;
+
+
                 crearCuadrados();
 
 
-                mensaje.textContent =
-                    "PERDISTE UN CUADRADO";
-
+                // ==================================
+                // NUEVA PARTIDA CON MENOS CUADRADOS
+                // ==================================
 
                 setTimeout(
                     function () {
 
-                        nuevaRonda();
+                        agregarPaso();
+
+                        mostrarSecuencia();
 
                     },
                     1000
@@ -796,13 +921,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // ==========================================
-    // MOVIMIENTO LENTO
+    // MOVIMIENTO
     // ==========================================
 
     function moverCuadrados() {
 
+
         const ancho =
             contenedor.clientWidth;
+
 
         const alto =
             contenedor.clientHeight;
@@ -812,38 +939,47 @@ document.addEventListener("DOMContentLoaded", function () {
             function (cuadrado) {
 
 
-                // Movimiento orgánico MUY SUAVE
+                // Movimiento orgánico
+
+                const tiempo =
+                    Date.now();
+
 
                 cuadrado.vx +=
 
                     Math.sin(
-                        Date.now()
-                        * 0.0007
+                        tiempo
+                        *
+                        0.0007
                         +
                         cuadrado.fase
                     )
-                    * 0.0015;
+                    *
+                    0.0012;
 
 
                 cuadrado.vy +=
 
                     Math.cos(
-                        Date.now()
-                        * 0.0006
+                        tiempo
+                        *
+                        0.0006
                         +
                         cuadrado.fase
                     )
-                    * 0.0015;
+                    *
+                    0.0012;
 
 
-                // VELOCIDAD MÁXIMA LENTA
+                // ==================================
+                // VELOCIDAD MÁXIMA
+                // ==================================
 
                 const velocidadMaxima =
                     0.7;
 
 
                 cuadrado.vx =
-
                     Math.max(
                         -velocidadMaxima,
                         Math.min(
@@ -854,7 +990,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
                 cuadrado.vy =
-
                     Math.max(
                         -velocidadMaxima,
                         Math.min(
@@ -864,6 +999,10 @@ document.addEventListener("DOMContentLoaded", function () {
                     );
 
 
+                // ==================================
+                // MOVER
+                // ==================================
+
                 cuadrado.x +=
                     cuadrado.vx;
 
@@ -872,7 +1011,9 @@ document.addEventListener("DOMContentLoaded", function () {
                     cuadrado.vy;
 
 
-                // Empuje
+                // ==================================
+                // EMPUJE
+                // ==================================
 
                 cuadrado.x +=
                     cuadrado.empujeX;
@@ -890,10 +1031,6 @@ document.addEventListener("DOMContentLoaded", function () {
                     0.92;
 
 
-                const tamaño =
-                    cuadrado.tamaño;
-
-
                 // ==================================
                 // PAREDES
                 // ==================================
@@ -904,19 +1041,28 @@ document.addEventListener("DOMContentLoaded", function () {
 
                     cuadrado.x = 0;
 
-                    cuadrado.vx *= -1;
+                    cuadrado.vx =
+                        Math.abs(
+                            cuadrado.vx
+                        );
 
                 }
 
 
                 if (
-                    cuadrado.x + tamaño >= ancho
+                    cuadrado.x +
+                    cuadrado.tamaño >=
+                    ancho
                 ) {
 
                     cuadrado.x =
-                        ancho - tamaño;
+                        ancho -
+                        cuadrado.tamaño;
 
-                    cuadrado.vx *= -1;
+                    cuadrado.vx =
+                        -Math.abs(
+                            cuadrado.vx
+                        );
 
                 }
 
@@ -927,19 +1073,28 @@ document.addEventListener("DOMContentLoaded", function () {
 
                     cuadrado.y = 0;
 
-                    cuadrado.vy *= -1;
+                    cuadrado.vy =
+                        Math.abs(
+                            cuadrado.vy
+                        );
 
                 }
 
 
                 if (
-                    cuadrado.y + tamaño >= alto
+                    cuadrado.y +
+                    cuadrado.tamaño >=
+                    alto
                 ) {
 
                     cuadrado.y =
-                        alto - tamaño;
+                        alto -
+                        cuadrado.tamaño;
 
-                    cuadrado.vy *= -1;
+                    cuadrado.vy =
+                        -Math.abs(
+                            cuadrado.vy
+                        );
 
                 }
 
@@ -973,13 +1128,19 @@ document.addEventListener("DOMContentLoaded", function () {
                 const a =
                     cuadrados[i];
 
+
                 const b =
                     cuadrados[j];
 
 
+                // ==================================
+                // CENTROS
+                // ==================================
+
                 const ax =
                     a.x +
                     a.tamaño / 2;
+
 
                 const ay =
                     a.y +
@@ -990,6 +1151,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     b.x +
                     b.tamaño / 2;
 
+
                 const by =
                     b.y +
                     b.tamaño / 2;
@@ -997,6 +1159,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 const dx =
                     bx - ax;
+
 
                 const dy =
                     by - ay;
@@ -1009,17 +1172,19 @@ document.addEventListener("DOMContentLoaded", function () {
                     );
 
 
-                const radioA =
-                    a.tamaño * 0.5;
-
-                const radioB =
-                    b.tamaño * 0.5;
-
-
                 const distanciaMinima =
-                    radioA +
-                    radioB;
+                    (
+                        a.tamaño / 2
+                    )
+                    +
+                    (
+                        b.tamaño / 2
+                    );
 
+
+                // ==================================
+                // COLISIÓN
+                // ==================================
 
                 if (
                     distancia <
@@ -1055,7 +1220,9 @@ document.addEventListener("DOMContentLoaded", function () {
                     }
 
 
-                    // Separación
+                    // ==================================
+                    // SEPARAR
+                    // ==================================
 
                     const penetracion =
                         distanciaMinima -
@@ -1070,6 +1237,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         nx *
                         separacion;
 
+
                     a.y -=
                         ny *
                         separacion;
@@ -1079,12 +1247,15 @@ document.addEventListener("DOMContentLoaded", function () {
                         nx *
                         separacion;
 
+
                     b.y +=
                         ny *
                         separacion;
 
 
-                    // Rebote
+                    // ==================================
+                    // REBOTE
+                    // ==================================
 
                     const velocidadRelativa =
 
@@ -1092,7 +1263,8 @@ document.addEventListener("DOMContentLoaded", function () {
                             b.vx -
                             a.vx
                         )
-                        * nx
+                        *
+                        nx
 
                         +
 
@@ -1100,7 +1272,8 @@ document.addEventListener("DOMContentLoaded", function () {
                             b.vy -
                             a.vy
                         )
-                        * ny;
+                        *
+                        ny;
 
 
                     if (
@@ -1109,12 +1282,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
                         const rebote =
-                            1.1;
+                            0.9;
 
 
                         const impulso =
-                            -velocidadRelativa
-                            * rebote;
+                            -(
+                                1 +
+                                rebote
+                            )
+                            *
+                            velocidadRelativa
+                            /
+                            2;
 
 
                         a.vx -=
@@ -1148,24 +1327,29 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // ==========================================
-    // RESPIRACIÓN
+    // DIBUJAR
     // ==========================================
 
     function dibujarCuadrados() {
+
+
+        const tiempo =
+            Date.now();
 
 
         cuadrados.forEach(
             function (cuadrado) {
 
 
-                const tiempo =
-                    Date.now();
-
+                // ==================================
+                // RESPIRACIÓN
+                // ==================================
 
                 const respiracion =
 
                     Math.sin(
-                        tiempo *
+                        tiempo
+                        *
                         cuadrado.velocidadRespiracion
                         +
                         cuadrado.fase
@@ -1174,14 +1358,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 const escala =
 
-                    1 +
-
+                    1
+                    +
                     (
-                        respiracion *
-                        cuadrado.intensidad /
+                        respiracion
+                        *
+                        cuadrado.intensidad
+                        /
                         100
                     );
 
+
+                // ==================================
+                // POSICIÓN
+                // ==================================
 
                 cuadrado.elemento.style.left =
                     cuadrado.x + "px";
@@ -1191,7 +1381,9 @@ document.addEventListener("DOMContentLoaded", function () {
                     cuadrado.y + "px";
 
 
-                // Rotación suave
+                // ==================================
+                // ROTACIÓN
+                // ==================================
 
                 cuadrado.rotacion +=
 
@@ -1199,8 +1391,13 @@ document.addEventListener("DOMContentLoaded", function () {
                         cuadrado.rotacionObjetivo -
                         cuadrado.rotacion
                     )
-                    * 0.08;
+                    *
+                    0.08;
 
+
+                // ==================================
+                // TRANSFORMACIÓN
+                // ==================================
 
                 cuadrado.elemento.style.transform =
 
@@ -1221,9 +1418,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function animar() {
 
+
         moverCuadrados();
 
+
         detectarColisiones();
+
 
         dibujarCuadrados();
 
@@ -1241,20 +1441,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
     crearCuadrados();
 
+
     animar();
 
+
+    // ==========================================
+    // COMENZAR SIMÓN DICE
+    // ==========================================
 
     setTimeout(
         function () {
 
-            mensaje.textContent =
-                "MIRÁ LA SECUENCIA";
-
-            nuevaRonda();
+            iniciarJuego();
 
         },
         1000
     );
 
-});
 
+});

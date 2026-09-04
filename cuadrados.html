@@ -16,24 +16,46 @@
             box-sizing: border-box;
         }
 
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+        }
+
+
         body {
             background: #D9D9D9;
             overflow: hidden;
             font-family: Arial, sans-serif;
         }
 
+
+        /* =====================================
+           ÁREA DEL JUEGO
+        ===================================== */
+
         #juego {
+
             width: 95vw;
             height: 95vh;
+
             margin: 2.5vh auto;
 
             background: #060C1A;
 
             position: relative;
+
             overflow: hidden;
         }
 
+
+        /* =====================================
+           CONTENEDOR
+        ===================================== */
+
         #contenedor {
+
             position: absolute;
 
             left: 0;
@@ -42,15 +64,13 @@
             width: 100%;
             height: 100%;
 
-            display: grid;
-
-            justify-content: center;
-            align-content: center;
-
-            gap: 60px;
-
             pointer-events: none;
         }
+
+
+        /* =====================================
+           CUADRADOS
+        ===================================== */
 
         .cuadrado {
 
@@ -71,24 +91,29 @@
             transform-origin: center center;
 
             transition:
-                box-shadow 0.2s ease,
-                filter 0.2s ease;
+                filter 0.12s ease,
+                box-shadow 0.12s ease;
         }
+
+
+        /* =====================================
+           CUADRADO ILUMINADO
+        ===================================== */
 
         .cuadrado.activo {
 
-            filter: brightness(7.9);
+            filter: brightness(4);
 
             box-shadow:
-                0 0 35px var(--color),
-                0 0 70px var(--color),
-                0 0 120px var(--color);
+                0 0 25px var(--color),
+                0 0 55px var(--color),
+                0 0 90px var(--color);
         }
 
 
-        /* =========================
+        /* =====================================
            NAVEGACIÓN
-        ========================= */
+        ===================================== */
 
         #navegacion {
 
@@ -100,6 +125,7 @@
             transform: translateX(-50%);
 
             display: flex;
+
             align-items: center;
 
             gap: 15px;
@@ -108,9 +134,14 @@
         }
 
 
+        /* =====================================
+           PROGRESO
+        ===================================== */
+
         #progreso {
 
             display: flex;
+
             align-items: center;
 
             gap: 7px;
@@ -134,7 +165,7 @@
         }
 
 
-        /* PRIMER CÍRCULO ACTIVO */
+        /* PRIMER JUEGO ACTIVO */
 
         #progreso span.activo {
 
@@ -144,9 +175,9 @@
         }
 
 
-        /* =========================
+        /* =====================================
            FLECHAS
-        ========================= */
+        ===================================== */
 
         #navegacion button {
 
@@ -181,64 +212,6 @@
             opacity: 0.6;
         }
 
-
-        /* =========================
-           TÍTULO
-        ========================= */
-
-        #titulo {
-
-            position: absolute;
-
-            top: 25px;
-            left: 50%;
-
-            transform: translateX(-50%);
-
-            color: white;
-
-            font-size: 18px;
-
-            letter-spacing: 5px;
-
-            opacity: 0.8;
-
-            pointer-events: none;
-
-            z-index: 10;
-        }
-
-
-        /* =========================
-           MENSAJE
-        ========================= */
-
-        #mensaje {
-
-            position: absolute;
-
-            bottom: 25px;
-            left: 50%;
-
-            transform: translateX(-50%);
-
-            color: white;
-
-            font-size: 14px;
-
-            letter-spacing: 3px;
-
-            opacity: 0.7;
-
-            pointer-events: none;
-
-            text-align: center;
-
-            white-space: nowrap;
-
-            z-index: 10;
-        }
-
     </style>
 
 </head>
@@ -250,9 +223,9 @@
     <main id="juego">
 
 
-        <!-- =========================
+        <!-- =================================
              NAVEGACIÓN
-        ========================= -->
+        ================================== -->
 
         <div id="navegacion">
 
@@ -268,9 +241,9 @@
             </button>
 
 
-            <!-- =========================
+            <!-- =================================
                  9 CÍRCULOS
-            ========================= -->
+            ================================== -->
 
             <div id="progreso">
 
@@ -304,7 +277,7 @@
             </div>
 
 
-            <!-- AVANZAR A HERENCIA -->
+            <!-- AVANZAR -->
 
             <button
                 type="button"
@@ -318,21 +291,19 @@
         </div>
 
 
-        <!-- =========================
+        <!-- =================================
              JUEGO
-        ========================= -->
+        ================================== -->
 
         <div id="contenedor"></div>
 
 
-        
-
     </main>
 
 
-    <!-- =========================
-         JAVASCRIPT DEL JUEGO
-    ========================= -->
+    <!-- =================================
+         JAVASCRIPT
+    ================================== -->
 
     <script src="cuadrados.js"></script>
 
