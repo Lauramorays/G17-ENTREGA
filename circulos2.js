@@ -1,633 +1,587 @@
-document.addEventListener("DOMContentLoaded", function () {
-
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
-    const mensaje = document.getElementById("mensaje");
-
-
-    // =====================================================
-    // COLORES
-    // =====================================================
-
-    const colores = [
-        "#D9D9D9",
-        "#8BB2D3",
-        "#202D64",
-        "#2B538E"
-    ];
-
-
-    // =====================================================
-    // CONFIGURACIÓN
-    // =====================================================
-
-    const RADIO_BASE = 55;
-
-    // Movimiento normal
-    const VELOCIDAD_NORMAL = 0.8;
-
-    // Movimiento alterado
-    const VELOCIDAD_ALTERADA = 1.8;
-
-    // Movimiento cuando está calmado
-    const VELOCIDAD_CALMA = 0.05;
-
-    // Tiempo que permanece calmado después de soltar
-    const TIEMPO_CALMA = 4000;
+// ============================================================
+// EMPATÍA
+// ============================================================
+//
+// CONCEPTO:
+//
+// Al comenzar, los 4 organismos parecen tranquilos.
+// Después de 1 segundo comienzan a alterarse.
+//
+// Cada organismo tiene un nivel de alteración diferente:
+// - algunos respiran más rápido
+// - algunos se expanden más
+// - algunos se mueven más rápido
+//
+// La persona puede intervenir tocando un organismo.
+//
+// 1 dedo:
+//      No es suficiente para calmarlo.
+//
+// 2 o más dedos:
+//      El organismo comienza a calmarse.
+//
+// Mientras los 2 o más dedos permanecen sobre él:
+//      - disminuye su movimiento
+//      - disminuye su respiración
+//      - vuelve a su tamaño normal
+//      - finalmente queda completamente quieto
+//
+// Al retirar los dedos:
+//      vuelve progresivamente a su estado alterado.
+//
+// ============================================================
 
 
-    // =====================================================
-    // VARIABLES
-    // =====================================================
+// ============================================================
+// CANVAS
+// ============================================================
 
-    let circulos = [];
-
-    // Guarda los dedos que están tocando
-    const dedos = new Map();
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
 
 
-    // =====================================================
-    // CANVAS RESPONSIVE
-    // =====================================================
+// Ajustamos el tamaño real del canvas al tamaño visual.
+function ajustarCanvas() {
 
-    function ajustarCanvas() {
-
-        const anchoAnterior = canvas.width;
-        const altoAnterior = canvas.height;
-
-        canvas.width = canvas.clientWidth;
-        canvas.height = canvas.clientHeight;
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+}
 
 
-        if (circulos.length > 0) {
-
-            circulos.forEach(circulo => {
-
-                if (anchoAnterior > 0) {
-
-                    circulo.x =
-                        circulo.x *
-                        canvas.width /
-                        anchoAnterior;
-
-                }
-
-                if (altoAnterior > 0) {
-
-                    circulo.y =
-                        circulo.y *
-                        canvas.height /
-                        altoAnterior;
-
-                }
-
-                controlarBordes(circulo);
-
-            });
-
-        } else {
-
-            crearCirculos();
-
-        }
-
-    }
+// Primera adaptación.
+ajustarCanvas();
 
 
-    window.addEventListener(
-        "resize",
-        ajustarCanvas
-    );
+// Si cambia el tamaño de la ventana,
+// volvemos a adaptar el canvas.
+window.addEventListener("resize", () => {
+
+    ajustarCanvas();
+});
 
 
-    // =====================================================
-    // CREAR CÍRCULOS
-    // =====================================================
+// ============================================================
+// COLORES
+// ============================================================
+//
+// Utilizamos exactamente la misma paleta del sistema.
+// ============================================================
 
-    function crearCirculos() {
+const colores = [
+    "#D9D9D9",
+    "#8BB2D3",
+    "#202D64",
+    "#2B538E"
+];
 
-        circulos = [];
+
+// ============================================================
+// CONFIGURACIÓN GENERAL
+// ============================================================
 
 
-        const posiciones = [
+// Los círculos tienen un tamaño similar al de los cuadrados
+// de MEMORIA.
+const RADIO_BASE = 55;
 
-            [0.25, 0.30],
-            [0.75, 0.30],
-            [0.25, 0.70],
-            [0.75, 0.70]
 
+// Cuerpo físico utilizado para las colisiones.
+const RADIO_CUERPO = 55;
+
+
+// ------------------------------------------------------------
+// TIEMPO INICIAL TRANQUILO
+// ------------------------------------------------------------
+//
+// Durante este tiempo los organismos parecen normales.
+// Después de 1 segundo comienza la alteración.
+// ------------------------------------------------------------
+
+const TIEMPO_TRANQUILO = 1000;
+
+
+// Guardamos el momento exacto en que comenzó la experiencia.
+const inicio = performance.now();
+
+
+// Indica si ya comenzó la alteración.
+let estadoAlterado = false;
+
+
+// ============================================================
+// CÍRCULOS
+// ============================================================
+
+let circulos = [];
+
+
+// ============================================================
+// CREAR CÍRCULOS
+// ============================================================
+
+function crearCirculos() {
+
+    circulos = [];
+
+
+    for (let i = 0; i < 4; i++) {
+
+        // ----------------------------------------------------
+        // NIVEL DE ALTERACIÓN
+        // ----------------------------------------------------
+        //
+        // Cada círculo tiene un nivel diferente.
+        //
+        // Esto evita que los 4 se comporten exactamente igual.
+        //
+        // 0.45 = alteración leve
+        // 0.70 = alteración media
+        // 1.00 = alteración fuerte
+        // ----------------------------------------------------
+
+        const nivelesAlteracion = [
+            0.55,
+            0.85,
+            0.65,
+            1.00
         ];
 
 
-        const radioResponsive =
-            Math.min(
-                RADIO_BASE,
-                Math.min(
-                    canvas.width,
-                    canvas.height
-                ) * 0.10
-            );
+        // ----------------------------------------------------
+        // VELOCIDAD ALTERADA
+        // ----------------------------------------------------
+        //
+        // Cuanto mayor es la alteración,
+        // más rápido se mueve el organismo.
+        // ----------------------------------------------------
+
+        const alteracion =
+            nivelesAlteracion[i];
 
 
-        for (let i = 0; i < 4; i++) {
+        circulos.push({
 
-            // Dirección aleatoria
-            const angulo =
+            // ------------------------------------------------
+            // POSICIÓN
+            // ------------------------------------------------
+
+            x:
+                Math.random() *
+                (canvas.width - RADIO_CUERPO * 2) +
+                RADIO_CUERPO,
+
+            y:
+                Math.random() *
+                (canvas.height - RADIO_CUERPO * 2) +
+                RADIO_CUERPO,
+
+
+            // ------------------------------------------------
+            // TAMAÑO
+            // ------------------------------------------------
+
+            radio: RADIO_BASE,
+
+
+            // ------------------------------------------------
+            // VELOCIDAD
+            // ------------------------------------------------
+            //
+            // Al principio utilizamos velocidades tranquilas.
+            // Después de un segundo serán reemplazadas por
+            // las velocidades correspondientes a su alteración.
+            // ------------------------------------------------
+
+            vx:
+                (Math.random() - 0.5) * 1.5,
+
+            vy:
+                (Math.random() - 0.5) * 1.5,
+
+
+            // ------------------------------------------------
+            // VELOCIDAD ALTERADA
+            // ------------------------------------------------
+            //
+            // Guardamos cuánto se moverá cuando se altere.
+            // ------------------------------------------------
+
+            velocidadAlterada:
+                0.9 +
+                alteracion * 1.8,
+
+
+            // ------------------------------------------------
+            // COLOR
+            // ------------------------------------------------
+
+            color: colores[i],
+
+
+            // ------------------------------------------------
+            // ALTERACIÓN
+            // ------------------------------------------------
+
+            nivelAlteracion:
+                alteracion,
+
+
+            // ------------------------------------------------
+            // RESPIRACIÓN
+            // ------------------------------------------------
+            //
+            // Cada organismo tiene un ritmo diferente.
+            //
+            // Algunos respiran muy rápido.
+            // Otros respiran un poco más lento.
+            // ------------------------------------------------
+
+            velocidadRespiracionNormal:
+                0.008 +
+                Math.random() * 0.008,
+
+
+            velocidadRespiracionAlterada:
+                0.025 +
+                alteracion * 0.035,
+
+
+            // Momento diferente de la respiración para cada uno.
+            faseRespiracion:
                 Math.random() *
                 Math.PI *
-                2;
+                2,
 
 
-            circulos.push({
+            // ------------------------------------------------
+            // AMPLITUD DE RESPIRACIÓN
+            // ------------------------------------------------
+            //
+            // Algunos organismos se expanden más que otros.
+            // ------------------------------------------------
 
-                // =====================================
-                // POSICIÓN
-                // =====================================
+            amplitudAlterada:
+                0.04 +
+                alteracion * 0.08,
 
-                x:
-                    canvas.width *
-                    posiciones[i][0],
 
-                y:
-                    canvas.height *
-                    posiciones[i][1],
+            // ------------------------------------------------
+            // DEDOS
+            // ------------------------------------------------
 
+            dedosSobre: [],
 
-                // =====================================
-                // TAMAÑO
-                // =====================================
 
-                radio:
-                    radioResponsive,
+            // ------------------------------------------------
+            // NIVEL DE CALMA
+            // ------------------------------------------------
+            //
+            // 0 = completamente alterado
+            // 1 = completamente calmado
+            //
+            // Lo hacemos progresivo para que se vea el cambio.
+            // ------------------------------------------------
 
-                radioOriginal:
-                    radioResponsive,
+            nivelCalma: 0,
 
 
-                // =====================================
-                // COLOR
-                // =====================================
+            // ------------------------------------------------
+            // CALMADO
+            // ------------------------------------------------
 
-                color:
-                    colores[i],
-
-
-                // =====================================
-                // MOVIMIENTO
-                // =====================================
-
-                vx:
-                    Math.cos(angulo) *
-                    VELOCIDAD_ALTERADA *
-                    (0.6 + Math.random() * 0.4),
-
-                vy:
-                    Math.sin(angulo) *
-                    VELOCIDAD_ALTERADA *
-                    (0.6 + Math.random() * 0.4),
-
-
-                // =====================================
-                // MOVIMIENTO ORGÁNICO
-                // =====================================
-
-                faseX:
-                    Math.random() *
-                    Math.PI *
-                    2,
-
-                faseY:
-                    Math.random() *
-                    Math.PI *
-                    2,
-
-                velocidadOrganica:
-                    0.015 +
-                    Math.random() *
-                    0.025,
-
-
-                // =====================================
-                // RESPIRACIÓN
-                // =====================================
-
-                faseRespiracion:
-                    Math.random() *
-                    Math.PI *
-                    2,
-
-                velocidadRespiracion:
-                    0.025 +
-                    Math.random() *
-                    0.025,
-
-                intensidadRespiracion:
-                    0.05 +
-                    Math.random() *
-                    0.05,
-
-
-                // =====================================
-                // ALTERACIÓN
-                // =====================================
-
-                alterado: true,
-
-                intensidadAlteracion:
-                    0.6 +
-                    Math.random() *
-                    0.4,
-
-
-                // =====================================
-                // TITILEO
-                // =====================================
-
-                faseTitileo:
-                    Math.random() *
-                    Math.PI *
-                    2,
-
-                velocidadTitileo:
-                    0.05 +
-                    Math.random() *
-                    0.08,
-
-                intensidadTitileo:
-                    0.35 +
-                    Math.random() *
-                    0.4,
-
-
-                // =====================================
-                // CALMA
-                // =====================================
-
-                calmado: false,
-
-                tiempoCalmaInicio: 0,
-
-                dedosSobre: []
-
-            });
-
-        }
-
-    }
-
-
-    // =====================================================
-    // BORDES
-    // =====================================================
-
-    function controlarBordes(circulo) {
-
-        const radio = circulo.radio;
-
-
-        if (circulo.x - radio < 0) {
-
-            circulo.x = radio;
-            circulo.vx =
-                Math.abs(circulo.vx);
-
-        }
-
-
-        if (
-            circulo.x + radio >
-            canvas.width
-        ) {
-
-            circulo.x =
-                canvas.width - radio;
-
-            circulo.vx =
-                -Math.abs(circulo.vx);
-
-        }
-
-
-        if (circulo.y - radio < 0) {
-
-            circulo.y = radio;
-
-            circulo.vy =
-                Math.abs(circulo.vy);
-
-        }
-
-
-        if (
-            circulo.y + radio >
-            canvas.height
-        ) {
-
-            circulo.y =
-                canvas.height - radio;
-
-            circulo.vy =
-                -Math.abs(circulo.vy);
-
-        }
-
-    }
-
-
-    // =====================================================
-    // MOVIMIENTO
-    // =====================================================
-
-    function moverCirculos() {
-
-        circulos.forEach(circulo => {
-
-            // =====================================
-            // SI ESTÁ CALMADO
-            // =====================================
-
-            if (circulo.calmado) {
-
-                // Se mueve apenas
-                circulo.x +=
-                    circulo.vx;
-
-                circulo.y +=
-                    circulo.vy;
-
-
-                // Reduce progresivamente su velocidad
-
-                circulo.vx *= 0.98;
-                circulo.vy *= 0.98;
-
-            }
-
-
-            // =====================================
-            // SI ESTÁ ALTERADO
-            // =====================================
-
-            else {
-
-                circulo.x +=
-                    circulo.vx;
-
-                circulo.y +=
-                    circulo.vy;
-
-
-                // Movimiento orgánico
-
-                circulo.faseX +=
-                    circulo.velocidadOrganica;
-
-                circulo.faseY +=
-                    circulo.velocidadOrganica *
-                    0.8;
-
-
-                circulo.x +=
-                    Math.sin(
-                        circulo.faseX
-                    ) *
-                    0.3;
-
-                circulo.y +=
-                    Math.cos(
-                        circulo.faseY
-                    ) *
-                    0.3;
-
-
-                // Pequeños cambios de dirección
-                // para que parezcan inquietos
-
-                circulo.vx +=
-                    (Math.random() - 0.5) *
-                    0.035 *
-                    circulo.intensidadAlteracion;
-
-                circulo.vy +=
-                    (Math.random() - 0.5) *
-                    0.035 *
-                    circulo.intensidadAlteracion;
-
-
-                // Limitar velocidad
-
-                const velocidad =
-                    Math.sqrt(
-                        circulo.vx *
-                        circulo.vx +
-
-                        circulo.vy *
-                        circulo.vy
-                    );
-
-
-                if (
-                    velocidad >
-                    VELOCIDAD_ALTERADA
-                ) {
-
-                    circulo.vx =
-                        circulo.vx /
-                        velocidad *
-                        VELOCIDAD_ALTERADA;
-
-                    circulo.vy =
-                        circulo.vy /
-                        velocidad *
-                        VELOCIDAD_ALTERADA;
-
-                }
-
-            }
-
-
-            controlarBordes(circulo);
-
+            calmado: false
         });
+    }
+}
 
+
+// Creamos los organismos.
+crearCirculos();
+
+
+// ============================================================
+// DIBUJAR CÍRCULO
+// ============================================================
+
+function dibujarCirculo(circulo) {
+
+    ctx.save();
+
+
+    // Nos trasladamos al centro del organismo.
+    ctx.translate(
+        circulo.x,
+        circulo.y
+    );
+
+
+    // --------------------------------------------------------
+    // INTERPOLAR LA RESPIRACIÓN
+    // --------------------------------------------------------
+    //
+    // Cuando está alterado:
+    // respiración grande y rápida.
+    //
+    // Cuando está calmado:
+    // respiración mínima.
+    //
+    // La transición es progresiva.
+    // --------------------------------------------------------
+
+    const amplitudAlterada =
+        circulo.amplitudAlterada;
+
+
+    const amplitudTranquila =
+        0.012;
+
+
+    const amplitud =
+        amplitudAlterada *
+            (1 - circulo.nivelCalma) +
+        amplitudTranquila *
+            circulo.nivelCalma;
+
+
+    // --------------------------------------------------------
+    // RESPIRACIÓN
+    // --------------------------------------------------------
+
+    const respiracion =
+        1 +
+        Math.sin(
+            circulo.faseRespiracion
+        ) *
+        amplitud;
+
+
+    // --------------------------------------------------------
+    // TAMAÑO
+    // --------------------------------------------------------
+    //
+    // Cuando está alterado puede expandirse más.
+    // Cuando se calma vuelve a su tamaño original.
+    // --------------------------------------------------------
+
+    const escalaAlterada =
+        1 +
+        circulo.nivelAlteracion * 0.10;
+
+
+    const escala =
+        respiracion *
+        (
+            escalaAlterada *
+                (1 - circulo.nivelCalma) +
+            1 *
+                circulo.nivelCalma
+        );
+
+
+    // La misma escala en X e Y mantiene
+    // siempre la forma circular.
+    ctx.scale(
+        escala,
+        escala
+    );
+
+
+    // ========================================================
+    // CUERPO DEL ORGANISMO
+    // ========================================================
+
+    ctx.beginPath();
+
+    ctx.arc(
+        0,
+        0,
+        circulo.radio,
+        0,
+        Math.PI * 2
+    );
+
+
+    // --------------------------------------------------------
+    // COLOR
+    // --------------------------------------------------------
+    //
+    // El color se mantiene dentro de la paleta del sistema.
+    //
+    // La alteración se representa principalmente mediante:
+    // tamaño + respiración + velocidad.
+    //
+    // Cuando se calma, el color vuelve a verse más estable.
+    // --------------------------------------------------------
+
+    ctx.fillStyle =
+        circulo.color;
+
+    ctx.fill();
+
+
+    // --------------------------------------------------------
+    // BORDE
+    // --------------------------------------------------------
+
+    ctx.strokeStyle =
+        circulo.color;
+
+    ctx.lineWidth = 2;
+
+    ctx.stroke();
+
+
+    ctx.restore();
+}
+
+
+// ============================================================
+// ACTUALIZAR RESPIRACIÓN
+// ============================================================
+
+function actualizarRespiracion(circulo) {
+
+    // --------------------------------------------------------
+    // VELOCIDAD DE RESPIRACIÓN ALTERADA
+    // --------------------------------------------------------
+
+    const velocidadAlterada =
+        circulo.velocidadRespiracionAlterada;
+
+
+    // --------------------------------------------------------
+    // VELOCIDAD DE RESPIRACIÓN TRANQUILA
+    // --------------------------------------------------------
+
+    const velocidadTranquila =
+        circulo.velocidadRespiracionNormal;
+
+
+    // --------------------------------------------------------
+    // INTERPOLACIÓN
+    // --------------------------------------------------------
+    //
+    // Cuanto más calmado está:
+    // más lenta es su respiración.
+    // --------------------------------------------------------
+
+    const velocidad =
+        velocidadAlterada *
+            (1 - circulo.nivelCalma) +
+        velocidadTranquila *
+            circulo.nivelCalma;
+
+
+    circulo.faseRespiracion +=
+        velocidad;
+}
+
+
+// ============================================================
+// CONTROLAR BORDES
+// ============================================================
+
+function controlarBordes(circulo) {
+
+    // --------------------------------------------------------
+    // IZQUIERDA
+    // --------------------------------------------------------
+
+    if (
+        circulo.x - RADIO_CUERPO < 0
+    ) {
+
+        circulo.x =
+            RADIO_CUERPO;
+
+        circulo.vx =
+            Math.abs(circulo.vx);
     }
 
 
-    // =====================================================
-    // COLISIONES
-    // =====================================================
+    // --------------------------------------------------------
+    // DERECHA
+    // --------------------------------------------------------
 
-    function detectarColisiones() {
+    if (
+        circulo.x + RADIO_CUERPO >
+        canvas.width
+    ) {
 
-        for (
-            let i = 0;
-            i < circulos.length;
-            i++
-        ) {
+        circulo.x =
+            canvas.width -
+            RADIO_CUERPO;
 
-            for (
-                let j = i + 1;
-                j < circulos.length;
-                j++
-            ) {
-
-                const a = circulos[i];
-                const b = circulos[j];
-
-
-                const dx =
-                    b.x - a.x;
-
-                const dy =
-                    b.y - a.y;
-
-
-                const distancia =
-                    Math.sqrt(
-                        dx * dx +
-                        dy * dy
-                    );
-
-
-                const distanciaMinima =
-                    a.radio +
-                    b.radio;
-
-
-                if (
-                    distancia >=
-                    distanciaMinima
-                ) {
-
-                    continue;
-
-                }
-
-
-                if (distancia === 0) {
-
-                    continue;
-
-                }
-
-
-                const nx =
-                    dx / distancia;
-
-                const ny =
-                    dy / distancia;
-
-
-                const penetracion =
-                    distanciaMinima -
-                    distancia;
-
-
-                // Separar
-
-                a.x -=
-                    nx *
-                    penetracion *
-                    0.5;
-
-                a.y -=
-                    ny *
-                    penetracion *
-                    0.5;
-
-
-                b.x +=
-                    nx *
-                    penetracion *
-                    0.5;
-
-                b.y +=
-                    ny *
-                    penetracion *
-                    0.5;
-
-
-                // Rebote
-
-                const relativaX =
-                    b.vx -
-                    a.vx;
-
-                const relativaY =
-                    b.vy -
-                    a.vy;
-
-
-                const velocidadNormal =
-                    relativaX *
-                    nx +
-                    relativaY *
-                    ny;
-
-
-                if (
-                    velocidadNormal > 0
-                ) {
-
-                    continue;
-
-                }
-
-
-                const impulso =
-                    -(1 + 0.8) *
-                    velocidadNormal /
-                    2;
-
-
-                const impulsoX =
-                    impulso * nx;
-
-                const impulsoY =
-                    impulso * ny;
-
-
-                a.vx -=
-                    impulsoX;
-
-                a.vy -=
-                    impulsoY;
-
-
-                b.vx +=
-                    impulsoX;
-
-                b.vy +=
-                    impulsoY;
-
-            }
-
-        }
-
+        circulo.vx =
+            -Math.abs(circulo.vx);
     }
 
 
-    // =====================================================
-    // BUSCAR CÍRCULO
-    // =====================================================
+    // --------------------------------------------------------
+    // ARRIBA
+    // --------------------------------------------------------
 
-    function buscarCirculo(x, y) {
+    if (
+        circulo.y - RADIO_CUERPO < 0
+    ) {
+
+        circulo.y =
+            RADIO_CUERPO;
+
+        circulo.vy =
+            Math.abs(circulo.vy);
+    }
+
+
+    // --------------------------------------------------------
+    // ABAJO
+    // --------------------------------------------------------
+
+    if (
+        circulo.y + RADIO_CUERPO >
+        canvas.height
+    ) {
+
+        circulo.y =
+            canvas.height -
+            RADIO_CUERPO;
+
+        circulo.vy =
+            -Math.abs(circulo.vy);
+    }
+}
+
+
+// ============================================================
+// COLISIONES
+// ============================================================
+
+function detectarColisiones() {
+
+    for (
+        let i = 0;
+        i < circulos.length;
+        i++
+    ) {
 
         for (
-            let i = circulos.length - 1;
-            i >= 0;
-            i--
+            let j = i + 1;
+            j < circulos.length;
+            j++
         ) {
 
-            const circulo =
+            const a =
                 circulos[i];
+
+            const b =
+                circulos[j];
 
 
             const dx =
-                x - circulo.x;
+                b.x - a.x;
 
             const dy =
-                y - circulo.y;
+                b.y - a.y;
 
 
             const distancia =
@@ -637,556 +591,763 @@ document.addEventListener("DOMContentLoaded", function () {
                 );
 
 
+            const distanciaMinima =
+                RADIO_CUERPO +
+                RADIO_CUERPO;
+
+
+            // ------------------------------------------------
+            // SI ESTÁN CHOCANDO
+            // ------------------------------------------------
+
             if (
-                distancia <=
-                circulo.radio
+                distancia <
+                    distanciaMinima &&
+                distancia > 0
             ) {
 
-                return circulo;
+                const nx =
+                    dx / distancia;
 
+                const ny =
+                    dy / distancia;
+
+
+                const separacion =
+                    distanciaMinima -
+                    distancia;
+
+
+                // ------------------------------------------------
+                // SI A ESTÁ COMPLETAMENTE CALMADO
+                // ------------------------------------------------
+
+                if (
+                    a.nivelCalma >= 0.95 &&
+                    b.nivelCalma < 0.95
+                ) {
+
+                    b.x +=
+                        nx * separacion;
+
+                    b.y +=
+                        ny * separacion;
+                }
+
+
+                // ------------------------------------------------
+                // SI B ESTÁ COMPLETAMENTE CALMADO
+                // ------------------------------------------------
+
+                else if (
+                    b.nivelCalma >= 0.95 &&
+                    a.nivelCalma < 0.95
+                ) {
+
+                    a.x -=
+                        nx * separacion;
+
+                    a.y -=
+                        ny * separacion;
+                }
+
+
+                // ------------------------------------------------
+                // AMBOS SE MUEVEN
+                // ------------------------------------------------
+
+                else {
+
+                    a.x -=
+                        nx *
+                        separacion *
+                        0.5;
+
+                    a.y -=
+                        ny *
+                        separacion *
+                        0.5;
+
+
+                    b.x +=
+                        nx *
+                        separacion *
+                        0.5;
+
+                    b.y +=
+                        ny *
+                        separacion *
+                        0.5;
+                }
+
+
+                // ------------------------------------------------
+                // REBOTE
+                // ------------------------------------------------
+
+                const velocidadRelativa =
+                    (b.vx - a.vx) * nx +
+                    (b.vy - a.vy) * ny;
+
+
+                if (
+                    velocidadRelativa < 0
+                ) {
+
+                    const rebote = 0.8;
+
+
+                    const impulso =
+                        -(1 + rebote) *
+                        velocidadRelativa /
+                        2;
+
+
+                    // Si A está calmado,
+                    // solamente B recibe movimiento.
+                    if (
+                        a.nivelCalma >= 0.95 &&
+                        b.nivelCalma < 0.95
+                    ) {
+
+                        b.vx +=
+                            impulso * nx;
+
+                        b.vy +=
+                            impulso * ny;
+                    }
+
+
+                    // Si B está calmado,
+                    // solamente A recibe movimiento.
+                    else if (
+                        b.nivelCalma >= 0.95 &&
+                        a.nivelCalma < 0.95
+                    ) {
+
+                        a.vx -=
+                            impulso * nx;
+
+                        a.vy -=
+                            impulso * ny;
+                    }
+
+
+                    // Si ambos están alterados,
+                    // ambos reciben el rebote.
+                    else {
+
+                        a.vx -=
+                            impulso * nx;
+
+                        a.vy -=
+                            impulso * ny;
+
+
+                        b.vx +=
+                            impulso * nx;
+
+                        b.vy +=
+                            impulso * ny;
+                    }
+                }
             }
-
         }
-
-
-        return null;
-
     }
+}
 
 
-    // =====================================================
-    // POSICIÓN DEL PUNTERO
-    // =====================================================
+// ============================================================
+// ACTUALIZAR ESTADO DE CALMA
+// ============================================================
 
-    function obtenerPosicion(e) {
+function actualizarCalma(circulo) {
 
-        const rect =
-            canvas.getBoundingClientRect();
+    // --------------------------------------------------------
+    // DOS O MÁS DEDOS
+    // --------------------------------------------------------
+    //
+    // Dos dedos son necesarios para comenzar a regular
+    // al organismo.
+    // --------------------------------------------------------
 
-
-        return {
-
-            x:
-                (e.clientX -
-                    rect.left) *
-                (
-                    canvas.width /
-                    rect.width
-                ),
-
-            y:
-                (e.clientY -
-                    rect.top) *
-                (
-                    canvas.height /
-                    rect.height
-                )
-
-        };
-
-    }
-
-
-    // =====================================================
-    // INICIAR CONTACTO
-    // =====================================================
-
-    function iniciarContacto(
-        circulo,
-        pointerId
+    if (
+        circulo.dedosSobre.length >= 2
     ) {
 
-        // Evitar repetir el mismo dedo
+        circulo.calmado = true;
 
+        // Aumentamos progresivamente el nivel de calma.
+        //
+        // 0 → alterado
+        // 1 → completamente calmado
+
+        circulo.nivelCalma += 0.025;
+
+
+        // Nunca supera 1.
         if (
-            circulo.dedosSobre
-                .includes(pointerId)
+            circulo.nivelCalma > 1
         ) {
 
-            return;
-
+            circulo.nivelCalma = 1;
         }
+    }
 
 
-        circulo.dedosSobre.push(
-            pointerId
-        );
+    // --------------------------------------------------------
+    // MENOS DE DOS DEDOS
+    // --------------------------------------------------------
+
+    else {
+
+        circulo.calmado = false;
+
+        // Al retirar los dedos no vuelve inmediatamente
+        // al estado alterado.
+        //
+        // Se recupera progresivamente.
+
+        circulo.nivelCalma -= 0.008;
 
 
-        dedos.set(
-            pointerId,
-            circulo
-        );
+        // Nunca baja de 0.
+        if (
+            circulo.nivelCalma < 0
+        ) {
+
+            circulo.nivelCalma = 0;
+        }
+    }
+}
 
 
-        // =====================================
-        // SI HAY DOS DEDOS
-        // =====================================
+// ============================================================
+// ACTUALIZAR TODOS LOS ESTADOS DE CALMA
+// ============================================================
+//
+// Esta función se ejecuta continuamente para que la transición
+// de alterado a calmado sea visible.
+// ============================================================
+
+function actualizarEstadosCalma() {
+
+    circulos.forEach(circulo => {
+
+        // ----------------------------------------------------
+        // SI HAY DOS O MÁS DEDOS
+        // ----------------------------------------------------
 
         if (
             circulo.dedosSobre.length >= 2
         ) {
 
-            calmarCirculo(circulo);
-
-        }
-
-    }
-
-
-    // =====================================================
-    // CALMAR CÍRCULO
-    // =====================================================
-
-    function calmarCirculo(circulo) {
-
-        circulo.calmado = true;
-
-
-        // Frenar inmediatamente
-
-        circulo.vx = 0;
-        circulo.vy = 0;
-
-
-        mensaje.textContent =
-            "TE DETUVISTE A ESCUCHAR";
-
-
-        setTimeout(
-            function () {
-
-                mensaje.textContent =
-                    "DOS DEDOS · MANTENÉ LA ATENCIÓN";
-
-            },
-            1500
-        );
-
-    }
-
-
-    // =====================================================
-    // SOLTAR CÍRCULO
-    // =====================================================
-
-    function soltarCirculo(circulo) {
-
-        circulo.dedosSobre = [];
-
-
-        // Si estaba calmado,
-        // empieza el período de calma
-
-        if (circulo.calmado) {
-
-            circulo.tiempoCalmaInicio =
-                performance.now();
-
-        }
-
-    }
-
-
-    // =====================================================
-    // ACTUALIZAR CALMA
-    // =====================================================
-
-    function actualizarCalma() {
-
-        const ahora =
-            performance.now();
-
-
-        circulos.forEach(circulo => {
-
-            if (!circulo.calmado) {
-
-                return;
-
-            }
-
-
-            // Mientras hay dedos,
-            // permanece completamente calmado
+            circulo.nivelCalma += 0.025;
 
             if (
-                circulo.dedosSobre.length >= 2
+                circulo.nivelCalma > 1
             ) {
 
-                circulo.vx = 0;
-                circulo.vy = 0;
-
-                return;
-
+                circulo.nivelCalma = 1;
             }
 
-
-            // =====================================
-            // TIEMPO DESDE QUE SE SOLTÓ
-            // =====================================
-
-            const tiempo =
-                ahora -
-                circulo.tiempoCalmaInicio;
+            circulo.calmado = true;
+        }
 
 
-            // Todavía está calmado
+        // ----------------------------------------------------
+        // SI HAY MENOS DE DOS DEDOS
+        // ----------------------------------------------------
+
+        else {
+
+            circulo.nivelCalma -= 0.008;
 
             if (
-                tiempo <
-                TIEMPO_CALMA
+                circulo.nivelCalma < 0
             ) {
 
-                circulo.vx *= 0.98;
-                circulo.vy *= 0.98;
-
-                return;
-
+                circulo.nivelCalma = 0;
             }
 
 
-            // =====================================
-            // VUELVE A ALTERARSE
-            // =====================================
-
+            // Se considera calmado mientras todavía
+            // esté en transición.
             circulo.calmado =
-                false;
+                circulo.nivelCalma > 0;
+        }
+    });
+}
 
 
-            const angulo =
-                Math.random() *
-                Math.PI *
-                2;
+// ============================================================
+// MOVIMIENTO
+// ============================================================
+
+function moverCirculos() {
+
+    circulos.forEach(circulo => {
+
+        // ----------------------------------------------------
+        // VELOCIDAD SEGÚN EL NIVEL DE CALMA
+        // ----------------------------------------------------
+        //
+        // 0 = velocidad alterada
+        // 1 = completamente quieto
+        //
+        // De esta forma la calma se puede ver.
+        // ----------------------------------------------------
+
+        const factorMovimiento =
+            1 -
+            circulo.nivelCalma;
 
 
-            const velocidad =
-                1.2 +
-                Math.random() *
-                0.8;
+        // ----------------------------------------------------
+        // MOVIMIENTO
+        // ----------------------------------------------------
 
+        circulo.x +=
+            circulo.vx *
+            factorMovimiento;
+
+        circulo.y +=
+            circulo.vy *
+            factorMovimiento;
+
+
+        // ----------------------------------------------------
+        // MOVIMIENTO ORGÁNICO
+        // ----------------------------------------------------
+        //
+        // El movimiento se vuelve más suave a medida
+        // que el organismo se calma.
+        // ----------------------------------------------------
+
+        circulo.vx +=
+            Math.sin(
+                circulo.faseRespiracion *
+                0.7
+            ) *
+            0.003 *
+            factorMovimiento;
+
+
+        circulo.vy +=
+            Math.cos(
+                circulo.faseRespiracion *
+                0.6
+            ) *
+            0.003 *
+            factorMovimiento;
+
+
+        // ----------------------------------------------------
+        // LIMITAR VELOCIDAD
+        // ----------------------------------------------------
+
+        const velocidadMaxima =
+            circulo.velocidadAlterada;
+
+
+        const velocidad =
+            Math.sqrt(
+                circulo.vx *
+                    circulo.vx +
+                circulo.vy *
+                    circulo.vy
+            );
+
+
+        if (
+            velocidad >
+            velocidadMaxima
+        ) {
 
             circulo.vx =
-                Math.cos(angulo) *
-                velocidad;
+                (circulo.vx / velocidad) *
+                velocidadMaxima;
 
             circulo.vy =
-                Math.sin(angulo) *
-                velocidad;
+                (circulo.vy / velocidad) *
+                velocidadMaxima;
+        }
 
 
-            circulo.intensidadAlteracion =
-                0.6 +
-                Math.random() *
-                0.4;
+        // ----------------------------------------------------
+        // BORDES
+        // ----------------------------------------------------
 
-        });
+        controlarBordes(circulo);
+    });
 
+
+    // Revisamos las colisiones.
+    detectarColisiones();
+}
+
+
+// ============================================================
+// DETECTAR CÍRCULO TOCADO
+// ============================================================
+
+function detectarCirculoTocado(
+    x,
+    y
+) {
+
+    for (
+        let i = circulos.length - 1;
+        i >= 0;
+        i--
+    ) {
+
+        const circulo =
+            circulos[i];
+
+
+        const dx =
+            x - circulo.x;
+
+        const dy =
+            y - circulo.y;
+
+
+        const distancia =
+            Math.sqrt(
+                dx * dx +
+                dy * dy
+            );
+
+
+        if (
+            distancia <=
+            RADIO_CUERPO
+        ) {
+
+            return circulo;
+        }
     }
 
 
-    // =====================================================
-    // POINTER DOWN
-    // =====================================================
-
-    canvas.addEventListener(
-        "pointerdown",
-        function (e) {
-
-            const posicion =
-                obtenerPosicion(e);
+    return null;
+}
 
 
-            const circulo =
-                buscarCirculo(
-                    posicion.x,
-                    posicion.y
-                );
+// ============================================================
+// COORDENADAS DEL TOQUE
+// ============================================================
+
+function obtenerCoordenadas(
+    clientX,
+    clientY
+) {
+
+    const rect =
+        canvas.getBoundingClientRect();
 
 
-            if (!circulo) {
+    return {
 
-                return;
+        x:
+            (clientX - rect.left) *
+            canvas.width /
+            rect.width,
 
-            }
-
-
-            iniciarContacto(
-                circulo,
-                e.pointerId
-            );
-
-
-            canvas.setPointerCapture(
-                e.pointerId
-            );
+        y:
+            (clientY - rect.top) *
+            canvas.height /
+            rect.height
+    };
+}
 
 
-            e.preventDefault();
+// ============================================================
+// INICIAR TOQUE
+// ============================================================
 
+canvas.addEventListener(
+    "pointerdown",
+    function(event) {
+
+        // Ignoramos el mouse.
+        if (
+            event.pointerType === "mouse"
+        ) {
+
+            return;
         }
-    );
 
 
-    // =====================================================
-    // POINTER UP
-    // =====================================================
+        event.preventDefault();
 
-    function terminarDedo(e) {
+
+        const posicion =
+            obtenerCoordenadas(
+                event.clientX,
+                event.clientY
+            );
+
 
         const circulo =
-            dedos.get(
-                e.pointerId
+            detectarCirculoTocado(
+                posicion.x,
+                posicion.y
             );
 
 
+        // Si no tocó un círculo,
+        // no hacemos nada.
         if (!circulo) {
 
             return;
-
         }
 
 
-        dedos.delete(
-            e.pointerId
+        // Capturamos ese dedo.
+        canvas.setPointerCapture(
+            event.pointerId
         );
 
 
-        const indice =
+        // Guardamos el identificador del dedo.
+        if (
+            !circulo.dedosSobre.includes(
+                event.pointerId
+            )
+        ) {
+
+            circulo.dedosSobre.push(
+                event.pointerId
+            );
+        }
+
+
+        // Actualizamos inmediatamente.
+        actualizarCalma(circulo);
+    },
+    {
+        passive: false
+    }
+);
+
+
+// ============================================================
+// SOLTAR DEDO
+// ============================================================
+
+function soltarDedo(
+    pointerId
+) {
+
+    circulos.forEach(circulo => {
+
+        const posicion =
             circulo.dedosSobre.indexOf(
-                e.pointerId
+                pointerId
             );
 
 
         if (
-            indice !== -1
+            posicion !== -1
         ) {
 
+            // Quitamos el dedo.
             circulo.dedosSobre.splice(
-                indice,
+                posicion,
                 1
             );
-
         }
+    });
+}
 
 
-        // Cuando ya no hay dedos,
-        // comienza la calma posterior
+// ============================================================
+// POINTER UP
+// ============================================================
+
+canvas.addEventListener(
+    "pointerup",
+    function(event) {
 
         if (
-            circulo.dedosSobre.length === 0
+            event.pointerType === "mouse"
         ) {
 
-            soltarCirculo(
-                circulo
-            );
-
+            return;
         }
 
+
+        event.preventDefault();
+
+
+        soltarDedo(
+            event.pointerId
+        );
+    },
+    {
+        passive: false
     }
+);
 
 
-    canvas.addEventListener(
-        "pointerup",
-        terminarDedo
+// ============================================================
+// POINTER CANCEL
+// ============================================================
+
+canvas.addEventListener(
+    "pointercancel",
+    function(event) {
+
+        if (
+            event.pointerType === "mouse"
+        ) {
+
+            return;
+        }
+
+
+        soltarDedo(
+            event.pointerId
+        );
+    }
+);
+
+
+// ============================================================
+// ANIMACIÓN PRINCIPAL
+// ============================================================
+
+function animar() {
+
+    // --------------------------------------------------------
+    // LIMPIAR CANVAS
+    // --------------------------------------------------------
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
     );
 
 
-    canvas.addEventListener(
-        "pointercancel",
-        terminarDedo
-    );
+    // --------------------------------------------------------
+    // COMPROBAR LOS PRIMEROS 1000 ms
+    // --------------------------------------------------------
+    //
+    // Durante el primer segundo todos están tranquilos.
+    // Después comienzan a alterarse.
+    // --------------------------------------------------------
+
+    const tiempoActual =
+        performance.now();
 
 
-    // =====================================================
-    // DIBUJAR CÍRCULO
-    // =====================================================
-
-    function dibujarCirculo(circulo) {
-
-        // =====================================
-        // RESPIRACIÓN
-        // =====================================
-
-        circulo.faseRespiracion +=
-            circulo.velocidadRespiracion;
+    const tiempoTranscurrido =
+        tiempoActual -
+        inicio;
 
 
-        let intensidad =
-            circulo.intensidadRespiracion;
+    if (
+        tiempoTranscurrido >=
+        TIEMPO_TRANQUILO
+    ) {
 
-
-        // Cuando está calmado,
-        // respira mucho más suavemente
-
-        if (circulo.calmado) {
-
-            intensidad *= 0.35;
-
-        }
-
-
-        const respiracion =
-            1 +
-            Math.sin(
-                circulo.faseRespiracion
-            ) *
-            intensidad;
-
-
-        const radio =
-            circulo.radio *
-            respiracion;
-
-
-        // =====================================
-        // TITILEO
-        // =====================================
-
-        let opacidad = 1;
-
-
-        if (!circulo.calmado) {
-
-            const titileo =
-                (
-                    Math.sin(
-                        performance.now() *
-                        circulo.velocidadTitileo +
-                        circulo.faseTitileo
-                    ) +
-                    1
-                ) /
-                2;
-
-
-            opacidad =
-                1 -
-                titileo *
-                circulo.intensidadTitileo;
-
-        }
-
-
-        // =====================================
-        // CÍRCULO
-        // =====================================
-
-        ctx.save();
-
-
-        ctx.globalAlpha =
-            opacidad;
-
-
-        ctx.beginPath();
-
-
-        ctx.arc(
-            circulo.x,
-            circulo.y,
-            radio,
-            0,
-            Math.PI * 2
-        );
-
-
-        ctx.fillStyle =
-            circulo.color;
-
-
-        ctx.fill();
-
-
-        ctx.restore();
-
-
-        // =====================================
-        // AURA DE CALMA
-        // =====================================
-
-        if (circulo.calmado) {
-
-            ctx.save();
-
-
-            ctx.globalAlpha = 0.18;
-
-
-            ctx.beginPath();
-
-
-            ctx.arc(
-                circulo.x,
-                circulo.y,
-                radio + 12,
-                0,
-                Math.PI * 2
-            );
-
-
-            ctx.strokeStyle =
-                "#D9D9D9";
-
-
-            ctx.lineWidth = 2;
-
-
-            ctx.stroke();
-
-
-            ctx.restore();
-
-        }
-
+        estadoAlterado = true;
     }
 
 
-    // =====================================================
-    // ANIMACIÓN
-    // =====================================================
+    // --------------------------------------------------------
+    // ACTIVAR ALTERACIÓN
+    // --------------------------------------------------------
 
-    function animar() {
+    if (
+        estadoAlterado
+    ) {
 
-        ctx.clearRect(
-            0,
-            0,
-            canvas.width,
-            canvas.height
-        );
+        circulos.forEach(circulo => {
+
+            // Solamente asignamos la velocidad alterada
+            // si todavía está prácticamente tranquilo.
+
+            if (
+                Math.abs(circulo.vx) < 0.76 &&
+                Math.abs(circulo.vy) < 0.76
+            ) {
+
+                const angulo =
+                    Math.random() *
+                    Math.PI *
+                    2;
 
 
-        moverCirculos();
-
-        detectarColisiones();
-
-        actualizarCalma();
+                const velocidad =
+                    circulo.velocidadAlterada;
 
 
-        circulos.forEach(
-            circulo => {
+                circulo.vx =
+                    Math.cos(angulo) *
+                    velocidad;
 
-                dibujarCirculo(
-                    circulo
-                );
-
+                circulo.vy =
+                    Math.sin(angulo) *
+                    velocidad;
             }
-        );
-
-
-        requestAnimationFrame(
-            animar
-        );
-
+        });
     }
 
 
-    // =====================================================
-    // INICIO
-    // =====================================================
+    // --------------------------------------------------------
+    // ACTUALIZAR CALMA
+    // --------------------------------------------------------
 
-    ajustarCanvas();
+    actualizarEstadosCalma();
 
-    animar();
 
-});
+    // --------------------------------------------------------
+    // MOVER
+    // --------------------------------------------------------
+
+    moverCirculos();
+
+
+    // --------------------------------------------------------
+    // RESPIRAR
+    // --------------------------------------------------------
+
+    circulos.forEach(circulo => {
+
+        actualizarRespiracion(
+            circulo
+        );
+    });
+
+
+    // --------------------------------------------------------
+    // DIBUJAR
+    // --------------------------------------------------------
+
+    circulos.forEach(circulo => {
+
+        dibujarCirculo(
+            circulo
+        );
+    });
+
+
+    // --------------------------------------------------------
+    // SIGUIENTE FRAME
+    // --------------------------------------------------------
+
+    requestAnimationFrame(
+        animar
+    );
+}
+
+
+// ============================================================
+// INICIAR EXPERIENCIA
+// ============================================================
+
+animar();
