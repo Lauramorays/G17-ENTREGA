@@ -45,6 +45,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 x: 0,
                 y: 0,
+
                 tamaño: 120,
 
                 vx: (Math.random() - 0.5) * 0.45,
@@ -90,7 +91,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // Ajusta el tamaño según la cantidad de cuadrados
     function actualizarTamaño() {
 
-        const tamaño = cantidadCuadrados <= 9 ? 120 : 100;
+        const tamaño =
+            cantidadCuadrados <= 9 ? 120 : 100;
 
         cuadrados.forEach(function (cuadrado) {
 
@@ -216,6 +218,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             cuadrado.seleccionado = true;
+
             cuadrado.elemento.classList.add("activo");
 
             cuadrado.rotacionObjetivo =
@@ -259,6 +262,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         cuadrado.seleccionado = true;
+
         cuadrado.elemento.classList.add("activo");
 
         cuadrado.rotacionObjetivo =
@@ -275,30 +279,41 @@ document.addEventListener("DOMContentLoaded", function () {
         }, 250);
 
 
+        // Comprueba si el cuadrado tocado es correcto
         if (numero !== secuencia[posicionJugador]) {
 
             perder();
+
             return;
         }
 
         posicionJugador++;
 
 
+        // Si completó toda la secuencia
         if (posicionJugador >= secuencia.length) {
 
             jugando = false;
 
+
+            // Cuando la secuencia llegó a la cantidad
+            // de cuadrados, agrega uno nuevo
             if (secuencia.length >= cantidadCuadrados) {
 
                 setTimeout(function () {
+
                     agregarCuadrado();
+
                 }, 700);
 
             } else {
 
+                // Si todavía no corresponde agregar cuadrado,
+                // continúa agregando pasos a la secuencia
                 setTimeout(function () {
 
                     agregarPaso();
+
                     mostrarSecuencia();
 
                 }, 900);
@@ -307,14 +322,18 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 
-    // Agrega un nuevo cuadrado
+    // ============================================================
+    // AGREGA UN CUADRADO SIN REINICIAR NI CAMBIAR POSICIONES
+    // ============================================================
     function agregarCuadrado() {
 
+        // Mantiene el máximo de 12 cuadrados
         if (cantidadCuadrados >= 12) {
 
             setTimeout(function () {
 
                 agregarPaso();
+
                 mostrarSecuencia();
 
             }, 800);
@@ -322,16 +341,268 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
+
+        // Guarda la cantidad anterior
+        const cantidadAnterior =
+            cantidadCuadrados;
+
+
+        // Aumenta la cantidad de cuadrados
         cantidadCuadrados++;
 
-        crearCuadrados();
 
-        secuencia = [];
+        // Índice del nuevo cuadrado
+        const i =
+            cantidadAnterior;
+
+
+        // Crea solamente el nuevo cuadrado
+        const cuadrado =
+            document.createElement("div");
+
+        cuadrado.classList.add("cuadrado");
+
+
+        const color =
+            colores[i % colores.length];
+
+
+        cuadrado.style.setProperty(
+            "--color",
+            color
+        );
+
+        cuadrado.style.backgroundColor =
+            color;
+
+        cuadrado.dataset.numero =
+            i;
+
+
+        const objeto = {
+
+            elemento: cuadrado,
+
+            x: 0,
+            y: 0,
+
+            tamaño:
+                cantidadCuadrados <= 9
+                    ? 120
+                    : 100,
+
+            vx:
+                (Math.random() - 0.5) * 0.45,
+
+            vy:
+                (Math.random() - 0.5) * 0.45,
+
+            fase:
+                Math.random() * Math.PI * 2,
+
+            velocidadRespiracion:
+                0.00055 +
+                Math.random() * 0.00025,
+
+            intensidadRespiracion:
+                0.055 +
+                Math.random() * 0.025,
+
+            faseVertical:
+                Math.random() * Math.PI * 2,
+
+            velocidadVertical:
+                0.00048 +
+                Math.random() * 0.00022,
+
+            empujeX: 0,
+            empujeY: 0,
+
+            rotacion:
+                (Math.random() - 0.5) * 8,
+
+            rotacionObjetivo: 0,
+
+            seleccionado: false
+        };
+
+
+        // Agrega el nuevo objeto al array
+        cuadrados.push(objeto);
+
+
+        // Tamaño del nuevo cuadrado
+        cuadrado.style.width =
+            objeto.tamaño + "px";
+
+        cuadrado.style.height =
+            objeto.tamaño + "px";
+
+
+        cuadrado.addEventListener(
+            "click",
+            function () {
+
+                tocarCuadrado(i);
+
+            }
+        );
+
+
+        contenedor.appendChild(cuadrado);
+
+
+        // ========================================================
+        // BUSCA UN LUGAR LIBRE PARA EL NUEVO CUADRADO
+        // SIN TOCAR LAS POSICIONES DE LOS ANTERIORES
+        // ========================================================
+
+        const ancho =
+            contenedor.clientWidth;
+
+        const alto =
+            contenedor.clientHeight;
+
+
+        let encontrado =
+            false;
+
+
+        for (
+            let intento = 0;
+            intento < 100;
+            intento++
+        ) {
+
+            const x =
+                Math.random() *
+                Math.max(
+                    1,
+                    ancho - objeto.tamaño
+                );
+
+
+            const y =
+                Math.random() *
+                Math.max(
+                    1,
+                    alto - objeto.tamaño
+                );
+
+
+            let libre =
+                true;
+
+
+            // Comprueba contra todos los cuadrados anteriores
+            for (
+                let j = 0;
+                j < cuadrados.length - 1;
+                j++
+            ) {
+
+                const otro =
+                    cuadrados[j];
+
+
+                const ax =
+                    x +
+                    objeto.tamaño / 2;
+
+                const ay =
+                    y +
+                    objeto.tamaño / 2;
+
+
+                const bx =
+                    otro.x +
+                    otro.tamaño / 2;
+
+                const by =
+                    otro.y +
+                    otro.tamaño / 2;
+
+
+                const dx =
+                    bx - ax;
+
+                const dy =
+                    by - ay;
+
+
+                const distancia =
+                    Math.sqrt(
+                        dx * dx +
+                        dy * dy
+                    );
+
+
+                const distanciaMinima =
+                    objeto.tamaño / 2 +
+                    otro.tamaño / 2;
+
+
+                if (
+                    distancia <
+                    distanciaMinima
+                ) {
+
+                    libre =
+                        false;
+
+                    break;
+                }
+            }
+
+
+            if (libre) {
+
+                objeto.x =
+                    x;
+
+                objeto.y =
+                    y;
+
+                encontrado =
+                    true;
+
+                break;
+            }
+        }
+
+
+        // Si no encontró espacio,
+        // usa una posición aleatoria
+        if (!encontrado) {
+
+            objeto.x =
+                Math.random() *
+                Math.max(
+                    1,
+                    ancho - objeto.tamaño
+                );
+
+            objeto.y =
+                Math.random() *
+                Math.max(
+                    1,
+                    alto - objeto.tamaño
+                );
+        }
+
+
+        // ========================================================
+        // LA SECUENCIA SE CONSERVA
+        // SOLO SE AGREGA UN PASO NUEVO
+        // ========================================================
+
         posicionJugador = 0;
+
 
         setTimeout(function () {
 
             agregarPaso();
+
             mostrarSecuencia();
 
         }, 900);
@@ -348,6 +619,8 @@ document.addEventListener("DOMContentLoaded", function () {
         jugando = false;
         mostrandoSecuencia = false;
 
+
+        // Hace que todos los cuadrados reaccionen al error
         cuadrados.forEach(function (cuadrado) {
 
             cuadrado.seleccionado = true;
@@ -362,6 +635,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
 
+        // Quita el efecto de selección
         setTimeout(function () {
 
             cuadrados.forEach(function (cuadrado) {
@@ -376,34 +650,49 @@ document.addEventListener("DOMContentLoaded", function () {
         }, 350);
 
 
+        // Elimina un cuadrado
         setTimeout(function () {
 
             cantidadCuadrados--;
 
+
+            // Si ya no quedan cuadrados,
+            // vuelve a comenzar desde 4
             if (cantidadCuadrados <= 0) {
 
                 cantidadCuadrados = 4;
 
                 secuencia = [];
+
                 posicionJugador = 0;
 
                 crearCuadrados();
 
                 setTimeout(function () {
+
                     iniciarJuego();
+
                 }, 1000);
 
                 return;
             }
 
+
+            // ====================================================
+            // SOLO AL PERDER SE REORGANIZAN LOS CUADRADOS
+            // ====================================================
+
             secuencia = [];
+
             posicionJugador = 0;
 
             crearCuadrados();
 
+
             setTimeout(function () {
 
                 agregarPaso();
+
                 mostrarSecuencia();
 
             }, 1000);
@@ -415,10 +704,15 @@ document.addEventListener("DOMContentLoaded", function () {
     // Movimiento orgánico
     function moverCuadrados() {
 
-        const ancho = contenedor.clientWidth;
-        const alto = contenedor.clientHeight;
+        const ancho =
+            contenedor.clientWidth;
 
-        const tiempo = Date.now();
+        const alto =
+            contenedor.clientHeight;
+
+        const tiempo =
+            Date.now();
+
 
         cuadrados.forEach(function (cuadrado) {
 
@@ -428,6 +722,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     cuadrado.fase
                 ) * 0.0012;
 
+
             cuadrado.vy +=
                 Math.cos(
                     tiempo * 0.0006 +
@@ -435,7 +730,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 ) * 0.0012;
 
 
-            const velocidadMaxima = 0.7;
+            const velocidadMaxima =
+                0.7;
+
 
             cuadrado.vx =
                 Math.max(
@@ -445,6 +742,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         cuadrado.vx
                     )
                 );
+
 
             cuadrado.vy =
                 Math.max(
@@ -456,62 +754,96 @@ document.addEventListener("DOMContentLoaded", function () {
                 );
 
 
-            cuadrado.x += cuadrado.vx;
-            cuadrado.y += cuadrado.vy;
+            cuadrado.x +=
+                cuadrado.vx;
 
-            cuadrado.x += cuadrado.empujeX;
-            cuadrado.y += cuadrado.empujeY;
-
-            cuadrado.empujeX *= 0.92;
-            cuadrado.empujeY *= 0.92;
+            cuadrado.y +=
+                cuadrado.vy;
 
 
+            cuadrado.x +=
+                cuadrado.empujeX;
+
+            cuadrado.y +=
+                cuadrado.empujeY;
+
+
+            cuadrado.empujeX *=
+                0.92;
+
+            cuadrado.empujeY *=
+                0.92;
+
+
+            // Movimiento orgánico suave
             const movimientoOrganico =
                 Math.sin(
                     tiempo * 0.00035 +
                     cuadrado.fase
                 ) * 0.08;
 
-            cuadrado.x += movimientoOrganico;
+
+            cuadrado.x +=
+                movimientoOrganico;
 
 
+            // Rebote contra el borde izquierdo
             if (cuadrado.x <= 0) {
 
                 cuadrado.x = 0;
-                cuadrado.vx = Math.abs(cuadrado.vx);
+
+                cuadrado.vx =
+                    Math.abs(
+                        cuadrado.vx
+                    );
             }
 
 
+            // Rebote contra el borde derecho
             if (
-                cuadrado.x + cuadrado.tamaño >=
+                cuadrado.x +
+                cuadrado.tamaño >=
                 ancho
             ) {
 
                 cuadrado.x =
-                    ancho - cuadrado.tamaño;
+                    ancho -
+                    cuadrado.tamaño;
 
                 cuadrado.vx =
-                    -Math.abs(cuadrado.vx);
+                    -Math.abs(
+                        cuadrado.vx
+                    );
             }
 
 
+            // Rebote contra el borde superior
             if (cuadrado.y <= 0) {
 
                 cuadrado.y = 0;
-                cuadrado.vy = Math.abs(cuadrado.vy);
+
+                cuadrado.vy =
+                    Math.abs(
+                        cuadrado.vy
+                    );
             }
 
 
+            // Rebote contra el borde inferior
             if (
-                cuadrado.y + cuadrado.tamaño >=
+                cuadrado.y +
+                cuadrado.tamaño >=
                 alto
             ) {
 
                 cuadrado.y =
-                    alto - cuadrado.tamaño;
+                    alto -
+                    cuadrado.tamaño;
 
                 cuadrado.vy =
-                    -Math.abs(cuadrado.vy);
+                    -Math.abs(
+                        cuadrado.vy
+                    );
             }
         });
     }
@@ -520,7 +852,11 @@ document.addEventListener("DOMContentLoaded", function () {
     // Detecta y resuelve las colisiones
     function detectarColisiones() {
 
-        for (let i = 0; i < cuadrados.length; i++) {
+        for (
+            let i = 0;
+            i < cuadrados.length;
+            i++
+        ) {
 
             for (
                 let j = i + 1;
@@ -528,23 +864,37 @@ document.addEventListener("DOMContentLoaded", function () {
                 j++
             ) {
 
-                const a = cuadrados[i];
-                const b = cuadrados[j];
+                const a =
+                    cuadrados[i];
+
+                const b =
+                    cuadrados[j];
+
 
                 const ax =
-                    a.x + a.tamaño / 2;
+                    a.x +
+                    a.tamaño / 2;
 
                 const ay =
-                    a.y + a.tamaño / 2;
+                    a.y +
+                    a.tamaño / 2;
+
 
                 const bx =
-                    b.x + b.tamaño / 2;
+                    b.x +
+                    b.tamaño / 2;
 
                 const by =
-                    b.y + b.tamaño / 2;
+                    b.y +
+                    b.tamaño / 2;
 
-                const dx = bx - ax;
-                const dy = by - ay;
+
+                const dx =
+                    bx - ax;
+
+                const dy =
+                    by - ay;
+
 
                 const distancia =
                     Math.sqrt(
@@ -552,15 +902,21 @@ document.addEventListener("DOMContentLoaded", function () {
                         dy * dy
                     );
 
+
                 const distanciaMinima =
                     a.tamaño / 2 +
                     b.tamaño / 2;
 
 
-                if (distancia < distanciaMinima) {
+                // Si se superponen, las separa
+                if (
+                    distancia <
+                    distanciaMinima
+                ) {
 
                     let nx;
                     let ny;
+
 
                     if (distancia === 0) {
 
@@ -569,33 +925,59 @@ document.addEventListener("DOMContentLoaded", function () {
 
                     } else {
 
-                        nx = dx / distancia;
-                        ny = dy / distancia;
+                        nx =
+                            dx /
+                            distancia;
+
+                        ny =
+                            dy /
+                            distancia;
                     }
 
 
                     const penetracion =
-                        distanciaMinima - distancia;
+                        distanciaMinima -
+                        distancia;
+
 
                     const separacion =
                         penetracion / 2;
 
 
-                    a.x -= nx * separacion;
-                    a.y -= ny * separacion;
+                    a.x -=
+                        nx *
+                        separacion;
 
-                    b.x += nx * separacion;
-                    b.y += ny * separacion;
+                    a.y -=
+                        ny *
+                        separacion;
 
 
+                    b.x +=
+                        nx *
+                        separacion;
+
+                    b.y +=
+                        ny *
+                        separacion;
+
+
+                    // Calcula la velocidad relativa
                     const velocidadRelativa =
-                        (b.vx - a.vx) * nx +
-                        (b.vy - a.vy) * ny;
+                        (b.vx - a.vx) *
+                        nx +
+                        (b.vy - a.vy) *
+                        ny;
 
 
-                    if (velocidadRelativa < 0) {
+                    // Hace que reboten entre sí
+                    if (
+                        velocidadRelativa < 0
+                    ) {
 
-                        const rebote = 0.9;
+                        const rebote =
+                            0.9;
+
 
                         const impulso =
                             -(1 + rebote) *
@@ -603,11 +985,22 @@ document.addEventListener("DOMContentLoaded", function () {
                             2;
 
 
-                        a.vx -= impulso * nx;
-                        a.vy -= impulso * ny;
+                        a.vx -=
+                            impulso *
+                            nx;
 
-                        b.vx += impulso * nx;
-                        b.vy += impulso * ny;
+                        a.vy -=
+                            impulso *
+                            ny;
+
+
+                        b.vx +=
+                            impulso *
+                            nx;
+
+                        b.vy +=
+                            impulso *
+                            ny;
                     }
                 }
             }
@@ -618,7 +1011,9 @@ document.addEventListener("DOMContentLoaded", function () {
     // Dibuja los cuadrados y su respiración
     function dibujarCuadrados() {
 
-        const tiempo = Date.now();
+        const tiempo =
+            Date.now();
+
 
         cuadrados.forEach(function (cuadrado) {
 
@@ -654,6 +1049,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 0.82;
 
 
+            // Suaviza la rotación
             cuadrado.rotacion +=
                 (
                     cuadrado.rotacionObjetivo -
@@ -664,10 +1060,12 @@ document.addEventListener("DOMContentLoaded", function () {
             cuadrado.elemento.style.left =
                 cuadrado.x + "px";
 
+
             cuadrado.elemento.style.top =
                 cuadrado.y + "px";
 
 
+            // Aplica respiración y rotación
             cuadrado.elemento.style.transform =
 
                 `
@@ -691,6 +1089,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     "7px";
 
                 cuadrado.elemento.style.boxShadow =
+
                     `
                     0 0 12px ${COLOR_SELECCION},
                     0 0 25px ${COLOR_SELECCION}
@@ -711,7 +1110,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 
-    // Bucle principal
+    // Bucle principal de animación
     function animar() {
 
         moverCuadrados();
@@ -724,13 +1123,17 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 
-    // Iniciar juego
+    // Inicia el juego
     crearCuadrados();
 
     animar();
 
+
     setTimeout(function () {
+
         iniciarJuego();
+
     }, 1000);
 
 });
+
