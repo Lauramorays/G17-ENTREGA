@@ -1,18 +1,48 @@
+
 // ============================================================
 // HERENCIA
 // cuadrados2.js
 // ============================================================
 //
 // INTERACCIÓN:
+//
 // - Comienzan 4 cuadrados.
 // - Se mueven solos.
 // - Chocan entre ellos y con los bordes.
-// - Para activar HERENCIA se necesitan 2 dedos.
+//
+// CON UN DEDO:
+// - Se puede agarrar y mover un cuadrado.
+// - No se puede dividir.
+//
+// CON DOS DEDOS:
 // - Los dos dedos deben tocar el mismo cuadrado.
-// - Al separar los dedos, el cuadrado primero se ESTIRA.
-// - Si los dedos se separan lo suficiente, el cuadrado se DIVIDE.
-// - Los dos nuevos cuadrados heredan el color y características
-//   del cuadrado original.
+// - Al separar los dedos, el cuadrado se ESTIRA.
+// - La deformación aumenta progresivamente.
+// - Al llegar a cierta distancia se produce la HERENCIA.
+//
+// HERENCIA:
+// - El padre permanece.
+// - Se crean dos hijos.
+// - Los hijos heredan color, tamaño y dirección.
+// - Los hijos pueden volver a generar hijos.
+//
+// TECLADO:
+// - 1 - 9: seleccionar cuadrado.
+// - Flechas: mover cuadrado.
+// - A / D: estirar horizontalmente.
+// - W / S: estirar verticalmente.
+// - ESPACIO: realizar herencia.
+// - ESC: cancelar.
+//
+// ESTÉTICA:
+// - Igual a MEMORIA.
+// - Cuadrados perfectos.
+// - Sin bordes.
+// - Sin outline.
+// - Sin esquinas redondeadas.
+// - Mismos degradados.
+// - Mismas sombras.
+// - Mismo nivel de brillo.
 // ============================================================
 
 
@@ -40,20 +70,14 @@ const COLORES = [
 // CONFIGURACIÓN
 // ============================================================
 
-// Tamaño de los cuadrados iniciales.
 const TAMANO_INICIAL = 110;
 
-// Distancia que deben alcanzar los dedos para provocar
-// la separación.
 const DISTANCIA_SEPARACION = 180;
 
-// Tamaño que tendrán los hijos respecto al padre.
 const REDUCCION_HIJO = 0.82;
 
-// Velocidad máxima de movimiento.
 const VELOCIDAD = 0.7;
 
-// Fuerza del choque entre cuadrados.
 const FUERZA_CHOQUE = 0.8;
 
 
@@ -65,36 +89,69 @@ let figuras = [];
 
 
 // ============================================================
-// VARIABLES DEL GESTO TÁCTIL
+// GESTO DE DOS DEDOS
 // ============================================================
 
-// Indica si estamos realizando una interacción.
 let gestoActivo = false;
 
-// Figura que estamos manipulando.
 let figuraSeleccionada = null;
 
-// Identificador del primer dedo.
 let dedo1ID = null;
 
-// Identificador del segundo dedo.
 let dedo2ID = null;
 
-// Posición del primer dedo.
 let dedo1 = {
     x: 0,
     y: 0
 };
 
-// Posición del segundo dedo.
 let dedo2 = {
     x: 0,
     y: 0
 };
 
-// Distancia que había entre los dedos
-// cuando comenzó el gesto.
 let distanciaInicial = 0;
+
+
+// ============================================================
+// MOVIMIENTO CON UN DEDO
+// ============================================================
+
+let movimientoUnDedo = false;
+
+let dedoMovimientoID = null;
+
+let desplazamientoDedo = {
+    x: 0,
+    y: 0
+};
+
+
+// ============================================================
+// MOUSE
+// ============================================================
+
+let mouseActivo = false;
+
+let mouseFigura = null;
+
+let desplazamientoMouse = {
+    x: 0,
+    y: 0
+};
+
+
+// ============================================================
+// TECLADO
+// ============================================================
+
+let figuraTeclado = null;
+
+let tecladoEstirando = false;
+
+let distanciaTeclado = 0;
+
+let anguloTeclado = 0;
 
 
 // ============================================================
@@ -103,10 +160,14 @@ let distanciaInicial = 0;
 
 function ajustarCanvas() {
 
-    const rect = canvas.getBoundingClientRect();
+    const rect =
+        canvas.getBoundingClientRect();
 
-    canvas.width = rect.width;
-    canvas.height = rect.height;
+    canvas.width =
+        rect.width;
+
+    canvas.height =
+        rect.height;
 }
 
 
@@ -114,53 +175,124 @@ function ajustarCanvas() {
 // CREAR FIGURA
 // ============================================================
 
-function crearFigura(x, y, color, tamano = TAMANO_INICIAL) {
+function crearFigura(
+    x,
+    y,
+    color,
+    tamano = TAMANO_INICIAL
+) {
 
     return {
 
-        // Posición.
+        // ----------------------------------------------------
+        // POSICIÓN
+        // ----------------------------------------------------
+
         x: x,
         y: y,
 
-        // Tamaño.
+
+        // ----------------------------------------------------
+        // TAMAÑO
+        // ----------------------------------------------------
+
         tamano: tamano,
 
-        // Color.
+
+        // ----------------------------------------------------
+        // COLOR
+        // ----------------------------------------------------
+
         color: color,
 
-        // Movimiento horizontal.
-        vx: (Math.random() - 0.5) * VELOCIDAD,
 
-        // Movimiento vertical.
-        vy: (Math.random() - 0.5) * VELOCIDAD,
+        // ----------------------------------------------------
+        // MOVIMIENTO
+        // ----------------------------------------------------
 
-        // Rotación.
-        rotacion: Math.random() * Math.PI * 2,
+        vx:
+            (Math.random() - 0.5) *
+            VELOCIDAD,
 
-        // Velocidad de rotación.
+        vy:
+            (Math.random() - 0.5) *
+            VELOCIDAD,
+
+
+        // ----------------------------------------------------
+        // ROTACIÓN
+        // ----------------------------------------------------
+
+        rotacion:
+            Math.random() *
+            Math.PI *
+            2,
+
         velocidadRotacion:
-            (Math.random() - 0.5) * 0.004,
+            (Math.random() - 0.5) *
+            0.004,
 
-        // Movimiento orgánico.
-        fase: Math.random() * Math.PI * 2,
 
-        // Generación de la figura.
+        // ----------------------------------------------------
+        // RESPIRACIÓN
+        // ----------------------------------------------------
+
+        fase:
+            Math.random() *
+            Math.PI *
+            2,
+
+        velocidadRespiracion:
+            0.012 +
+            Math.random() *
+            0.008,
+
+        intensidadRespiracion:
+            0.018 +
+            Math.random() *
+            0.012,
+
+
+        // ----------------------------------------------------
+        // GENERACIÓN
+        // ----------------------------------------------------
+
         generacion: 0,
 
-        // Cantidad de veces que se reprodujo.
         reproducciones: 0,
 
-        // Indica si actualmente está siendo estirada.
+
+        // ----------------------------------------------------
+        // ESTIRAMIENTO
+        // ----------------------------------------------------
+
         estirando: false,
 
-        // Escala horizontal durante el estiramiento.
         escalaX: 1,
 
-        // Escala vertical.
         escalaY: 1,
 
-        // Ángulo del estiramiento.
-        anguloEstiramiento: 0
+        anguloEstiramiento: 0,
+
+        intensidadEstiramiento: 0,
+
+        tension: 0,
+
+
+        // ----------------------------------------------------
+        // APARICIÓN
+        // ----------------------------------------------------
+
+        aparicion: 1,
+
+        velocidadAparicion: 0.045,
+
+
+        // ----------------------------------------------------
+        // SELECCIÓN
+        // ----------------------------------------------------
+
+        seleccionado: false
     };
 }
 
@@ -173,7 +305,7 @@ function crearFigurasIniciales() {
 
     figuras = [];
 
-    // Cuadrado 1.
+
     figuras.push(
         crearFigura(
             canvas.width * 0.25,
@@ -182,7 +314,7 @@ function crearFigurasIniciales() {
         )
     );
 
-    // Cuadrado 2.
+
     figuras.push(
         crearFigura(
             canvas.width * 0.75,
@@ -191,7 +323,7 @@ function crearFigurasIniciales() {
         )
     );
 
-    // Cuadrado 3.
+
     figuras.push(
         crearFigura(
             canvas.width * 0.25,
@@ -200,7 +332,7 @@ function crearFigurasIniciales() {
         )
     );
 
-    // Cuadrado 4.
+
     figuras.push(
         crearFigura(
             canvas.width * 0.75,
@@ -217,40 +349,65 @@ function crearFigurasIniciales() {
 
 function limitarFigura(figura) {
 
-    const radio = figura.tamano / 2;
+    const radio =
+        figura.tamano / 2;
 
-    // Borde izquierdo.
-    if (figura.x - radio < 0) {
 
-        figura.x = radio;
+    if (
+        figura.x - radio < 0
+    ) {
 
-        figura.vx *= -1;
+        figura.x =
+            radio;
+
+        figura.vx =
+            Math.abs(
+                figura.vx
+            );
     }
 
-    // Borde derecho.
-    if (figura.x + radio > canvas.width) {
+
+    if (
+        figura.x + radio >
+        canvas.width
+    ) {
 
         figura.x =
             canvas.width - radio;
 
-        figura.vx *= -1;
+        figura.vx =
+            -Math.abs(
+                figura.vx
+            );
     }
 
-    // Borde superior.
-    if (figura.y - radio < 0) {
 
-        figura.y = radio;
+    if (
+        figura.y - radio < 0
+    ) {
 
-        figura.vy *= -1;
+        figura.y =
+            radio;
+
+        figura.vy =
+            Math.abs(
+                figura.vy
+            );
     }
 
-    // Borde inferior.
-    if (figura.y + radio > canvas.height) {
+
+    if (
+        figura.y + radio >
+        canvas.height
+    ) {
 
         figura.y =
             canvas.height - radio;
 
-        figura.vy *= -1;
+        figura.vy =
+            -Math.abs(
+                figura.vy
+            );
     }
 }
 
@@ -261,55 +418,138 @@ function limitarFigura(figura) {
 
 function actualizarMovimiento() {
 
-    figuras.forEach(figura => {
+    figuras.forEach(
+        figura => {
 
-        // Si la figura está siendo manipulada
-        // dejamos de moverla automáticamente.
-        if (
-            figura === figuraSeleccionada &&
-            gestoActivo
-        ) {
-            return;
+            // ------------------------------------------------
+            // FIGURA MANIPULADA
+            // ------------------------------------------------
+
+            if (
+                figura === figuraSeleccionada &&
+                (
+                    gestoActivo ||
+                    movimientoUnDedo
+                )
+            ) {
+
+                return;
+            }
+
+
+            if (
+                figura === mouseFigura &&
+                mouseActivo
+            ) {
+
+                return;
+            }
+
+
+            if (
+                figura === figuraTeclado
+            ) {
+
+                return;
+            }
+
+
+            // ------------------------------------------------
+            // MOVIMIENTO AUTOMÁTICO
+            // ------------------------------------------------
+
+            figura.x +=
+                figura.vx;
+
+            figura.y +=
+                figura.vy;
+
+
+            // ------------------------------------------------
+            // MOVIMIENTO ORGÁNICO
+            // ------------------------------------------------
+
+            figura.fase +=
+                figura.velocidadRespiracion;
+
+
+            figura.x +=
+                Math.sin(
+                    figura.fase
+                ) * 0.15;
+
+
+            figura.y +=
+                Math.cos(
+                    figura.fase * 0.8
+                ) * 0.15;
+
+
+            // ------------------------------------------------
+            // ROTACIÓN
+            // ------------------------------------------------
+
+            figura.rotacion +=
+                figura.velocidadRotacion;
+
+
+            // ------------------------------------------------
+            // APARICIÓN
+            // ------------------------------------------------
+
+            if (
+                figura.aparicion < 1
+            ) {
+
+                figura.aparicion +=
+                    figura.velocidadAparicion;
+
+                if (
+                    figura.aparicion > 1
+                ) {
+
+                    figura.aparicion = 1;
+                }
+            }
+
+
+            limitarFigura(figura);
         }
-
-        // Movimiento principal.
-        figura.x += figura.vx;
-        figura.y += figura.vy;
-
-        // Movimiento orgánico muy suave.
-        figura.fase += 0.015;
-
-        figura.x +=
-            Math.sin(figura.fase) * 0.15;
-
-        figura.y +=
-            Math.cos(figura.fase * 0.8) * 0.15;
-
-        // Rotación lenta.
-        figura.rotacion +=
-            figura.velocidadRotacion;
-
-        // Evitar que salga de la pantalla.
-        limitarFigura(figura);
-    });
+    );
 }
 
 
 // ============================================================
-// COLISIONES ENTRE FIGURAS
+// COLISIONES
 // ============================================================
 
 function detectarColisiones() {
 
-    for (let i = 0; i < figuras.length; i++) {
+    for (
+        let i = 0;
+        i < figuras.length;
+        i++
+    ) {
 
-        for (let j = i + 1; j < figuras.length; j++) {
+        for (
+            let j = i + 1;
+            j < figuras.length;
+            j++
+        ) {
 
-            const a = figuras[i];
-            const b = figuras[j];
+            const a =
+                figuras[i];
 
-            const dx = b.x - a.x;
-            const dy = b.y - a.y;
+            const b =
+                figuras[j];
+
+
+            const dx =
+                b.x - a.x;
+
+            const dy =
+                b.y - a.y;
+
 
             const distancia =
                 Math.sqrt(
@@ -317,12 +557,17 @@ function detectarColisiones() {
                     dy * dy
                 );
 
-            const distanciaMinima =
-                (a.tamano + b.tamano) / 2;
 
-            // Si las figuras están chocando.
+            const distanciaMinima =
+                (
+                    a.tamano +
+                    b.tamano
+                ) / 2;
+
+
             if (
-                distancia < distanciaMinima &&
+                distancia <
+                distanciaMinima &&
                 distancia > 0
             ) {
 
@@ -332,37 +577,83 @@ function detectarColisiones() {
                 const ny =
                     dy / distancia;
 
-                // Cuánto se superponen.
-                const solapamiento =
-                    distanciaMinima - distancia;
 
-                // Separamos las dos figuras.
+                const solapamiento =
+                    distanciaMinima -
+                    distancia;
+
+
                 a.x -=
-                    nx * solapamiento * 0.5;
+                    nx *
+                    solapamiento *
+                    0.5;
 
                 a.y -=
-                    ny * solapamiento * 0.5;
+                    ny *
+                    solapamiento *
+                    0.5;
+
 
                 b.x +=
-                    nx * solapamiento * 0.5;
+                    nx *
+                    solapamiento *
+                    0.5;
 
                 b.y +=
-                    ny * solapamiento * 0.5;
+                    ny *
+                    solapamiento *
+                    0.5;
 
-                // Pequeño impulso.
+
+                const velocidadAX =
+                    a.vx;
+
+                const velocidadAY =
+                    a.vy;
+
+
+                a.vx =
+                    b.vx *
+                    0.92;
+
+                a.vy =
+                    b.vy *
+                    0.92;
+
+
+                b.vx =
+                    velocidadAX *
+                    0.92;
+
+                b.vy =
+                    velocidadAY *
+                    0.92;
+
+
                 a.vx -=
-                    nx * FUERZA_CHOQUE;
+                    nx *
+                    FUERZA_CHOQUE *
+                    0.15;
 
                 a.vy -=
-                    ny * FUERZA_CHOQUE;
+                    ny *
+                    FUERZA_CHOQUE *
+                    0.15;
+
 
                 b.vx +=
-                    nx * FUERZA_CHOQUE;
+                    nx *
+                    FUERZA_CHOQUE *
+                    0.15;
 
                 b.vy +=
-                    ny * FUERZA_CHOQUE;
+                    ny *
+                    FUERZA_CHOQUE *
+                    0.15;
+
 
                 limitarFigura(a);
+
                 limitarFigura(b);
             }
         }
@@ -371,7 +662,7 @@ function detectarColisiones() {
 
 
 // ============================================================
-// BUSCAR QUÉ FIGURA ESTÁ DEBAJO DE UN DEDO
+// BUSCAR FIGURA
 // ============================================================
 
 function buscarFigura(x, y) {
@@ -382,10 +673,13 @@ function buscarFigura(x, y) {
         i--
     ) {
 
-        const figura = figuras[i];
+        const figura =
+            figuras[i];
+
 
         const mitad =
             figura.tamano / 2;
+
 
         if (
             x >= figura.x - mitad &&
@@ -398,21 +692,25 @@ function buscarFigura(x, y) {
         }
     }
 
+
     return null;
 }
 
 
 // ============================================================
-// DISTANCIA ENTRE LOS DOS DEDOS
+// DISTANCIA ENTRE DEDOS
 // ============================================================
 
 function calcularDistancia() {
 
     const dx =
-        dedo2.x - dedo1.x;
+        dedo2.x -
+        dedo1.x;
 
     const dy =
-        dedo2.y - dedo1.y;
+        dedo2.y -
+        dedo1.y;
+
 
     return Math.sqrt(
         dx * dx +
@@ -422,7 +720,7 @@ function calcularDistancia() {
 
 
 // ============================================================
-// OBTENER POSICIÓN DEL TOUCH
+// OBTENER TOUCH
 // ============================================================
 
 function obtenerTouch(touch) {
@@ -430,30 +728,32 @@ function obtenerTouch(touch) {
     const rect =
         canvas.getBoundingClientRect();
 
+
     return {
 
         x:
-            touch.clientX - rect.left,
+            touch.clientX -
+            rect.left,
 
         y:
-            touch.clientY - rect.top
+            touch.clientY -
+            rect.top
     };
 }
 
 
 // ============================================================
-// COMENZAR GESTO
+// COMENZAR GESTO DE DOS DEDOS
 // ============================================================
 
 function comenzarGesto() {
 
-    // Buscamos qué figura está debajo
-    // de cada dedo.
     const figura1 =
         buscarFigura(
             dedo1.x,
             dedo1.y
         );
+
 
     const figura2 =
         buscarFigura(
@@ -461,35 +761,47 @@ function comenzarGesto() {
             dedo2.y
         );
 
-    // Los dos dedos tienen que estar
-    // sobre el mismo cuadrado.
+
+    // Los dos dedos deben tocar
+    // exactamente el mismo cuadrado.
+
     if (
         !figura1 ||
         !figura2 ||
         figura1 !== figura2
     ) {
+
         return;
     }
 
-    // Guardamos la figura.
+
     figuraSeleccionada =
         figura1;
 
-    // Guardamos la distancia inicial.
+
     distanciaInicial =
         calcularDistancia();
 
-    // Activamos el gesto.
-    gestoActivo = true;
 
-    // Indicamos que se está estirando.
+    gestoActivo =
+        true;
+
+
+    movimientoUnDedo =
+        false;
+
+
     figuraSeleccionada.estirando =
+        true;
+
+
+    figuraSeleccionada.seleccionado =
         true;
 }
 
 
 // ============================================================
-// ACTUALIZAR ESTIRAMIENTO
+// ACTUALIZAR GESTO
 // ============================================================
 
 function actualizarGesto() {
@@ -498,14 +810,15 @@ function actualizarGesto() {
         !gestoActivo ||
         !figuraSeleccionada
     ) {
+
         return;
     }
 
-    // Calculamos la distancia actual.
+
     const distanciaActual =
         calcularDistancia();
 
-    // Cuánto aumentó la distancia.
+
     const aumento =
         Math.max(
             0,
@@ -513,39 +826,72 @@ function actualizarGesto() {
             distanciaInicial
         );
 
-    // Calculamos cuánto se estira.
-    let escala =
-        1 +
+
+    // --------------------------------------------------------
+    // PROGRESO
+    // --------------------------------------------------------
+
+    let progreso =
         aumento /
-        DISTANCIA_SEPARACION *
+        DISTANCIA_SEPARACION;
+
+
+    progreso =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                progreso
+            )
+        );
+
+
+    // --------------------------------------------------------
+    // ESTIRAMIENTO
+    // --------------------------------------------------------
+
+    const escala =
+        1 +
+        progreso *
         0.65;
 
-    // Evitamos una deformación exagerada.
-    escala =
-        Math.min(
-            escala,
-            1.65
-        );
 
-    // Dirección entre los dedos.
     const angulo =
         Math.atan2(
-            dedo2.y - dedo1.y,
-            dedo2.x - dedo1.x
+            dedo2.y -
+            dedo1.y,
+
+            dedo2.x -
+            dedo1.x
         );
 
-    // Aplicamos el estiramiento.
+
     figuraSeleccionada.escalaX =
         escala;
 
+
     figuraSeleccionada.escalaY =
-        1;
+        1 -
+        progreso *
+        0.12;
+
 
     figuraSeleccionada.anguloEstiramiento =
         angulo;
 
-    // Cuando llega a la distancia necesaria,
-    // se produce la herencia.
+
+    figuraSeleccionada.intensidadEstiramiento =
+        progreso;
+
+
+    figuraSeleccionada.tension =
+        progreso;
+
+
+    // --------------------------------------------------------
+    // HERENCIA
+    // --------------------------------------------------------
+
     if (
         distanciaActual >=
         DISTANCIA_SEPARACION
@@ -559,23 +905,28 @@ function actualizarGesto() {
 
 
 // ============================================================
-// CREAR LOS DOS HIJOS
+// CREAR HIJOS
 // ============================================================
 
 function crearHijos(padre) {
 
-    // Evitamos que el gesto se ejecute dos veces.
     if (!padre) {
         return;
     }
 
-    // Dirección en la que estaban separados
-    // los dos dedos.
+
+    // --------------------------------------------------------
+    // DIRECCIÓN ENTRE LOS DEDOS
+    // --------------------------------------------------------
+
     const dx =
-        dedo2.x - dedo1.x;
+        dedo2.x -
+        dedo1.x;
 
     const dy =
-        dedo2.y - dedo1.y;
+        dedo2.y -
+        dedo1.y;
+
 
     const distancia =
         Math.sqrt(
@@ -583,11 +934,15 @@ function crearHijos(padre) {
             dy * dy
         );
 
-    // Vector normalizado.
+
     let nx = 1;
+
     let ny = 0;
 
-    if (distancia > 0) {
+
+    if (
+        distancia > 0
+    ) {
 
         nx =
             dx / distancia;
@@ -596,36 +951,56 @@ function crearHijos(padre) {
             dy / distancia;
     }
 
-    // Los hijos son un poco más pequeños.
+
+    // --------------------------------------------------------
+    // TAMAÑO HEREDADO
+    // --------------------------------------------------------
+
     const tamanoHijo =
         padre.tamano *
         REDUCCION_HIJO;
 
-    // Distancia inicial de separación.
-    const distanciaHijo = 35;
 
-    // Posición del primer hijo.
+    // --------------------------------------------------------
+    // SEPARACIÓN
+    // --------------------------------------------------------
+
+    const distanciaHijo =
+        padre.tamano *
+        0.48;
+
+
     let x1 =
         padre.x -
-        nx * distanciaHijo;
+        nx *
+        distanciaHijo;
+
 
     let y1 =
         padre.y -
-        ny * distanciaHijo;
+        ny *
+        distanciaHijo;
 
-    // Posición del segundo hijo.
+
     let x2 =
         padre.x +
-        nx * distanciaHijo;
+        nx *
+        distanciaHijo;
+
 
     let y2 =
         padre.y +
-        ny * distanciaHijo;
+        ny *
+        distanciaHijo;
 
-    // Evitamos que los hijos aparezcan
-    // fuera del canvas.
+
+    // --------------------------------------------------------
+    // LIMITAR HIJOS
+    // --------------------------------------------------------
+
     const radio =
         tamanoHijo / 2;
+
 
     x1 =
         Math.max(
@@ -636,6 +1011,7 @@ function crearHijos(padre) {
             )
         );
 
+
     y1 =
         Math.max(
             radio,
@@ -645,6 +1021,7 @@ function crearHijos(padre) {
             )
         );
 
+
     x2 =
         Math.max(
             radio,
@@ -653,6 +1030,7 @@ function crearHijos(padre) {
                 x2
             )
         );
+
 
     y2 =
         Math.max(
@@ -665,7 +1043,7 @@ function crearHijos(padre) {
 
 
     // ========================================================
-    // CREAR HIJO 1
+    // HIJO 1
     // ========================================================
 
     const hijo1 =
@@ -676,22 +1054,27 @@ function crearHijos(padre) {
             tamanoHijo
         );
 
-    // Hereda la generación.
+
     hijo1.generacion =
         padre.generacion + 1;
 
-    // Se mueve en dirección contraria.
+
+    // Hereda la dirección del padre
+    // y recibe impulso hacia atrás.
+
     hijo1.vx =
         padre.vx -
-        nx * 1.1;
+        nx *
+        1.1;
 
     hijo1.vy =
         padre.vy -
-        ny * 1.1;
+        ny *
+        1.1;
 
 
     // ========================================================
-    // CREAR HIJO 2
+    // HIJO 2
     // ========================================================
 
     const hijo2 =
@@ -702,22 +1085,27 @@ function crearHijos(padre) {
             tamanoHijo
         );
 
-    // Hereda la generación.
+
     hijo2.generacion =
         padre.generacion + 1;
 
-    // Se mueve en la dirección opuesta.
+
+    // Hereda la dirección del padre
+    // y recibe impulso hacia adelante.
+
     hijo2.vx =
         padre.vx +
-        nx * 1.1;
+        nx *
+        1.1;
 
     hijo2.vy =
         padre.vy +
-        ny * 1.1;
+        ny *
+        1.1;
 
 
     // ========================================================
-    // AGREGAR LOS HIJOS
+    // AGREGAR HIJOS
     // ========================================================
 
     figuras.push(
@@ -727,7 +1115,7 @@ function crearHijos(padre) {
 
 
     // ========================================================
-    // RESTAURAR EL PADRE
+    // RESTAURAR PADRE
     // ========================================================
 
     padre.estirando =
@@ -738,6 +1126,16 @@ function crearHijos(padre) {
 
     padre.escalaY =
         1;
+
+    padre.intensidadEstiramiento =
+        0;
+
+    padre.tension =
+        0;
+
+    padre.seleccionado =
+        false;
+
 
     padre.reproducciones++;
 
@@ -761,64 +1159,518 @@ function crearHijos(padre) {
 
 
 // ============================================================
-// DIBUJAR UNA FIGURA
+// CANCELAR GESTO
+// ============================================================
+
+function cancelarGesto() {
+
+    if (
+        figuraSeleccionada
+    ) {
+
+        figuraSeleccionada.estirando =
+            false;
+
+        figuraSeleccionada.escalaX =
+            1;
+
+        figuraSeleccionada.escalaY =
+            1;
+
+        figuraSeleccionada.intensidadEstiramiento =
+            0;
+
+        figuraSeleccionada.tension =
+            0;
+
+        figuraSeleccionada.seleccionado =
+            false;
+    }
+
+
+    gestoActivo =
+        false;
+
+    movimientoUnDedo =
+        false;
+
+    figuraSeleccionada =
+        null;
+
+    dedo1ID =
+        null;
+
+    dedo2ID =
+        null;
+}
+
+
+// ============================================================
+// GRADIENTE
+// EXACTAMENTE IGUAL A MEMORIA
+// ============================================================
+
+function crearGradiente(figura) {
+
+    const tamano =
+        figura.tamano;
+
+
+    const gradiente =
+        ctx.createRadialGradient(
+
+            -tamano * 0.20,
+            -tamano * 0.25,
+            tamano * 0.05,
+
+            tamano * 0.10,
+            tamano * 0.10,
+            tamano * 0.85
+        );
+
+
+    // ========================================================
+    // BLANCO / GRIS
+    // ========================================================
+
+    if (
+        figura.color === "#D9D9D9"
+    ) {
+
+        gradiente.addColorStop(
+            0,
+            "#FFFFFF"
+        );
+
+        gradiente.addColorStop(
+            0.45,
+            "#D9D9D9"
+        );
+
+        gradiente.addColorStop(
+            1,
+            "#AEB4BA"
+        );
+    }
+
+
+    // ========================================================
+    // CELESTE
+    // ========================================================
+
+    else if (
+        figura.color === "#8BB2D3"
+    ) {
+
+        gradiente.addColorStop(
+            0,
+            "#DCECF9"
+        );
+
+        gradiente.addColorStop(
+            0.48,
+            "#8BB2D3"
+        );
+
+        gradiente.addColorStop(
+            1,
+            "#527A9C"
+        );
+    }
+
+
+    // ========================================================
+    // AZUL OSCURO
+    // ========================================================
+
+    else if (
+        figura.color === "#202D64"
+    ) {
+
+        gradiente.addColorStop(
+            0,
+            "#6674A5"
+        );
+
+        gradiente.addColorStop(
+            0.50,
+            "#202D64"
+        );
+
+        gradiente.addColorStop(
+            1,
+            "#10183B"
+        );
+    }
+
+
+    // ========================================================
+    // AZUL
+    // ========================================================
+
+    else if (
+        figura.color === "#2B538E"
+    ) {
+
+        gradiente.addColorStop(
+            0,
+            "#7EA7D0"
+        );
+
+        gradiente.addColorStop(
+            0.50,
+            "#2B538E"
+        );
+
+        gradiente.addColorStop(
+            1,
+            "#18355F"
+        );
+    }
+
+
+    return gradiente;
+}
+
+
+// ============================================================
+// DIBUJAR FIGURA
 // ============================================================
 
 function dibujarFigura(figura) {
 
     ctx.save();
 
-    // Nos movemos al centro de la figura.
+
+    // --------------------------------------------------------
+    // CENTRO
+    // --------------------------------------------------------
+
     ctx.translate(
         figura.x,
         figura.y
     );
 
-    // Rotación normal.
+
+    // --------------------------------------------------------
+    // RESPIRACIÓN
+    // --------------------------------------------------------
+
+    const respiracion =
+        1 +
+        Math.sin(
+            figura.fase
+        ) *
+        figura.intensidadRespiracion;
+
+
+    // --------------------------------------------------------
+    // ROTACIÓN
+    // --------------------------------------------------------
+
     ctx.rotate(
         figura.rotacion
     );
 
-    // Si está siendo estirada,
-    // aplicamos la transformación.
-    if (figura.estirando) {
 
-        // Ajustamos la dirección del estiramiento.
+    // --------------------------------------------------------
+    // ESTIRAMIENTO
+    // --------------------------------------------------------
+
+    if (
+        figura.estirando
+    ) {
+
         ctx.rotate(
             figura.anguloEstiramiento -
             figura.rotacion
         );
 
-        // Estiramos solamente sobre el eje X.
+
         ctx.scale(
-            figura.escalaX,
-            figura.escalaY
+            figura.escalaX *
+            respiracion,
+
+            figura.escalaY *
+            respiracion
         );
     }
 
-    // Color de la figura.
-    ctx.fillStyle =
-        figura.color;
+    else {
 
-    // Dibujamos el cuadrado.
+        ctx.scale(
+            respiracion,
+            respiracion
+        );
+    }
+
+
+    // --------------------------------------------------------
+    // OPACIDAD
+    // --------------------------------------------------------
+
+    ctx.globalAlpha =
+        figura.aparicion;
+
+
+    // ========================================================
+    // SOMBRA / BRILLO
+    // EXACTAMENTE IGUAL A MEMORIA
+    // ========================================================
+
+    if (
+        figura.color === "#D9D9D9"
+    ) {
+
+        ctx.shadowColor =
+            "rgba(217,217,217,0.25)";
+
+        ctx.shadowBlur =
+            18;
+
+        ctx.shadowOffsetX =
+            0;
+
+        ctx.shadowOffsetY =
+            0;
+    }
+
+    else if (
+        figura.color === "#8BB2D3"
+    ) {
+
+        ctx.shadowColor =
+            "rgba(139,178,211,0.25)";
+
+        ctx.shadowBlur =
+            18;
+
+        ctx.shadowOffsetX =
+            0;
+
+        ctx.shadowOffsetY =
+            0;
+    }
+
+    else if (
+        figura.color === "#202D64"
+    ) {
+
+        ctx.shadowColor =
+            "rgba(32,45,100,0.35)";
+
+        ctx.shadowBlur =
+            18;
+
+        ctx.shadowOffsetX =
+            0;
+
+        ctx.shadowOffsetY =
+            0;
+    }
+
+    else if (
+        figura.color === "#2B538E"
+    ) {
+
+        ctx.shadowColor =
+            "rgba(43,83,142,0.35)";
+
+        ctx.shadowBlur =
+            18;
+
+        ctx.shadowOffsetX =
+            0;
+
+        ctx.shadowOffsetY =
+            0;
+    }
+
+
+    // --------------------------------------------------------
+    // DEGRADADO
+    // --------------------------------------------------------
+
+    ctx.fillStyle =
+        crearGradiente(figura);
+
+
+    // --------------------------------------------------------
+    // CUADRADO
+    // --------------------------------------------------------
+
+    const mitad =
+        figura.tamano / 2;
+
+
     ctx.fillRect(
-        -figura.tamano / 2,
-        -figura.tamano / 2,
+        -mitad,
+        -mitad,
         figura.tamano,
         figura.tamano
     );
+
+
+    // --------------------------------------------------------
+    // QUITAR SOMBRA ANTES DE LA CAPA INTERNA
+    // --------------------------------------------------------
+
+    ctx.shadowBlur =
+        0;
+
+
+    // ========================================================
+    // SOMBRA INTERNA / PROFUNDIDAD
+    // BASADA EN MEMORIA
+    // ========================================================
+
+    let sombraInterna;
+
+
+    if (
+        figura.color === "#D9D9D9"
+    ) {
+
+        sombraInterna =
+            ctx.createLinearGradient(
+                -mitad,
+                -mitad,
+                mitad,
+                mitad
+            );
+
+        sombraInterna.addColorStop(
+            0,
+            "rgba(255,255,255,0.35)"
+        );
+
+        sombraInterna.addColorStop(
+            0.45,
+            "rgba(255,255,255,0)"
+        );
+
+        sombraInterna.addColorStop(
+            1,
+            "rgba(0,0,0,0.12)"
+        );
+    }
+
+    else if (
+        figura.color === "#8BB2D3"
+    ) {
+
+        sombraInterna =
+            ctx.createLinearGradient(
+                -mitad,
+                -mitad,
+                mitad,
+                mitad
+            );
+
+        sombraInterna.addColorStop(
+            0,
+            "rgba(255,255,255,0.25)"
+        );
+
+        sombraInterna.addColorStop(
+            0.45,
+            "rgba(255,255,255,0)"
+        );
+
+        sombraInterna.addColorStop(
+            1,
+            "rgba(0,0,0,0.15)"
+        );
+    }
+
+    else if (
+        figura.color === "#202D64"
+    ) {
+
+        sombraInterna =
+            ctx.createLinearGradient(
+                -mitad,
+                -mitad,
+                mitad,
+                mitad
+            );
+
+        sombraInterna.addColorStop(
+            0,
+            "rgba(255,255,255,0.15)"
+        );
+
+        sombraInterna.addColorStop(
+            0.45,
+            "rgba(255,255,255,0)"
+        );
+
+        sombraInterna.addColorStop(
+            1,
+            "rgba(0,0,0,0.25)"
+        );
+    }
+
+    else {
+
+        sombraInterna =
+            ctx.createLinearGradient(
+                -mitad,
+                -mitad,
+                mitad,
+                mitad
+            );
+
+        sombraInterna.addColorStop(
+            0,
+            "rgba(255,255,255,0.18)"
+        );
+
+        sombraInterna.addColorStop(
+            0.45,
+            "rgba(255,255,255,0)"
+        );
+
+        sombraInterna.addColorStop(
+            1,
+            "rgba(0,0,0,0.25)"
+        );
+    }
+
+
+    ctx.fillStyle =
+        sombraInterna;
+
+
+    ctx.fillRect(
+        -mitad,
+        -mitad,
+        figura.tamano,
+        figura.tamano
+    );
+
+
+    // ========================================================
+    // SELECCIÓN
+    // ========================================================
+    //
+    // NO SE DIBUJA NINGÚN BORDE.
+    //
+    // La selección se comunica solamente mediante
+    // el comportamiento de estiramiento.
+    // ========================================================
+
 
     ctx.restore();
 }
 
 
 // ============================================================
-// DIBUJAR TODO EL ESCENARIO
+// DIBUJAR TODO
 // ============================================================
 
 function dibujar() {
 
-    // Limpiamos todo.
     ctx.clearRect(
         0,
         0,
@@ -826,31 +1678,9 @@ function dibujar() {
         canvas.height
     );
 
-    // Dibujamos cada cuadrado.
+
     figuras.forEach(
         dibujarFigura
-    );
-}
-
-
-// ============================================================
-// BUCLE DE ANIMACIÓN
-// ============================================================
-
-function animar() {
-
-    // Movimiento automático.
-    actualizarMovimiento();
-
-    // Colisiones.
-    detectarColisiones();
-
-    // Dibujar.
-    dibujar();
-
-    // Repetir.
-    requestAnimationFrame(
-        animar
     );
 }
 
@@ -863,40 +1693,103 @@ canvas.addEventListener(
     "touchstart",
     function(evento) {
 
-        // Evita zoom, desplazamiento y otros
-        // comportamientos del navegador.
         evento.preventDefault();
 
-        // Solo nos interesan dos dedos.
+
+        // ====================================================
+        // DOS DEDOS
+        // ====================================================
+
         if (
-            evento.touches.length !== 2
+            evento.touches.length === 2
         ) {
+
+            movimientoUnDedo =
+                false;
+
+
+            const touch1 =
+                evento.touches[0];
+
+            const touch2 =
+                evento.touches[1];
+
+
+            dedo1ID =
+                touch1.identifier;
+
+            dedo2ID =
+                touch2.identifier;
+
+
+            dedo1 =
+                obtenerTouch(touch1);
+
+            dedo2 =
+                obtenerTouch(touch2);
+
+
+            comenzarGesto();
+
+
             return;
         }
 
-        // Obtenemos los dos dedos.
-        const touch1 =
-            evento.touches[0];
 
-        const touch2 =
-            evento.touches[1];
+        // ====================================================
+        // UN DEDO
+        // ====================================================
 
-        // Guardamos sus identificadores.
-        dedo1ID =
-            touch1.identifier;
+        if (
+            evento.touches.length === 1
+        ) {
 
-        dedo2ID =
-            touch2.identifier;
+            const touch =
+                evento.touches[0];
 
-        // Guardamos posiciones.
-        dedo1 =
-            obtenerTouch(touch1);
 
-        dedo2 =
-            obtenerTouch(touch2);
+            const posicion =
+                obtenerTouch(touch);
 
-        // Intentamos comenzar el gesto.
-        comenzarGesto();
+
+            const figura =
+                buscarFigura(
+                    posicion.x,
+                    posicion.y
+                );
+
+
+            if (!figura) {
+                return;
+            }
+
+
+            figuraSeleccionada =
+                figura;
+
+
+            movimientoUnDedo =
+                true;
+
+
+            dedoMovimientoID =
+                touch.identifier;
+
+
+            desplazamientoDedo.x =
+                posicion.x -
+                figura.x;
+
+
+            desplazamientoDedo.y =
+                posicion.y -
+                figura.y;
+
+
+            figura.seleccionado =
+                true;
+        }
+
     },
     {
         passive: false
@@ -914,43 +1807,98 @@ canvas.addEventListener(
 
         evento.preventDefault();
 
-        // Si no estamos haciendo un gesto,
-        // no hacemos nada.
-        if (!gestoActivo) {
+
+        // ====================================================
+        // DOS DEDOS
+        // ====================================================
+
+        if (
+            gestoActivo
+        ) {
+
+            for (
+                let i = 0;
+                i < evento.touches.length;
+                i++
+            ) {
+
+                const touch =
+                    evento.touches[i];
+
+
+                if (
+                    touch.identifier ===
+                    dedo1ID
+                ) {
+
+                    dedo1 =
+                        obtenerTouch(touch);
+                }
+
+
+                if (
+                    touch.identifier ===
+                    dedo2ID
+                ) {
+
+                    dedo2 =
+                        obtenerTouch(touch);
+                }
+            }
+
+
+            actualizarGesto();
+
+
             return;
         }
 
-        // Buscamos nuestros dos dedos.
-        for (
-            let i = 0;
-            i < evento.touches.length;
-            i++
+
+        // ====================================================
+        // UN DEDO
+        // ====================================================
+
+        if (
+            movimientoUnDedo &&
+            figuraSeleccionada
         ) {
 
-            const touch =
-                evento.touches[i];
-
-            // Actualizamos el primer dedo.
-            if (
-                touch.identifier === dedo1ID
+            for (
+                let i = 0;
+                i < evento.touches.length;
+                i++
             ) {
 
-                dedo1 =
-                    obtenerTouch(touch);
-            }
+                const touch =
+                    evento.touches[i];
 
-            // Actualizamos el segundo dedo.
-            if (
-                touch.identifier === dedo2ID
-            ) {
 
-                dedo2 =
-                    obtenerTouch(touch);
+                if (
+                    touch.identifier ===
+                    dedoMovimientoID
+                ) {
+
+                    const posicion =
+                        obtenerTouch(touch);
+
+
+                    figuraSeleccionada.x =
+                        posicion.x -
+                        desplazamientoDedo.x;
+
+
+                    figuraSeleccionada.y =
+                        posicion.y -
+                        desplazamientoDedo.y;
+
+
+                    limitarFigura(
+                        figuraSeleccionada
+                    );
+                }
             }
         }
 
-        // Actualizamos el estiramiento.
-        actualizarGesto();
     },
     {
         passive: false
@@ -959,55 +1907,59 @@ canvas.addEventListener(
 
 
 // ============================================================
-// FINALIZAR TOUCH
-// ============================================================
-
-function finalizarGesto(evento) {
-
-    evento.preventDefault();
-
-    // Si soltamos uno de los dedos antes
-    // de completar la separación,
-    // cancelamos el estiramiento.
-    if (
-        gestoActivo &&
-        evento.touches.length < 2
-    ) {
-
-        if (figuraSeleccionada) {
-
-            figuraSeleccionada.estirando =
-                false;
-
-            figuraSeleccionada.escalaX =
-                1;
-
-            figuraSeleccionada.escalaY =
-                1;
-        }
-
-        gestoActivo =
-            false;
-
-        figuraSeleccionada =
-            null;
-
-        dedo1ID =
-            null;
-
-        dedo2ID =
-            null;
-    }
-}
-
-
-// ============================================================
 // TOUCHEND
 // ============================================================
 
 canvas.addEventListener(
     "touchend",
-    finalizarGesto,
+    function(evento) {
+
+        evento.preventDefault();
+
+
+        if (
+            gestoActivo &&
+            evento.touches.length >= 2
+        ) {
+
+            return;
+        }
+
+
+        if (
+            gestoActivo
+        ) {
+
+            cancelarGesto();
+
+            return;
+        }
+
+
+        if (
+            movimientoUnDedo
+        ) {
+
+            if (
+                figuraSeleccionada
+            ) {
+
+                figuraSeleccionada.seleccionado =
+                    false;
+            }
+
+
+            movimientoUnDedo =
+                false;
+
+            figuraSeleccionada =
+                null;
+
+            dedoMovimientoID =
+                null;
+        }
+
+    },
     {
         passive: false
     }
@@ -1020,7 +1972,13 @@ canvas.addEventListener(
 
 canvas.addEventListener(
     "touchcancel",
-    finalizarGesto,
+    function(evento) {
+
+        evento.preventDefault();
+
+        cancelarGesto();
+
+    },
     {
         passive: false
     }
@@ -1028,33 +1986,544 @@ canvas.addEventListener(
 
 
 // ============================================================
-// INICIALIZACIÓN
+// MOUSE
+// ============================================================
+//
+// El mouse funciona como un dedo.
+// Solo permite mover.
 // ============================================================
 
-// Ajustamos el canvas.
+canvas.addEventListener(
+    "mousedown",
+    function(evento) {
+
+        const rect =
+            canvas.getBoundingClientRect();
+
+
+        const x =
+            evento.clientX -
+            rect.left;
+
+        const y =
+            evento.clientY -
+            rect.top;
+
+
+        const figura =
+            buscarFigura(
+                x,
+                y
+            );
+
+
+        if (!figura) {
+            return;
+        }
+
+
+        mouseActivo =
+            true;
+
+
+        mouseFigura =
+            figura;
+
+
+        desplazamientoMouse.x =
+            x -
+            figura.x;
+
+
+        desplazamientoMouse.y =
+            y -
+            figura.y;
+
+
+        figura.seleccionado =
+            true;
+    }
+);
+
+
+canvas.addEventListener(
+    "mousemove",
+    function(evento) {
+
+        if (
+            !mouseActivo ||
+            !mouseFigura
+        ) {
+
+            return;
+        }
+
+
+        const rect =
+            canvas.getBoundingClientRect();
+
+
+        const x =
+            evento.clientX -
+            rect.left;
+
+        const y =
+            evento.clientY -
+            rect.top;
+
+
+        mouseFigura.x =
+            x -
+            desplazamientoMouse.x;
+
+
+        mouseFigura.y =
+            y -
+            desplazamientoMouse.y;
+
+
+        limitarFigura(
+            mouseFigura
+        );
+    }
+);
+
+
+canvas.addEventListener(
+    "mouseup",
+    function() {
+
+        if (
+            mouseFigura
+        ) {
+
+            mouseFigura.seleccionado =
+                false;
+        }
+
+
+        mouseActivo =
+            false;
+
+        mouseFigura =
+            null;
+    }
+);
+
+
+canvas.addEventListener(
+    "mouseleave",
+    function() {
+
+        if (
+            mouseFigura
+        ) {
+
+            mouseFigura.seleccionado =
+                false;
+        }
+
+
+        mouseActivo =
+            false;
+
+        mouseFigura =
+            null;
+    }
+);
+
+
+// ============================================================
+// TECLADO
+// ============================================================
+
+document.addEventListener(
+    "keydown",
+    function(evento) {
+
+        const tecla =
+            evento.key.toLowerCase();
+
+
+        // ====================================================
+        // SELECCIONAR FIGURA
+        // ====================================================
+
+        if (
+            tecla >= "1" &&
+            tecla <= "9"
+        ) {
+
+            const indice =
+                parseInt(tecla) - 1;
+
+
+            if (
+                figuras[indice]
+            ) {
+
+                if (
+                    figuraTeclado
+                ) {
+
+                    figuraTeclado.seleccionado =
+                        false;
+                }
+
+
+                figuraTeclado =
+                    figuras[indice];
+
+
+                figuraTeclado.seleccionado =
+                    true;
+
+
+                tecladoEstirando =
+                    false;
+
+                distanciaTeclado =
+                    0;
+            }
+
+
+            return;
+        }
+
+
+        if (
+            !figuraTeclado
+        ) {
+
+            return;
+        }
+
+
+        // ====================================================
+        // MOVER
+        // ====================================================
+
+        const velocidadTeclado =
+            4;
+
+
+        if (
+            tecla === "arrowleft"
+        ) {
+
+            figuraTeclado.x -=
+                velocidadTeclado;
+        }
+
+
+        if (
+            tecla === "arrowright"
+        ) {
+
+            figuraTeclado.x +=
+                velocidadTeclado;
+        }
+
+
+        if (
+            tecla === "arrowup"
+        ) {
+
+            figuraTeclado.y -=
+                velocidadTeclado;
+        }
+
+
+        if (
+            tecla === "arrowdown"
+        ) {
+
+            figuraTeclado.y +=
+                velocidadTeclado;
+        }
+
+
+        // ====================================================
+        // ESTIRAMIENTO
+        // ====================================================
+
+        if (
+            tecla === "a"
+        ) {
+
+            tecladoEstirando =
+                true;
+
+            distanciaTeclado +=
+                8;
+
+            anguloTeclado =
+                Math.PI;
+        }
+
+
+        if (
+            tecla === "d"
+        ) {
+
+            tecladoEstirando =
+                true;
+
+            distanciaTeclado +=
+                8;
+
+            anguloTeclado =
+                0;
+        }
+
+
+        if (
+            tecla === "w"
+        ) {
+
+            tecladoEstirando =
+                true;
+
+            distanciaTeclado +=
+                8;
+
+            anguloTeclado =
+                -Math.PI / 2;
+        }
+
+
+        if (
+            tecla === "s"
+        ) {
+
+            tecladoEstirando =
+                true;
+
+            distanciaTeclado +=
+                8;
+
+            anguloTeclado =
+                Math.PI / 2;
+        }
+
+
+        // ====================================================
+        // VISUAL DE ESTIRAMIENTO
+        // ====================================================
+
+        if (
+            tecladoEstirando
+        ) {
+
+            const progreso =
+                Math.min(
+                    1,
+                    distanciaTeclado /
+                    DISTANCIA_SEPARACION
+                );
+
+
+            figuraTeclado.estirando =
+                true;
+
+
+            figuraTeclado.escalaX =
+                1 +
+                progreso *
+                0.65;
+
+
+            figuraTeclado.escalaY =
+                1 -
+                progreso *
+                0.12;
+
+
+            figuraTeclado.anguloEstiramiento =
+                anguloTeclado;
+
+
+            figuraTeclado.intensidadEstiramiento =
+                progreso;
+
+
+            figuraTeclado.tension =
+                progreso;
+        }
+
+
+        // ====================================================
+        // ESPACIO = HERENCIA
+        // ====================================================
+
+        if (
+            tecla === " "
+        ) {
+
+            if (
+                tecladoEstirando &&
+                distanciaTeclado >=
+                DISTANCIA_SEPARACION
+            ) {
+
+                // Para que crearHijos pueda calcular
+                // correctamente la dirección del teclado.
+
+                const distancia =
+                    DISTANCIA_SEPARACION;
+
+
+                dedo1.x =
+                    figuraTeclado.x -
+                    Math.cos(
+                        anguloTeclado
+                    ) *
+                    distancia /
+                    2;
+
+
+                dedo1.y =
+                    figuraTeclado.y -
+                    Math.sin(
+                        anguloTeclado
+                    ) *
+                    distancia /
+                    2;
+
+
+                dedo2.x =
+                    figuraTeclado.x +
+                    Math.cos(
+                        anguloTeclado
+                    ) *
+                    distancia /
+                    2;
+
+
+                dedo2.y =
+                    figuraTeclado.y +
+                    Math.sin(
+                        anguloTeclado
+                    ) *
+                    distancia /
+                    2;
+
+
+                crearHijos(
+                    figuraTeclado
+                );
+
+
+                tecladoEstirando =
+                    false;
+
+                distanciaTeclado =
+                    0;
+
+                figuraTeclado =
+                    null;
+            }
+        }
+
+
+        // ====================================================
+        // ESC = CANCELAR
+        // ====================================================
+
+        if (
+            tecla === "escape"
+        ) {
+
+            if (
+                figuraTeclado
+            ) {
+
+                figuraTeclado.estirando =
+                    false;
+
+                figuraTeclado.escalaX =
+                    1;
+
+                figuraTeclado.escalaY =
+                    1;
+
+                figuraTeclado.tension =
+                    0;
+
+                figuraTeclado.intensidadEstiramiento =
+                    0;
+
+                figuraTeclado.seleccionado =
+                    false;
+            }
+
+
+            tecladoEstirando =
+                false;
+
+            distanciaTeclado =
+                0;
+
+            figuraTeclado =
+                null;
+        }
+
+
+        if (
+            figuraTeclado
+        ) {
+
+            limitarFigura(
+                figuraTeclado
+            );
+        }
+    }
+);
+
+
+// ============================================================
+// ANIMACIÓN
+// ============================================================
+
+function animar() {
+
+    actualizarMovimiento();
+
+    detectarColisiones();
+
+    dibujar();
+
+    requestAnimationFrame(
+        animar
+    );
+}
+
+
+// ============================================================
+// INICIO
+// ============================================================
+
 ajustarCanvas();
 
-// Creamos las 4 figuras.
 crearFigurasIniciales();
 
-// Iniciamos la animación.
 animar();
 
 
 // ============================================================
-// CAMBIO DE TAMAÑO
+// RESIZE
 // ============================================================
 
 window.addEventListener(
     "resize",
     function() {
 
-        // Recalculamos el tamaño del canvas.
         ajustarCanvas();
 
-        // Evitamos que alguna figura quede afuera.
+
         figuras.forEach(
             limitarFigura
         );
     }
 );
+
