@@ -1,3 +1,4 @@
+
 // ============================================================
 // CUADRADOS - MEMORIA
 // ============================================================
@@ -154,19 +155,29 @@ document.addEventListener("DOMContentLoaded", function () {
             color: color,
 
 
+            // =================================================
             // RESPIRACIÓN
+            // =================================================
 
-            fase:
+            faseRespiracion:
+                Math.random() *
+                Math.PI * 2,
+
+            faseSecundaria:
                 Math.random() *
                 Math.PI * 2,
 
             velocidadRespiracion:
-                0.015 +
-                Math.random() * 0.01,
+                0.012 +
+                Math.random() * 0.005,
 
-            intensidadRespiracion:
-                0.025 +
-                Math.random() * 0.02,
+            amplitudRespiracion:
+                0.045 +
+                Math.random() * 0.015,
+
+            respiracionX: 1,
+
+            respiracionY: 1,
 
 
             // MOVIMIENTO VERTICAL
@@ -413,9 +424,6 @@ document.addEventListener("DOMContentLoaded", function () {
         await esperar(500);
 
 
-        // Si no existe secuencia,
-        // empieza desde cero.
-
         if (secuencia.length === 0) {
 
             secuencia.push(
@@ -450,8 +458,7 @@ document.addEventListener("DOMContentLoaded", function () {
             );
 
 
-        // IMPORTANTE:
-        // NO SE BORRA LA SECUENCIA ANTERIOR.
+        // NO SE BORRA LA SECUENCIA ANTERIOR
 
         secuencia.push(indice);
 
@@ -603,10 +610,6 @@ document.addEventListener("DOMContentLoaded", function () {
             posicionJugador++;
 
 
-            // ------------------------------------------------
-            // COMPLETÓ TODA LA SECUENCIA
-            // ------------------------------------------------
-
             if (
                 posicionJugador >=
                 secuencia.length
@@ -614,11 +617,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 jugando = false;
 
-
-                // =================================================
-                // SI YA LLEGÓ A LA CANTIDAD DE CUADRADOS
-                // SE AGREGA UNO NUEVO
-                // =================================================
 
                 if (
                     secuencia.length >=
@@ -630,11 +628,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
 
                 else {
-
-                    // --------------------------------------------
-                    // CONTINUAR CON LA MISMA SECUENCIA
-                    // Y AGREGAR UN NUEVO PASO
-                    // --------------------------------------------
 
                     setTimeout(() => {
 
@@ -665,11 +658,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (cantidadCuadrados >= 12) {
 
-            // --------------------------------------------
-            // LLEGÓ AL MÁXIMO.
-            // NO REINICIA.
-            // --------------------------------------------
-
             setTimeout(() => {
 
                 agregarPaso();
@@ -680,16 +668,8 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
 
-        // ----------------------------------------------------
-        // AUMENTAR CANTIDAD
-        // ----------------------------------------------------
-
         cantidadCuadrados++;
 
-
-        // ----------------------------------------------------
-        // CREAR SOLAMENTE EL NUEVO
-        // ----------------------------------------------------
 
         const cuadradoNuevo =
             crearCuadrado(
@@ -707,10 +687,6 @@ document.addEventListener("DOMContentLoaded", function () {
         const alto =
             contenedor.clientHeight;
 
-
-        // ----------------------------------------------------
-        // BUSCAR POSICIÓN LIBRE
-        // ----------------------------------------------------
 
         let encontrado = false;
 
@@ -798,10 +774,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
 
-        // ----------------------------------------------------
-        // SI NO ENCUENTRA LUGAR
-        // ----------------------------------------------------
-
         if (!encontrado) {
 
             cuadradoNuevo.x =
@@ -822,34 +794,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
         // ====================================================
-        // MUY IMPORTANTE:
         // NO REINICIAR LA SECUENCIA
         // ====================================================
 
-        // La secuencia anterior se mantiene.
-        //
-        // Ejemplo:
-        //
-        // 4 cuadrados:
-        // A - B - C - D
-        //
-        // Se completa:
-        //
-        // A - B - C - D
-        //
-        // Aparece cuadrado E.
-        //
-        // La siguiente ronda será:
-        //
-        // A - B - C - D - E
-        //
-        // NO empieza nuevamente desde cero.
-
-
         setTimeout(() => {
-
-            // Agregamos solamente el nuevo
-            // paso a la secuencia.
 
             agregarPaso();
 
@@ -873,10 +821,6 @@ document.addEventListener("DOMContentLoaded", function () {
         mostrandoSecuencia = false;
 
 
-        // ----------------------------------------------------
-        // EFECTO DE ERROR
-        // ----------------------------------------------------
-
         cuadrados.forEach(
             cuadrado => {
 
@@ -899,10 +843,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }, 180);
 
 
-        // ----------------------------------------------------
-        // BUSCAR EL CUADRADO A ELIMINAR
-        // ----------------------------------------------------
-
         let indiceEliminar =
             indiceError;
 
@@ -918,10 +858,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 );
         }
 
-
-        // ----------------------------------------------------
-        // DESAPARECER
-        // ----------------------------------------------------
 
         iniciarDesaparicion(
             indiceEliminar
@@ -1098,10 +1034,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function terminarPerdida() {
 
-        // ----------------------------------------------------
-        // ELIMINAR EL CUADRADO QUE DESAPARECIÓ
-        // ----------------------------------------------------
-
         cuadrados
             .filter(
                 c =>
@@ -1127,10 +1059,6 @@ document.addEventListener("DOMContentLoaded", function () {
             );
 
 
-        // ----------------------------------------------------
-        // ACTUALIZAR CANTIDAD
-        // ----------------------------------------------------
-
         cantidadCuadrados =
             cuadrados.length;
 
@@ -1143,10 +1071,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
         posicionJugador = 0;
 
-
-        // ----------------------------------------------------
-        // SI NO QUEDA NINGUNO
-        // ----------------------------------------------------
 
         if (
             cantidadCuadrados <= 0
@@ -1175,10 +1099,6 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-
-        // ====================================================
-        // REINICIAR POSICIONES
-        // ====================================================
 
         setTimeout(() => {
 
@@ -1214,9 +1134,9 @@ document.addEventListener("DOMContentLoaded", function () {
         cuadrados.forEach(
             cuadrado => {
 
-                cuadrado.fase +=
-                    cuadrado.velocidadRespiracion;
-
+                // ------------------------------------------------
+                // MOVIMIENTO VERTICAL
+                // ------------------------------------------------
 
                 cuadrado.faseVertical +=
                     cuadrado.velocidadVertical;
@@ -1249,6 +1169,44 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 cuadrado.rotacion +=
                     cuadrado.velocidadRotacion;
+
+
+                // =================================================
+                // RESPIRACIÓN
+                // =================================================
+
+                cuadrado.faseRespiracion +=
+                    cuadrado.velocidadRespiracion;
+
+                cuadrado.faseSecundaria +=
+                    cuadrado.velocidadRespiracion * 0.47;
+
+
+                const ondaPrincipal =
+                    Math.sin(
+                        cuadrado.faseRespiracion
+                    );
+
+
+                const ondaSecundaria =
+                    Math.sin(
+                        cuadrado.faseSecundaria
+                    );
+
+
+                const respiracion =
+                    ondaPrincipal *
+                    cuadrado.amplitudRespiracion +
+                    ondaSecundaria *
+                    0.006;
+
+
+                cuadrado.respiracionX =
+                    1 + respiracion;
+
+
+                cuadrado.respiracionY =
+                    1 + respiracion * 0.94;
 
 
                 const tamaño =
@@ -1523,23 +1481,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
                 // --------------------------------------------
-                // RESPIRACIÓN
-                // --------------------------------------------
-
-                const respiracion =
-                    1 +
-                    Math.sin(
-                        cuadrado.fase
-                    ) *
-                    cuadrado.intensidadRespiracion;
-
-
-                // --------------------------------------------
                 // ESCALA
                 // --------------------------------------------
 
                 let escala =
-                    respiracion;
+                    1;
 
 
                 if (
@@ -1609,12 +1555,19 @@ document.addEventListener("DOMContentLoaded", function () {
                     opacidad;
 
 
-                // --------------------------------------------
+                // =================================================
                 // TRANSFORMACIÓN
-                // --------------------------------------------
+                // =================================================
+                //
+                // La respiración se aplica acá.
+                // El cambio de tamaño es pequeño.
+                //
+                // X y Y son ligeramente diferentes para que
+                // no parezca simplemente un zoom.
+                // =================================================
 
                 cuadrado.elemento.style.transform =
-                    `scale(${escala}) rotate(${cuadrado.rotacion}deg)`;
+                    `scaleX(${escala * cuadrado.respiracionX}) scaleY(${escala * cuadrado.respiracionY}) rotate(${cuadrado.rotacion}deg)`;
 
 
                 // --------------------------------------------
@@ -1700,3 +1653,4 @@ document.addEventListener("DOMContentLoaded", function () {
     }, 1000);
 
 });
+
