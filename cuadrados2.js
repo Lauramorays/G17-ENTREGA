@@ -11,8 +11,10 @@
 // - Respiran de manera lenta, visible y orgánica.
 // - Con 1 dedo / mouse se puede mover un cuadrado.
 // - Con 2 dedos sobre el mismo cuadrado se puede estirar.
-// - Al separar suficientemente los dedos, el cuadrado se divide.
+// - La figura pierde su forma mientras se estira.
+// - Al llegar al límite se divide.
 // - El padre permanece.
+// - El padre hace un rebote elástico antes de recuperar su forma.
 // - Los hijos heredan el color y características del padre.
 // - Los hijos también pueden volver a dividirse.
 // ============================================================
@@ -51,6 +53,23 @@ const REDUCCION_HIJO = 0.82;
 const VELOCIDAD = 0.7;
 
 const FUERZA_CHOQUE = 0.8;
+
+
+// ============================================================
+// CONFIGURACIÓN DEFORMACIÓN
+// ============================================================
+
+// Cuánto puede deformarse el cuerpo.
+const DEFORMACION_MAXIMA = 1.65;
+
+// Cuánto se comprime en el eje contrario.
+const COMPRESION_MAXIMA = 0.68;
+
+// Duración aproximada del rebote.
+const FUERZA_REBOTE = 0.16;
+
+// Amortiguación del rebote.
+const AMORTIGUACION_REBOTE = 0.82;
 
 
 // ============================================================
@@ -168,20 +187,21 @@ function crearFigura(
         // RESPIRACIÓN
         // ----------------------------------------------------
 
-       faseRespiracion:
-    Math.random() * Math.PI * 2,
+        faseRespiracion:
+            Math.random() * Math.PI * 2,
 
-faseSecundaria:
-    Math.random() * Math.PI * 2,
+        faseSecundaria:
+            Math.random() * Math.PI * 2,
 
-velocidadRespiracion:
-    0.012 + Math.random() * 0.05,
+        velocidadRespiracion:
+            0.012 + Math.random() * 0.005,
 
-amplitudRespiracion:
-    0.045 + Math.random() * 0.015,
+        amplitudRespiracion:
+            0.045 + Math.random() * 0.015,
 
-respiracionX: 1,
-respiracionY: 1,
+        respiracionX: 1,
+        respiracionY: 1,
+
         // ----------------------------------------------------
         // HERENCIA
         // ----------------------------------------------------
@@ -191,7 +211,7 @@ respiracionY: 1,
         reproducciones: 0,
 
         // ----------------------------------------------------
-        // ESTIRAMIENTO
+        // DEFORMACIÓN
         // ----------------------------------------------------
 
         estirando: false,
@@ -200,7 +220,27 @@ respiracionY: 1,
 
         escalaY: 1,
 
-        anguloEstiramiento: 0
+        anguloEstiramiento: 0,
+
+        // ----------------------------------------------------
+        // REBOTE ELÁSTICO
+        // ----------------------------------------------------
+
+        rebotando: false,
+
+        velocidadRebote: 0,
+
+        deformacionRebote: 0,
+
+        direccionReboteX: 1,
+
+        direccionReboteY: 0,
+
+        // ----------------------------------------------------
+        // PEQUEÑA DEFORMACIÓN LATERAL
+        // ----------------------------------------------------
+
+        inclinacionDeformacion: 0
 
     };
 }
@@ -292,10 +332,6 @@ function limitarFigura(figura) {
 
 function actualizarRespiracion(figura) {
 
-    // --------------------------------------------------------
-    // Avanza lentamente la respiración
-    // --------------------------------------------------------
-
     figura.faseRespiracion +=
         figura.velocidadRespiracion;
 
@@ -303,47 +339,179 @@ function actualizarRespiracion(figura) {
         figura.velocidadRespiracion * 0.47;
 
 
-    // --------------------------------------------------------
-    // Onda principal
-    // --------------------------------------------------------
-
     const ondaPrincipal =
         Math.sin(figura.faseRespiracion);
 
-
-    // --------------------------------------------------------
-    // Onda secundaria
-    // --------------------------------------------------------
 
     const ondaSecundaria =
         Math.sin(figura.faseSecundaria);
 
 
-    // --------------------------------------------------------
-    // RESPIRACIÓN
-    //
-    // 6% - 7.5% de cambio de tamaño.
-    //
-    // Es suficientemente visible,
-    // pero sigue siendo lenta.
-    // --------------------------------------------------------
-
     const respiracion =
         ondaPrincipal * figura.amplitudRespiracion +
-        ondaSecundaria * 0.008;
+        ondaSecundaria * 0.006;
 
-
-    // --------------------------------------------------------
-    // X y Y ligeramente diferentes
-    //
-    // Esto evita que parezca simplemente un zoom.
-    // --------------------------------------------------------
 
     figura.respiracionX =
         1 + respiracion;
 
     figura.respiracionY =
-        1 + respiracion * 0.82;
+        1 + respiracion * 0.94;
+}
+
+
+// ============================================================
+// ACTUALIZAR REBOTE ELÁSTICO
+// ============================================================
+
+function actualizarRebote(figura) {
+
+    if (!figura.rebotando) {
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // La velocidad del rebote disminuye poco a poco.
+    // --------------------------------------------------------
+
+    figura.velocidadRebote *=
+        AMORTIGUACION_REBOTE;
+
+
+    // --------------------------------------------------------
+    // La deformación se mueve como un cuerpo elástico.
+    // --------------------------------------------------------
+
+    figura.deformacionRebote +=
+        figura.velocidadRebote;
+
+
+    // --------------------------------------------------------
+    // Convertimos la deformación en escalas.
+    //
+    // Primero se pasa ligeramente del tamaño original
+    // y después vuelve a estabilizarse.
+    // --------------------------------------------------------
+
+    const deformacion =
+        Math.sin(
+            figura.deformacionRebote
+        ) *
+        Math.abs(figura.velocidadRebote) *
+        1.8;
+
+
+    figura.escalaX =
+        1 + deformacion *
+        figura.direccionReboteX;
+
+
+    figura.escalaY =
+        1 - deformacion *
+        0.38;
+
+
+    // --------------------------------------------------------
+    // Pequeña inclinación.
+    // Esto ayuda a que parezca un cuerpo blando.
+    // --------------------------------------------------------
+
+    figura.inclinacionDeformacion =
+        Math.sin(
+            figura.deformacionRebote * 0.8
+        ) *
+        0.035;
+
+
+    // --------------------------------------------------------
+    // Cuando el movimiento ya es muy pequeño,
+    // volvemos completamente a la forma original.
+    // --------------------------------------------------------
+
+    if (
+        Math.abs(figura.velocidadRebote) < 0.001
+    ) {
+
+        figura.rebotando = false;
+
+        figura.escalaX = 1;
+
+        figura.escalaY = 1;
+
+        figura.inclinacionDeformacion = 0;
+
+        figura.velocidadRebote = 0;
+
+        figura.deformacionRebote = 0;
+    }
+}
+
+
+// ============================================================
+// INICIAR REBOTE
+// ============================================================
+
+function iniciarRebote(
+    figura,
+    angulo
+) {
+
+    if (!figura) {
+        return;
+    }
+
+
+    figura.estirando = false;
+
+    figura.rebotando = true;
+
+
+    // --------------------------------------------------------
+    // La figura vuelve desde la deformación máxima.
+    // --------------------------------------------------------
+
+    figura.escalaX =
+        DEFORMACION_MAXIMA;
+
+    figura.escalaY =
+        COMPRESION_MAXIMA;
+
+
+    figura.anguloEstiramiento =
+        angulo;
+
+
+    // --------------------------------------------------------
+    // Guardamos hacia dónde estaba estirada.
+    // --------------------------------------------------------
+
+    figura.direccionReboteX =
+        Math.cos(angulo);
+
+
+    figura.direccionReboteY =
+        Math.sin(angulo);
+
+
+    // --------------------------------------------------------
+    // Comenzamos el rebote.
+    // --------------------------------------------------------
+
+    figura.velocidadRebote =
+        FUERZA_REBOTE;
+
+
+    figura.deformacionRebote =
+        Math.PI / 2;
+
+
+    // --------------------------------------------------------
+    // Pequeña inclinación inicial.
+    // --------------------------------------------------------
+
+    figura.inclinacionDeformacion =
+        0.035;
 }
 
 
@@ -354,6 +522,13 @@ function actualizarRespiracion(figura) {
 function actualizarMovimiento() {
 
     figuras.forEach(figura => {
+
+        // ----------------------------------------------------
+        // Rebote elástico
+        // ----------------------------------------------------
+
+        actualizarRebote(figura);
+
 
         // ----------------------------------------------------
         // Si está siendo controlada por dos dedos,
@@ -451,10 +626,6 @@ function detectarColisiones() {
             const b = figuras[j];
 
 
-            // ------------------------------------------------
-            // Distancia
-            // ------------------------------------------------
-
             const dx = b.x - a.x;
 
             const dy = b.y - a.y;
@@ -463,17 +634,9 @@ function detectarColisiones() {
                 Math.sqrt(dx * dx + dy * dy);
 
 
-            // ------------------------------------------------
-            // Distancia mínima
-            // ------------------------------------------------
-
             const distanciaMinima =
                 (a.tamano + b.tamano) / 2;
 
-
-            // ------------------------------------------------
-            // Hay choque
-            // ------------------------------------------------
 
             if (
                 distancia < distanciaMinima &&
@@ -527,10 +690,6 @@ function detectarColisiones() {
                     ny * FUERZA_CHOQUE;
 
 
-                // ------------------------------------------------
-                // Volver a limitar
-                // ------------------------------------------------
-
                 limitarFigura(a);
 
                 limitarFigura(b);
@@ -555,16 +714,13 @@ function buscarFigura(x, y) {
         const figura = figuras[i];
 
 
-        // ----------------------------------------------------
-        // Consideramos también la respiración
-        // para que la zona táctil acompañe el tamaño.
-        // ----------------------------------------------------
-
         const mitad =
             (figura.tamano / 2) *
             Math.max(
                 figura.respiracionX,
-                figura.respiracionY
+                figura.respiracionY,
+                figura.escalaX,
+                figura.escalaY
             );
 
 
@@ -646,10 +802,6 @@ function comenzarGesto() {
         );
 
 
-    // --------------------------------------------------------
-    // Los dos dedos deben estar sobre la misma figura
-    // --------------------------------------------------------
-
     if (
         !figura1 ||
         !figura2 ||
@@ -673,6 +825,15 @@ function comenzarGesto() {
 
     figuraSeleccionada.estirando =
         true;
+
+    figuraSeleccionada.rebotando =
+        false;
+
+    figuraSeleccionada.escalaX =
+        1;
+
+    figuraSeleccionada.escalaY =
+        1;
 }
 
 
@@ -691,17 +852,9 @@ function actualizarGesto() {
     }
 
 
-    // --------------------------------------------------------
-    // Distancia actual
-    // --------------------------------------------------------
-
     const distanciaActual =
         calcularDistancia();
 
-
-    // --------------------------------------------------------
-    // Cuánto se separaron
-    // --------------------------------------------------------
 
     const aumento =
         Math.max(
@@ -712,25 +865,58 @@ function actualizarGesto() {
 
 
     // --------------------------------------------------------
-    // Estiramiento
+    // PROGRESO DEL ESTIRAMIENTO
     // --------------------------------------------------------
 
-    let escala =
-        1 +
+    let progreso =
         aumento /
-        DISTANCIA_SEPARACION *
-        0.65;
+        DISTANCIA_SEPARACION;
 
 
-    escala =
+    progreso =
         Math.min(
-            escala,
-            1.65
+            progreso,
+            1
         );
 
 
     // --------------------------------------------------------
-    // Dirección del estiramiento
+    // SUAVIZAMOS EL MOVIMIENTO
+    //
+    // Evita que la deformación sea rígida.
+    // --------------------------------------------------------
+
+    const suave =
+        progreso *
+        progreso *
+        (3 - 2 * progreso);
+
+
+    // --------------------------------------------------------
+    // ESTIRAMIENTO PRINCIPAL
+    // --------------------------------------------------------
+
+    const escala =
+        1 +
+        suave *
+        (DEFORMACION_MAXIMA - 1);
+
+
+    // --------------------------------------------------------
+    // COMPRESIÓN DEL OTRO EJE
+    //
+    // Esto hace que el cuadrado realmente parezca
+    // un cuerpo que está siendo estirado.
+    // --------------------------------------------------------
+
+    const compresion =
+        1 -
+        suave *
+        (1 - COMPRESION_MAXIMA);
+
+
+    // --------------------------------------------------------
+    // DIRECCIÓN
     // --------------------------------------------------------
 
     const angulo =
@@ -744,14 +930,26 @@ function actualizarGesto() {
         escala;
 
     figuraSeleccionada.escalaY =
-        1;
+        compresion;
 
     figuraSeleccionada.anguloEstiramiento =
         angulo;
 
 
     // --------------------------------------------------------
-    // Crear hijos
+    // PEQUEÑA INCLINACIÓN
+    //
+    // Da la sensación de que el cuerpo está cediendo
+    // ante la fuerza.
+    // --------------------------------------------------------
+
+    figuraSeleccionada.inclinacionDeformacion =
+        Math.sin(progreso * Math.PI) *
+        0.045;
+
+
+    // --------------------------------------------------------
+    // LLEGÓ AL MÁXIMO
     // --------------------------------------------------------
 
     if (
@@ -909,10 +1107,6 @@ function crearHijos(padre) {
         padre.generacion + 1;
 
 
-    // --------------------------------------------------------
-    // Hereda movimiento del padre
-    // --------------------------------------------------------
-
     hijo1.vx =
         padre.vx -
         nx * 1.1;
@@ -922,10 +1116,6 @@ function crearHijos(padre) {
         padre.vy -
         ny * 1.1;
 
-
-    // --------------------------------------------------------
-    // Hereda rotación
-    // --------------------------------------------------------
 
     hijo1.rotacion =
         padre.rotacion;
@@ -948,10 +1138,6 @@ function crearHijos(padre) {
         padre.generacion + 1;
 
 
-    // --------------------------------------------------------
-    // Hereda movimiento del padre
-    // --------------------------------------------------------
-
     hijo2.vx =
         padre.vx +
         nx * 1.1;
@@ -961,10 +1147,6 @@ function crearHijos(padre) {
         padre.vy +
         ny * 1.1;
 
-
-    // --------------------------------------------------------
-    // Hereda rotación
-    // --------------------------------------------------------
 
     hijo2.rotacion =
         padre.rotacion;
@@ -981,16 +1163,20 @@ function crearHijos(padre) {
 
 
     // ========================================================
-    // EL PADRE NO DESAPARECE
+    // EL PADRE PERMANECE
+    //
+    // PERO NO RECUPERA SU FORMA DE GOLPE.
+    //
+    // Primero hace el rebote.
     // ========================================================
 
-    padre.estirando = false;
-
-    padre.escalaX = 1;
-
-    padre.escalaY = 1;
-
     padre.reproducciones++;
+
+
+    iniciarRebote(
+        padre,
+        Math.atan2(ny, nx)
+    );
 
 
     // ========================================================
@@ -1027,7 +1213,7 @@ function dibujarFigura(figura) {
 
 
     // --------------------------------------------------------
-    // Rotación
+    // Rotación original
     // --------------------------------------------------------
 
     ctx.rotate(
@@ -1036,10 +1222,17 @@ function dibujarFigura(figura) {
 
 
     // --------------------------------------------------------
-    // Estiramiento
+    // DEFORMACIÓN
     // --------------------------------------------------------
 
-    if (figura.estirando) {
+    if (
+        figura.estirando ||
+        figura.rebotando
+    ) {
+
+        // ----------------------------------------------------
+        // Nos colocamos en la dirección del estiramiento.
+        // ----------------------------------------------------
 
         ctx.rotate(
             figura.anguloEstiramiento -
@@ -1047,17 +1240,43 @@ function dibujarFigura(figura) {
         );
 
 
+        // ----------------------------------------------------
+        // Escala elástica.
+        // ----------------------------------------------------
+
         ctx.scale(
             figura.escalaX,
             figura.escalaY
+        );
+
+
+        // ----------------------------------------------------
+        // Pequeño efecto de torsión.
+        // ----------------------------------------------------
+
+        ctx.transform(
+            1,
+            figura.inclinacionDeformacion,
+            0,
+            1,
+            0,
+            0
+        );
+
+
+        // ----------------------------------------------------
+        // Volvemos a la rotación normal.
+        // ----------------------------------------------------
+
+        ctx.rotate(
+            figura.rotacion -
+            figura.anguloEstiramiento
         );
     }
 
 
     // ========================================================
     // RESPIRACIÓN
-    //
-    // Se aplica directamente al tamaño visual.
     // ========================================================
 
     ctx.scale(
@@ -1075,7 +1294,7 @@ function dibujarFigura(figura) {
 
 
     // ========================================================
-    // GRADIENTES EXACTOS DE MEMORIA
+    // GRADIENTES
     // ========================================================
 
     let gradiente;
@@ -1109,10 +1328,6 @@ function dibujarFigura(figura) {
             "#AEB4BA"
         );
 
-
-        // ----------------------------------------------------
-        // BOX SHADOW
-        // ----------------------------------------------------
 
         ctx.shadowColor =
             "rgba(217,217,217,0.25)";
@@ -1156,10 +1371,6 @@ function dibujarFigura(figura) {
         );
 
 
-        // ----------------------------------------------------
-        // BOX SHADOW
-        // ----------------------------------------------------
-
         ctx.shadowColor =
             "rgba(139,178,211,0.25)";
 
@@ -1201,10 +1412,6 @@ function dibujarFigura(figura) {
             "#10183B"
         );
 
-
-        // ----------------------------------------------------
-        // BOX SHADOW
-        // ----------------------------------------------------
 
         ctx.shadowColor =
             "rgba(32,45,100,0.35)";
@@ -1248,10 +1455,6 @@ function dibujarFigura(figura) {
         );
 
 
-        // ----------------------------------------------------
-        // BOX SHADOW
-        // ----------------------------------------------------
-
         ctx.shadowColor =
             "rgba(43,83,142,0.35)";
 
@@ -1280,8 +1483,7 @@ function dibujarFigura(figura) {
 
 
     // --------------------------------------------------------
-    // Quitamos la sombra exterior antes de hacer
-    // el efecto interno.
+    // Quitar sombra exterior
     // --------------------------------------------------------
 
     ctx.shadowColor =
@@ -1293,10 +1495,6 @@ function dibujarFigura(figura) {
     // ========================================================
     // SOMBRA INTERNA
     // ========================================================
-
-    // --------------------------------------------------------
-    // Parte oscura inferior derecha
-    // --------------------------------------------------------
 
     const sombraInterna =
         ctx.createLinearGradient(
@@ -1587,14 +1785,23 @@ function finalizarGesto(evento) {
             figuraSeleccionada
         ) {
 
-            figuraSeleccionada.estirando =
-                false;
+            // ------------------------------------------------
+            // Si todavía no llegó a dividirse,
+            // hacemos que vuelva mediante un pequeño rebote.
+            // ------------------------------------------------
 
-            figuraSeleccionada.escalaX =
-                1;
+            const figura =
+                figuraSeleccionada;
 
-            figuraSeleccionada.escalaY =
-                1;
+
+            const angulo =
+                figura.anguloEstiramiento;
+
+
+            iniciarRebote(
+                figura,
+                angulo
+            );
         }
 
 
@@ -1766,11 +1973,6 @@ let figuraTeclado = null;
 document.addEventListener(
     "keydown",
     function(evento) {
-
-        // ----------------------------------------------------
-        // Si todavía no hay figura seleccionada,
-        // seleccionamos la primera.
-        // ----------------------------------------------------
 
         if (
             !figuraTeclado &&
