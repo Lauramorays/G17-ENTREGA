@@ -10,7 +10,7 @@
 // - Chocan entre ellos y con los bordes.
 // - Con UN dedo: el cuadrado solamente se mueve.
 // - Con DOS dedos sobre EL MISMO cuadrado: se deforma.
-// - Al estirarlo completamente: genera 3 hijos.
+// - Al estirarlo completamente: genera 2 hijos.
 // - El padre NO desaparece.
 // - Después de generar hijos, el padre vuelve rápidamente
 //   pero de forma visible a su forma PERFECTAMENTE CUADRADA.
@@ -60,15 +60,6 @@ const ESTIRAMIENTO_MAXIMO = 2.0;
 // ============================================================
 // RETRACCIÓN
 // ============================================================
-//
-// Antes era demasiado lenta o podía quedarse deformado.
-//
-// Ahora:
-// - empieza inmediatamente después de crear los hijos
-// - dura aproximadamente 300 ms
-// - vuelve a cuadrado
-// - tiene una pequeña elasticidad al final
-//
 
 const DURACION_RETRACCION = 320;
 
@@ -109,17 +100,6 @@ let siguienteId = 0;
 // ============================================================
 // DEDOS ACTIVOS
 // ============================================================
-//
-// Cada dedo queda asociado a un cuadrado concreto.
-//
-// Esto es importante para que:
-// dedo 1 -> cuadrado A
-// dedo 2 -> SOLO pueda unirse al cuadrado A
-//
-// y no ocurra:
-// dedo 1 -> cuadrado A
-// dedo 2 -> cuadrado B
-//
 
 const punteros = new Map();
 
@@ -194,6 +174,16 @@ function crearFigura(x, y, color, tamano = TAMANO_INICIAL) {
         inicioRetraccion: 0,
 
         deformacionInicioRetraccion: 0,
+
+        // ----------------------------------------------------
+        // NACIMIENTO
+        // ----------------------------------------------------
+
+        naciendo: false,
+
+        inicioNacimiento: 0,
+
+        duracionNacimiento: 420,
 
         // ----------------------------------------------------
         // CONTROL
@@ -401,20 +391,12 @@ function actualizarRetraccion(figura) {
         return;
     }
 
-    // --------------------------------------------------------
-    // Curva rápida al principio y suave al final.
-    // --------------------------------------------------------
-
     const suavizado =
         1 - Math.pow(1 - progreso, 3);
 
     let deformacion =
         figura.deformacionInicioRetraccion *
         (1 - suavizado);
-
-    // --------------------------------------------------------
-    // Pequeño rebote visual al final.
-    // --------------------------------------------------------
 
     if (progreso > 0.78) {
 
@@ -423,7 +405,8 @@ function actualizarRetraccion(figura) {
                 (progreso - 0.78) /
                 0.22 *
                 Math.PI
-            ) * 0.035 *
+            ) *
+            0.035 *
             (1 - progreso);
 
         deformacion += rebote;
@@ -436,10 +419,55 @@ function actualizarRetraccion(figura) {
         figura.deformacionActual;
 
     figura.escalaGesto =
-        1 + (ESTIRAMIENTO_MAXIMO - 1) * d;
+        1 +
+        (ESTIRAMIENTO_MAXIMO - 1) *
+        d;
 
     figura.compresionGesto =
-        1 - 0.35 * d;
+        1 -
+        0.35 *
+        d;
+}
+
+
+// ============================================================
+// ACTUALIZAR NACIMIENTO
+// ============================================================
+
+function actualizarNacimiento(figura) {
+
+    if (!figura.naciendo) return;
+
+    const ahora = performance.now();
+
+    const progreso =
+        (ahora - figura.inicioNacimiento) /
+        figura.duracionNacimiento;
+
+    if (progreso >= 1) {
+
+        figura.naciendo = false;
+
+        return;
+    }
+
+    // --------------------------------------------------------
+    // El hijo comienza prácticamente pegado al padre
+    // y se desplaza hacia afuera progresivamente.
+    // --------------------------------------------------------
+
+    const suavizado =
+        1 - Math.pow(1 - progreso, 3);
+
+    figura.x =
+        figura.xNacimiento +
+        (figura.xDestino - figura.xNacimiento) *
+        suavizado;
+
+    figura.y =
+        figura.yNacimiento +
+        (figura.yDestino - figura.yNacimiento) *
+        suavizado;
 }
 
 
@@ -465,9 +493,12 @@ function iniciarRetraccion(figura) {
 
 function actualizarMovimiento(figura) {
 
-    // --------------------------------------------------------
-    // Mientras se arrastra, el dedo controla la posición.
-    // --------------------------------------------------------
+    if (figura.naciendo) {
+
+        actualizarNacimiento(figura);
+
+        return;
+    }
 
     if (figura.arrastrado) return;
 
@@ -562,21 +593,30 @@ function actualizarColisiones() {
                 distancia < distanciaMinima
             ) {
 
-                const nx = dx / distancia;
+                const nx =
+                    dx / distancia;
 
-                const ny = dy / distancia;
+                const ny =
+                    dy / distancia;
 
                 const penetracion =
-                    distanciaMinima - distancia;
+                    distanciaMinima -
+                    distancia;
 
                 const separacion =
                     penetracion * 0.5;
 
-                a.x -= nx * separacion;
-                a.y -= ny * separacion;
+                a.x -=
+                    nx * separacion;
 
-                b.x += nx * separacion;
-                b.y += ny * separacion;
+                a.y -=
+                    ny * separacion;
+
+                b.x +=
+                    nx * separacion;
+
+                b.y +=
+                    ny * separacion;
 
                 const velocidadRelativa =
                     (b.vx - a.vx) * nx +
@@ -588,11 +628,17 @@ function actualizarColisiones() {
                         velocidadRelativa *
                         FUERZA_CHOQUE;
 
-                    a.vx += nx * impulso;
-                    a.vy += ny * impulso;
+                    a.vx +=
+                        nx * impulso;
 
-                    b.vx -= nx * impulso;
-                    b.vy -= ny * impulso;
+                    a.vy +=
+                        ny * impulso;
+
+                    b.vx -=
+                        nx * impulso;
+
+                    b.vy -=
+                        ny * impulso;
                 }
             }
         }
@@ -603,36 +649,36 @@ function actualizarColisiones() {
 // ============================================================
 // OBTENER FIGURA TOCADA
 // ============================================================
-//
-// IMPORTANTE:
-//
-// Se comprueba primero la figura que está más arriba
-// visualmente.
-//
-// Además se utiliza el tamaño REAL de la figura deformada.
-//
-// Esto hace mucho más preciso el agarre con los dedos.
-//
 
 function obtenerFiguraEnPunto(x, y) {
 
-    for (let i = figuras.length - 1; i >= 0; i--) {
+    for (
+        let i = figuras.length - 1;
+        i >= 0;
+        i--
+    ) {
 
         const figura = figuras[i];
 
-        const dx = x - figura.x;
+        const dx =
+            x - figura.x;
 
-        const dy = y - figura.y;
+        const dy =
+            y - figura.y;
 
-        const cos = Math.cos(-figura.angulo);
+        const cos =
+            Math.cos(-figura.angulo);
 
-        const sin = Math.sin(-figura.angulo);
+        const sin =
+            Math.sin(-figura.angulo);
 
         const localX =
-            dx * cos - dy * sin;
+            dx * cos -
+            dy * sin;
 
         const localY =
-            dx * sin + dy * cos;
+            dx * sin +
+            dy * cos;
 
         const mitad =
             figura.tamano * 0.5;
@@ -648,10 +694,6 @@ function obtenerFiguraEnPunto(x, y) {
 
         const radioY =
             mitad * escalaY + 18;
-
-        // ----------------------------------------------------
-        // Hitbox ligeramente ampliada para dedos.
-        // ----------------------------------------------------
 
         if (
             Math.abs(localX) <= radioX &&
@@ -677,9 +719,13 @@ function obtenerPosicionPuntero(e) {
 
     return {
 
-        x: e.clientX - rect.left,
+        x:
+            e.clientX -
+            rect.left,
 
-        y: e.clientY - rect.top
+        y:
+            e.clientY -
+            rect.top
     };
 }
 
@@ -705,17 +751,13 @@ canvas.addEventListener(
 
         if (!figura) return;
 
-        // ----------------------------------------------------
-        // Capturamos el dedo.
-        // ----------------------------------------------------
-
         try {
-            canvas.setPointerCapture(e.pointerId);
-        } catch (_) {}
 
-        // ----------------------------------------------------
-        // Guardamos qué figura tomó este dedo.
-        // ----------------------------------------------------
+            canvas.setPointerCapture(
+                e.pointerId
+            );
+
+        } catch (_) {}
 
         punteros.set(
             e.pointerId,
@@ -725,11 +767,6 @@ canvas.addEventListener(
                 y: pos.y
             }
         );
-
-        // ----------------------------------------------------
-        // Si todavía no hay dedos en la figura:
-        // movimiento normal.
-        // ----------------------------------------------------
 
         if (figura.dedos.size === 0) {
 
@@ -745,13 +782,6 @@ canvas.addEventListener(
 
             return;
         }
-
-        // ----------------------------------------------------
-        // Si ya hay UN dedo:
-        //
-        // El segundo dedo tiene que estar sobre el MISMO
-        // cuadrado.
-        // ----------------------------------------------------
 
         if (figura.dedos.size === 1) {
 
@@ -782,12 +812,9 @@ canvas.addEventListener(
                     dy * dy
                 );
 
-            // ------------------------------------------------
-            // Evitamos que una distancia inicial demasiado
-            // pequeña produzca una deformación inmediata.
-            // ------------------------------------------------
-
-            if (figura.distanciaInicial < 10) {
+            if (
+                figura.distanciaInicial < 10
+            ) {
 
                 figura.distanciaInicial = 10;
             }
@@ -825,14 +852,14 @@ canvas.addEventListener(
             obtenerPosicionPuntero(e);
 
         registro.x = pos.x;
+
         registro.y = pos.y;
 
-        // ----------------------------------------------------
-        // Actualizamos la posición del dedo dentro de la
-        // figura.
-        // ----------------------------------------------------
-
-        if (figura.dedos.has(e.pointerId)) {
+        if (
+            figura.dedos.has(
+                e.pointerId
+            )
+        ) {
 
             figura.dedos.get(
                 e.pointerId
@@ -845,9 +872,6 @@ canvas.addEventListener(
 
         // ----------------------------------------------------
         // UN SOLO DEDO
-        //
-        // Solo mueve.
-        // NO deforma.
         // ----------------------------------------------------
 
         if (figura.dedos.size === 1) {
@@ -863,8 +887,6 @@ canvas.addEventListener(
 
         // ----------------------------------------------------
         // DOS DEDOS
-        //
-        // Recién acá se puede deformar.
         // ----------------------------------------------------
 
         if (figura.dedos.size === 2) {
@@ -891,12 +913,9 @@ canvas.addEventListener(
             const distanciaInicial =
                 figura.distanciaInicial;
 
-            // ------------------------------------------------
-            // Cuánto se separaron respecto al inicio.
-            // ------------------------------------------------
-
             let progreso =
-                (distancia - distanciaInicial) /
+                (distancia -
+                 distanciaInicial) /
                 (
                     distanciaInicial *
                     (ESTIRAMIENTO_MAXIMO - 1)
@@ -905,15 +924,16 @@ canvas.addEventListener(
             progreso =
                 Math.max(
                     0,
-                    Math.min(1, progreso)
+                    Math.min(
+                        1,
+                        progreso
+                    )
                 );
 
-            // ------------------------------------------------
-            // Solo deformamos si REALMENTE se están
-            // separando.
-            // ------------------------------------------------
-
-            if (distancia > distanciaInicial) {
+            if (
+                distancia >
+                distanciaInicial
+            ) {
 
                 figura.deformacionActual =
                     progreso;
@@ -943,21 +963,18 @@ canvas.addEventListener(
                 figura.compresionGesto = 1;
             }
 
-            // ------------------------------------------------
-            // El centro sigue a los dos dedos.
-            // ------------------------------------------------
-
             figura.x =
                 (dedos[0].x +
-                 dedos[1].x) / 2;
+                 dedos[1].x) /
+                2;
 
             figura.y =
                 (dedos[0].y +
-                 dedos[1].y) / 2;
+                 dedos[1].y) /
+                2;
 
             // ------------------------------------------------
-            // Llegó al máximo.
-            // Crear hijos.
+            // LLEGÓ AL MÁXIMO
             // ------------------------------------------------
 
             if (
@@ -967,25 +984,12 @@ canvas.addEventListener(
 
                 crearHijos(figura);
 
-                // ------------------------------------------------
-                // MUY IMPORTANTE:
-                //
-                // Después de crear los hijos comenzamos
-                // inmediatamente la retracción.
-                // ------------------------------------------------
-
                 iniciarRetraccion(figura);
-
-                // ------------------------------------------------
-                // Reiniciamos la distancia para que no vuelva
-                // a crear hijos continuamente.
-                // ------------------------------------------------
 
                 figura.distanciaInicial =
                     distancia;
 
-                figura.deformacionActual =
-                    1;
+                figura.deformacionActual = 1;
             }
         }
     },
@@ -1018,17 +1022,16 @@ function soltarPuntero(e) {
     );
 
     try {
+
         canvas.releasePointerCapture(
             e.pointerId
         );
+
     } catch (_) {}
 
-    // --------------------------------------------------------
-    // Si queda un dedo:
-    // volvemos al modo movimiento.
-    // --------------------------------------------------------
-
-    if (figura.dedos.size === 1) {
+    if (
+        figura.dedos.size === 1
+    ) {
 
         figura.deformacionActual = 0;
 
@@ -1040,11 +1043,6 @@ function soltarPuntero(e) {
 
         return;
     }
-
-    // --------------------------------------------------------
-    // Si se soltaron los dos dedos mientras estaba deformado,
-    // vuelve a su forma original.
-    // --------------------------------------------------------
 
     if (
         figura.deformacionActual > 0 &&
@@ -1072,9 +1070,7 @@ canvas.addEventListener(
     "pointerleave",
     function(e) {
 
-        // No eliminamos el puntero inmediatamente.
-        // Si el navegador mantiene el pointer capture,
-        // el gesto puede continuar correctamente.
+        // El pointer capture mantiene el gesto.
     }
 );
 
@@ -1082,14 +1078,29 @@ canvas.addEventListener(
 // ============================================================
 // CREAR HIJOS
 // ============================================================
+//
+// AHORA SON 2 HIJOS.
+//
+// Los hijos comienzan pegados al borde del padre y se van
+// desprendiendo progresivamente hacia afuera.
+// Esto genera un efecto parecido a una hoja que se abre,
+// se rasga o se desprende de la masa principal.
+// ============================================================
 
 function crearHijos(padre) {
 
     if (!padre.puedeReproducirse) {
+
         return;
     }
 
-    const cantidad = 3;
+    // ========================================================
+    // CAMBIO 1:
+    // ANTES: 3
+    // AHORA: 2
+    // ========================================================
+
+    const cantidad = 2;
 
     const direccion =
         padre.direccionEstiramiento;
@@ -1097,39 +1108,97 @@ function crearHijos(padre) {
     const distancia =
         DISTANCIA_SEPARACION;
 
-    for (let i = 0; i < cantidad; i++) {
+    for (
+        let i = 0;
+        i < cantidad;
+        i++
+    ) {
 
         // ----------------------------------------------------
-        // Separación angular de los hijos.
+        // Los dos hijos se separan ligeramente uno del otro.
         // ----------------------------------------------------
 
         const variacion =
-            (i - 1) * 0.45;
+            i === 0
+                ? -0.32
+                : 0.32;
 
         const angulo =
             direccion + variacion;
 
-        const x =
+        // ----------------------------------------------------
+        // POSICIÓN DEL BORDE DEL PADRE
+        // ----------------------------------------------------
+
+        const borde =
+            padre.tamano *
+            0.5 *
+            Math.max(
+                padre.escalaGesto,
+                1
+            );
+
+        const xNacimiento =
+            padre.x +
+            Math.cos(angulo) *
+            borde;
+
+        const yNacimiento =
+            padre.y +
+            Math.sin(angulo) *
+            borde;
+
+        // ----------------------------------------------------
+        // POSICIÓN FINAL DEL HIJO
+        // ----------------------------------------------------
+
+        const xDestino =
             padre.x +
             Math.cos(angulo) *
             distancia;
 
-        const y =
+        const yDestino =
             padre.y +
             Math.sin(angulo) *
             distancia;
 
+        // ----------------------------------------------------
+        // Creamos el hijo inicialmente en el borde.
+        // ----------------------------------------------------
+
         const hijo =
             crearFigura(
-                x,
-                y,
+                xNacimiento,
+                yNacimiento,
                 padre.color,
                 padre.tamano *
                 REDUCCION_HIJO
             );
 
         // ----------------------------------------------------
-        // Los hijos salen impulsados hacia afuera.
+        // Guardamos nacimiento y destino para la animación.
+        // ----------------------------------------------------
+
+        hijo.xNacimiento =
+            xNacimiento;
+
+        hijo.yNacimiento =
+            yNacimiento;
+
+        hijo.xDestino =
+            xDestino;
+
+        hijo.yDestino =
+            yDestino;
+
+        hijo.naciendo = true;
+
+        hijo.inicioNacimiento =
+            performance.now();
+
+        // ----------------------------------------------------
+        // El hijo conserva el movimiento del padre y después
+        // recibe un pequeño impulso hacia afuera.
         // ----------------------------------------------------
 
         hijo.vx =
@@ -1172,21 +1241,15 @@ function dibujarFigura(figura) {
         figura.y
     );
 
-    ctx.rotate(figura.angulo);
-
-    // --------------------------------------------------------
-    // Escalas normales de respiración.
-    // --------------------------------------------------------
+    ctx.rotate(
+        figura.angulo
+    );
 
     const respiracionX =
         figura.respiracionX;
 
     const respiracionY =
         figura.respiracionY;
-
-    // --------------------------------------------------------
-    // DEFORMACIÓN
-    // --------------------------------------------------------
 
     const deformacion =
         figura.deformacionActual;
@@ -1232,17 +1295,10 @@ function dibujarFigura(figura) {
     // ========================================================
     // CUADRADO PERFECTO
     // ========================================================
-    //
-    // Cuando no está deformado, dibujamos un cuadrado REAL.
-    //
-    // No roundedRect.
-    // No curva.
-    // No deformación.
-    //
-    // Esto asegura que vuelva exactamente a su forma inicial.
-    //
 
-    if (deformacion <= 0.001) {
+    if (
+        deformacion <= 0.001
+    ) {
 
         ctx.beginPath();
 
@@ -1260,13 +1316,6 @@ function dibujarFigura(figura) {
     // ========================================================
     // MASA BLANDA
     // ========================================================
-    //
-    // Mientras se estira:
-    // - los lados se curvan
-    // - las esquinas se vuelven orgánicas
-    // - no aparece una punta
-    // - parece una masa de goma/latex
-    //
 
     else {
 
@@ -1275,15 +1324,24 @@ function dibujarFigura(figura) {
 
         const largo =
             mitad *
-            (1 + estiramiento * 0.95);
+            (
+                1 +
+                estiramiento *
+                0.95
+            );
 
         const ancho =
             mitad *
-            (1 - estiramiento * 0.28);
+            (
+                1 -
+                estiramiento *
+                0.28
+            );
 
         const curva =
             10 +
-            estiramiento * 22;
+            estiramiento *
+            22;
 
         const deformacionCurva =
             Math.sin(

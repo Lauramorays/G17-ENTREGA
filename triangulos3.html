@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 
@@ -18,6 +19,12 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
         }
 
         body {
@@ -42,7 +49,11 @@
             touch-action: none;
         }
 
-        /* Coloca las flechas a los extremos y los puntos en el centro. */
+
+        /* ============================================================
+           NAVEGACIÓN
+           ============================================================ */
+
         #navegacion {
             position: absolute;
             top: 18px;
@@ -56,15 +67,12 @@
             pointer-events: none;
         }
 
-        /* Mantiene los 9 puntos centrados. */
         #progreso {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 11px;
+            gap: 7px;
         }
 
-        /* Puntos de progreso. */
         #progreso span {
             display: block;
             width: 9px;
@@ -75,63 +83,69 @@
             opacity: 0.45;
         }
 
-        /* Noveno punto activo: Expectativa. */
+        /* 9. EXPECTATIVA */
         #progreso span.activo {
             background: #C4CEE5;
             opacity: 1;
         }
 
-        /* Flechas de navegación. */
         #navegacion button {
             border: none;
             background: transparent;
             color: #C4CEE5;
-            font-size: 38px;
-            font-weight: 200;
-            line-height: 1;
+            font-size: 32px;
             cursor: pointer;
             padding: 0;
-            width: auto;
-            height: auto;
+            width: 30px;
+            height: 35px;
             display: flex;
             align-items: center;
             justify-content: center;
+            pointer-events: auto;
             position: relative;
             z-index: 1001;
-            pointer-events: auto;
             user-select: none;
-            transition:
-                opacity 0.3s ease,
-                transform 0.3s ease;
         }
 
-        /* Pequeña reacción de la flecha al pasar el mouse. */
         #navegacion button:hover {
-            opacity: 0.7;
-            transform: scale(1.1);
+            opacity: 0.6;
+        }
+
+        #navegacion button:active {
+            opacity: 0.4;
         }
 
     </style>
 
 </head>
 
+
 <body>
 
     <main id="juego">
 
-        <!-- Navegación entre las 9 experiencias. -->
+
+        <!-- ============================================================
+             NAVEGACIÓN
+             ============================================================ -->
+
         <div id="navegacion">
 
-            <!-- Volver a Desprendimiento. -->
+
+            <!-- Volver a DESPRENDIMIENTO -->
             <button
                 type="button"
                 onclick="window.location.href='triangulos2.html'"
-                aria-label="Volver"
+                aria-label="Volver a Desprendimiento"
             >
                 ‹
             </button>
 
-            <!-- Progreso de las 9 experiencias. -->
+
+            <!-- ========================================================
+                 PROGRESO DE LAS 9 EXPERIENCIAS
+                 ======================================================== -->
+
             <div id="progreso">
 
                 <!-- 1. MEMORIA -->
@@ -163,24 +177,36 @@
 
             </div>
 
-            <!-- Volver al inicio. -->
+
+            <!-- Volver al INICIO -->
             <button
                 type="button"
                 onclick="window.location.href='index.html'"
-                aria-label="Inicio"
+                aria-label="Volver al inicio"
             >
                 ›
             </button>
 
         </div>
 
-        <!-- Área del juego. -->
+
+        <!-- ============================================================
+             ÁREA DEL JUEGO
+             ============================================================ -->
+
         <canvas id="canvas"></canvas>
 
+
     </main>
+
+
+    <!-- ================================================================
+         JAVASCRIPT
+         ================================================================ -->
 
     <script src="triangulos3.js"></script>
 
 </body>
 
 </html>
+

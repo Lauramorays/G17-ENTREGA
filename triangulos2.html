@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 
@@ -9,13 +10,21 @@
         name="viewport"
         content="width=device-width, initial-scale=1.0"
     >
-<title>Ansiedad</title>
+
+    <title>Anciedad</title>
+
     <style>
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
         }
 
         body {
@@ -40,7 +49,11 @@
             touch-action: none;
         }
 
-        /* Coloca las flechas en los extremos y los puntos en el centro. */
+
+        /* ============================================================
+           NAVEGACIÓN
+           ============================================================ */
+
         #navegacion {
             position: absolute;
             top: 18px;
@@ -54,15 +67,12 @@
             pointer-events: none;
         }
 
-        /* Mantiene los 9 puntos juntos y centrados. */
         #progreso {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 11px;
+            gap: 7px;
         }
 
-        /* Estilo de los puntos de progreso. */
         #progreso span {
             display: block;
             width: 9px;
@@ -73,40 +83,36 @@
             opacity: 0.45;
         }
 
-        /* Octavo punto: Desprendimiento. */
+        /* 8. DESPRENDIMIENTO */
         #progreso span.activo {
             background: #C4CEE5;
             opacity: 1;
         }
 
-        /* Estilo de las flechas de navegación. */
         #navegacion button {
             border: none;
             background: transparent;
             color: #C4CEE5;
-            font-size: 38px;
-            font-weight: 200;
-            line-height: 1;
+            font-size: 32px;
             cursor: pointer;
             padding: 0;
-            width: auto;
-            height: auto;
+            width: 30px;
+            height: 35px;
             display: flex;
             align-items: center;
             justify-content: center;
+            pointer-events: auto;
             position: relative;
             z-index: 1001;
-            pointer-events: auto;
             user-select: none;
-            transition:
-                opacity 0.3s ease,
-                transform 0.3s ease;
         }
 
-        /* Pequeña reacción visual al pasar el mouse. */
         #navegacion button:hover {
-            opacity: 0.7;
-            transform: scale(1.1);
+            opacity: 0.6;
+        }
+
+        #navegacion button:active {
+            opacity: 0.4;
         }
 
     </style>
@@ -118,43 +124,65 @@
 
     <main id="juego">
 
-        <!-- Navegación entre las experiencias. -->
+
+        <!-- ============================================================
+             NAVEGACIÓN
+             ============================================================ -->
+
         <div id="navegacion">
 
-            <!-- Volver a Incertidumbre. -->
+
+            <!-- Volver a INCERTIDUMBRE -->
             <button
                 type="button"
                 onclick="window.location.href='triangulos.html'"
-                aria-label="Volver"
+                aria-label="Volver a Incertidumbre"
             >
                 ‹
             </button>
 
 
-            <!-- Progreso de las 9 experiencias. -->
+            <!-- ========================================================
+                 PROGRESO DE LAS 9 EXPERIENCIAS
+                 ======================================================== -->
+
             <div id="progreso">
 
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
+                <!-- 1. MEMORIA -->
                 <span></span>
 
-                <!-- 8. DESPRENDIMIENTO -->
+                <!-- 2. HERENCIA -->
+                <span></span>
+
+                <!-- 3. CADUCIDAD -->
+                <span></span>
+
+                <!-- 4. IDENTIDAD -->
+                <span></span>
+
+                <!-- 5. EMPATÍA -->
+                <span></span>
+
+                <!-- 6. COLABORACIÓN -->
+                <span></span>
+
+                <!-- 7. INCERTIDUMBRE -->
+                <span></span>
+
+                <!-- 8. ANCIEDAD -->
                 <span class="activo"></span>
 
+                <!-- 9. EXPECTATIVA -->
                 <span></span>
 
             </div>
 
 
-            <!-- Avanzar a Expectativa. -->
+            <!-- Avanzar a EXPECTATIVA -->
             <button
                 type="button"
                 onclick="window.location.href='triangulos3.html'"
-                aria-label="Avanzar"
+                aria-label="Avanzar a Expectativa"
             >
                 ›
             </button>
@@ -162,14 +190,23 @@
         </div>
 
 
-        <!-- Área donde funciona el juego. -->
+        <!-- ============================================================
+             ÁREA DEL JUEGO
+             ============================================================ -->
+
         <canvas id="canvas"></canvas>
+
 
     </main>
 
+
+    <!-- ================================================================
+         JAVASCRIPT
+         ================================================================ -->
 
     <script src="triangulos2.js"></script>
 
 </body>
 
 </html>
+
