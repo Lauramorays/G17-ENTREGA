@@ -32,6 +32,9 @@
 // - Gradientes.
 // - Líneas formadas por pequeños puntos.
 // - Los puntos de conexión son rectos.
+// - Los círculos nuevos aparecen creciendo.
+// - Los círculos que pierden su conexión desaparecen
+//   achicándose progresivamente.
 // ============================================================
 
 
@@ -69,6 +72,20 @@ const AMPLITUD_RESPIRACION_MAX = 2.8;
 
 
 // ============================================================
+// ANIMACIÓN DE APARICIÓN / DESAPARICIÓN
+// ============================================================
+
+const ESCALA_INICIAL =
+    0.08;
+
+const VELOCIDAD_APARICION =
+    0.055;
+
+const VELOCIDAD_DESAPARICION =
+    0.045;
+
+
+// ============================================================
 // VARIABLES
 // ============================================================
 
@@ -102,7 +119,8 @@ const posicionesIniciales = [
 
 function ajustarCanvas() {
 
-    const rect = canvas.getBoundingClientRect();
+    const rect =
+        canvas.getBoundingClientRect();
 
     canvas.width = rect.width;
     canvas.height = rect.height;
@@ -113,22 +131,36 @@ function ajustarCanvas() {
 // CREAR CÍRCULO
 // ============================================================
 
-function crearCirculo(x, y, color, esInicial = false) {
+function crearCirculo(
+    x,
+    y,
+    color,
+    esInicial = false
+) {
 
     const circulo = {
 
-        id: siguienteIdCirculo++,
+        id:
+            siguienteIdCirculo++,
 
         x,
         y,
 
-        radio: RADIO_BASE,
-        radioOriginal: RADIO_BASE,
+        radio:
+            RADIO_BASE,
+
+        radioOriginal:
+            RADIO_BASE,
 
         color,
 
-        vx: (Math.random() - 0.5) * 0.18,
-        vy: (Math.random() - 0.5) * 0.18,
+        vx:
+            (Math.random() - 0.5) *
+            0.18,
+
+        vy:
+            (Math.random() - 0.5) *
+            0.18,
 
 
         // ----------------------------------------------------
@@ -136,10 +168,14 @@ function crearCirculo(x, y, color, esInicial = false) {
         // ----------------------------------------------------
 
         faseMovimiento:
-            Math.random() * Math.PI * 2,
+            Math.random() *
+            Math.PI *
+            2,
 
         velocidadMovimiento:
-            0.006 + Math.random() * 0.004,
+            0.006 +
+            Math.random() *
+            0.004,
 
 
         // ----------------------------------------------------
@@ -147,10 +183,14 @@ function crearCirculo(x, y, color, esInicial = false) {
         // ----------------------------------------------------
 
         faseRespiracion:
-            Math.random() * Math.PI * 2,
+            Math.random() *
+            Math.PI *
+            2,
 
         velocidadRespiracion:
-            0.008 + Math.random() * 0.006,
+            0.008 +
+            Math.random() *
+            0.006,
 
         amplitudRespiracion:
             AMPLITUD_RESPIRACION_MIN +
@@ -174,24 +214,46 @@ function crearCirculo(x, y, color, esInicial = false) {
         offsetX: 0,
         offsetY: 0,
 
-        punteros: new Set(),
+        punteros:
+            new Set(),
 
-        conexiones: new Set(),
+        conexiones:
+            new Set(),
 
-        seleccionado: false,
+        seleccionado:
+            false,
 
 
         // ----------------------------------------------------
         // COLABORACIÓN
         // ----------------------------------------------------
 
-        creadoPor: null,
+        creadoPor:
+            null,
 
-        esInicial
+        esInicial,
 
+
+        // ----------------------------------------------------
+        // ANIMACIÓN
+        // ----------------------------------------------------
+
+        // Los iniciales aparecen directamente
+        // a tamaño completo.
+        escala:
+            esInicial
+                ? 1
+                : ESCALA_INICIAL,
+
+        eliminando:
+            false
     };
 
-    circulos.push(circulo);
+
+    circulos.push(
+        circulo
+    );
+
 
     return circulo;
 }
@@ -212,7 +274,8 @@ function iniciarCirculos() {
     siguienteIdCirculo = 1;
     siguienteIdConexion = 1;
 
-    primeraColaboracionRealizada = false;
+    primeraColaboracionRealizada =
+        false;
 
 
     for (
@@ -232,7 +295,8 @@ function iniciarCirculos() {
             canvas.height * py,
 
             colores[
-                i % colores.length
+                i %
+                colores.length
             ],
 
             true
@@ -242,24 +306,71 @@ function iniciarCirculos() {
 
 
 // ============================================================
-// OBTENER POSICIÓN DEL PUNTERO
+// OBTENER RADIO REAL
 // ============================================================
 
-function obtenerPosicionPuntero(e) {
+function obtenerRadioReal(
+    circulo
+) {
 
-    const rect =
-        canvas.getBoundingClientRect();
+    return (
+        circulo.radio +
+        circulo.respiracion
+    ) *
+    circulo.escala;
+}
 
-    return {
 
-        x:
-            e.clientX -
-            rect.left,
+// ============================================================
+// ACTUALIZAR ANIMACIÓN DE ESCALA
+// ============================================================
 
-        y:
-            e.clientY -
-            rect.top
-    };
+function actualizarEscala(
+    circulo
+) {
+
+    // ========================================================
+    // APARICIÓN
+    // ========================================================
+
+    if (
+        !circulo.eliminando
+    ) {
+
+        if (
+            circulo.escala < 1
+        ) {
+
+            circulo.escala +=
+                VELOCIDAD_APARICION;
+
+
+            if (
+                circulo.escala >= 1
+            ) {
+
+                circulo.escala = 1;
+            }
+        }
+
+        return;
+    }
+
+
+    // ========================================================
+    // DESAPARICIÓN
+    // ========================================================
+
+    circulo.escala -=
+        VELOCIDAD_DESAPARICION;
+
+
+    if (
+        circulo.escala < 0
+    ) {
+
+        circulo.escala = 0;
+    }
 }
 
 
@@ -267,7 +378,10 @@ function obtenerPosicionPuntero(e) {
 // BUSCAR CÍRCULO
 // ============================================================
 
-function encontrarCirculo(x, y) {
+function encontrarCirculo(
+    x,
+    y
+) {
 
     for (
         let i = circulos.length - 1;
@@ -279,11 +393,21 @@ function encontrarCirculo(x, y) {
             circulos[i];
 
 
+        if (
+            circulo.eliminando
+        ) {
+
+            continue;
+        }
+
+
         const dx =
-            x - circulo.x;
+            x -
+            circulo.x;
 
         const dy =
-            y - circulo.y;
+            y -
+            circulo.y;
 
 
         const distancia =
@@ -294,18 +418,21 @@ function encontrarCirculo(x, y) {
 
 
         const radioReal =
-            circulo.radio +
-            circulo.respiracion +
+            obtenerRadioReal(
+                circulo
+            ) +
             8;
 
 
         if (
-            distancia <= radioReal
+            distancia <=
+            radioReal
         ) {
 
             return circulo;
         }
     }
+
 
     return null;
 }
@@ -352,7 +479,8 @@ canvas.addEventListener(
         // ----------------------------------------------------
 
         if (
-            circulo.punteroMovimiento !== null
+            circulo.punteroMovimiento !==
+            null
         ) {
 
             return;
@@ -368,8 +496,11 @@ canvas.addEventListener(
             e.pointerId,
 
             {
-                id: e.pointerId,
-                circulo: circulo
+                id:
+                    e.pointerId,
+
+                circulo:
+                    circulo
             }
         );
 
@@ -549,7 +680,8 @@ function terminarPuntero(e) {
 
 
         circulo.seleccionado =
-            circulo.punteros.size > 0;
+            circulo.punteros.size >
+            0;
     }
 
 
@@ -563,7 +695,7 @@ function terminarPuntero(e) {
 
 
     // --------------------------------------------------------
-    // Comprobar inmediatamente las conexiones
+    // Comprobar conexiones
     // --------------------------------------------------------
 
     actualizarColaboracion();
@@ -571,16 +703,43 @@ function terminarPuntero(e) {
 
 
 // ============================================================
+// OBTENER POSICIÓN DEL PUNTERO
+// ============================================================
+
+function obtenerPosicionPuntero(e) {
+
+    const rect =
+        canvas.getBoundingClientRect();
+
+
+    return {
+
+        x:
+            e.clientX -
+            rect.left,
+
+        y:
+            e.clientY -
+            rect.top
+    };
+}
+
+
+// ============================================================
 // BUSCAR CONEXIÓN ENTRE DOS CÍRCULOS
 // ============================================================
 
-function buscarConexionEntre(a, b) {
+function buscarConexionEntre(
+    a,
+    b
+) {
 
     return conexiones.find(
         conexion => {
 
             if (
-                conexion.tipo !== "par"
+                conexion.tipo !==
+                "par"
             ) {
 
                 return false;
@@ -613,7 +772,8 @@ function buscarConexionInicial() {
 
     return conexiones.find(
         conexion =>
-            conexion.tipo === "inicial"
+            conexion.tipo ===
+            "inicial"
     );
 }
 
@@ -635,14 +795,6 @@ function obtenerInicialesSeleccionados() {
 // ============================================================
 // DIBUJAR PREVISUALIZACIÓN DE CONEXIONES
 // ============================================================
-//
-// Esta función permite que al tocar solo 2 círculos
-// inmediatamente aparezcan los puntitos entre ellos.
-//
-// IMPORTANTE:
-// Estos puntitos son solamente visuales.
-// No generan un círculo nuevo.
-// ============================================================
 
 function dibujarConexionesPrevias() {
 
@@ -657,11 +809,6 @@ function dibujarConexionesPrevias() {
     const seleccionados =
         obtenerInicialesSeleccionados();
 
-
-    // --------------------------------------------------------
-    // Si hay 2 o más círculos seleccionados,
-    // unir visualmente todos los seleccionados.
-    // --------------------------------------------------------
 
     if (
         seleccionados.length < 2
@@ -769,7 +916,6 @@ function crearConexionInicial(
             circulo.conexiones.add(
                 conexion.id
             );
-
         }
     );
 
@@ -895,7 +1041,8 @@ function obtenerCirculoMasNuevo() {
     ) {
 
         if (
-            circulo.esInicial
+            circulo.esInicial ||
+            circulo.eliminando
         ) {
 
             continue;
@@ -925,7 +1072,7 @@ function obtenerCirculoMasNuevo() {
 function actualizarColaboracion() {
 
     // --------------------------------------------------------
-    // Primero eliminar conexiones que perdieron dedos
+    // Primero revisar conexiones perdidas
     // --------------------------------------------------------
 
     limpiarConexionesInactivas();
@@ -934,6 +1081,7 @@ function actualizarColaboracion() {
     const seleccionados =
         circulos.filter(
             circulo =>
+                !circulo.eliminando &&
                 circulo.punteros.size > 0
         );
 
@@ -953,22 +1101,14 @@ function actualizarColaboracion() {
             );
 
 
-        // ----------------------------------------------------
-        // Los cuatro círculos iniciales
-        // ----------------------------------------------------
-
         const todosIniciales =
             iniciales.length === 4 &&
             iniciales.every(
                 circulo =>
-                    circulo.punteros.size > 0
+                    circulo.punteros.size >
+                    0
             );
 
-
-        // ----------------------------------------------------
-        // SOLO CUANDO ESTÁN LOS 4
-        // aparece el círculo #5.
-        // ----------------------------------------------------
 
         if (
             todosIniciales
@@ -1116,7 +1256,8 @@ function limpiarConexionesInactivas() {
         // ====================================================
 
         if (
-            conexion.tipo === "par"
+            conexion.tipo ===
+            "par"
         ) {
 
             const activa =
@@ -1242,11 +1383,15 @@ function eliminarConexion(
 
 
     // --------------------------------------------------------
-    // El hijo desaparece directamente.
+    // IMPORTANTE:
+    //
+    // El hijo NO se elimina instantáneamente.
+    // Comienza una animación de desaparición.
+    //
     // Sus descendientes permanecen.
     // --------------------------------------------------------
 
-    eliminarCirculoDirecto(
+    iniciarDesaparicion(
         hijo
     );
 
@@ -1256,8 +1401,90 @@ function eliminarConexion(
 
 
 // ============================================================
+// INICIAR DESAPARICIÓN
+// ============================================================
+
+function iniciarDesaparicion(
+    circulo
+) {
+
+    if (!circulo) {
+        return;
+    }
+
+
+    if (
+        circulo.esInicial
+    ) {
+
+        return;
+    }
+
+
+    // Si ya está desapareciendo,
+    // no volver a iniciar la animación.
+    if (
+        circulo.eliminando
+    ) {
+
+        return;
+    }
+
+
+    circulo.eliminando =
+        true;
+
+
+    circulo.seleccionado =
+        false;
+
+
+    circulo.siendoMovido =
+        false;
+
+
+    circulo.punteroMovimiento =
+        null;
+
+
+    // --------------------------------------------------------
+    // Quitar punteros
+    // --------------------------------------------------------
+
+    circulo.punteros.forEach(
+        pointerId => {
+
+            punteros.delete(
+                pointerId
+            );
+        }
+    );
+
+
+    circulo.punteros.clear();
+
+
+    // --------------------------------------------------------
+    // La escala empieza desde donde estaba.
+    // No vuelve a crecer antes de desaparecer.
+    // --------------------------------------------------------
+
+    if (
+        circulo.escala <= 0
+    ) {
+
+        circulo.escala = 1;
+    }
+}
+
+
+// ============================================================
 // ELIMINAR CÍRCULO DIRECTAMENTE
 // ============================================================
+//
+// Esta función solamente se utiliza para retirar
+// definitivamente un círculo cuando ya terminó
+// su animación de desaparición.
 //
 // NO elimina descendientes.
 // ============================================================
@@ -1349,7 +1576,8 @@ function eliminarCirculoDirecto(
                     const otro =
                         circulos.find(
                             c =>
-                                c.id === id
+                                c.id ===
+                                id
                         );
 
 
@@ -1392,6 +1620,48 @@ function eliminarCirculoDirecto(
 
 
 // ============================================================
+// ACTUALIZAR CÍRCULOS QUE ESTÁN DESAPARECIENDO
+// ============================================================
+
+function actualizarDesapariciones() {
+
+    for (
+        let i =
+            circulos.length - 1;
+        i >= 0;
+        i--
+    ) {
+
+        const circulo =
+            circulos[i];
+
+
+        if (
+            !circulo.eliminando
+        ) {
+
+            continue;
+        }
+
+
+        // ----------------------------------------------------
+        // Si terminó de achicarse,
+        // ahora sí se elimina.
+        // ----------------------------------------------------
+
+        if (
+            circulo.escala <= 0
+        ) {
+
+            eliminarCirculoDirecto(
+                circulo
+            );
+        }
+    }
+}
+
+
+// ============================================================
 // COMPROBAR REINICIO DE PRIMERA COLABORACIÓN
 // ============================================================
 
@@ -1400,7 +1670,8 @@ function comprobarReinicioInicial() {
     const quedanGenerados =
         circulos.some(
             circulo =>
-                !circulo.esInicial
+                !circulo.esInicial &&
+                !circulo.eliminando
         );
 
 
@@ -1428,8 +1699,9 @@ function controlarBordes(
 ) {
 
     const radio =
-        circulo.radio +
-        circulo.respiracion;
+        obtenerRadioReal(
+            circulo
+        );
 
 
     if (
@@ -1443,7 +1715,8 @@ function controlarBordes(
         circulo.vx =
             Math.abs(
                 circulo.vx
-            ) * 0.8;
+            ) *
+            0.8;
     }
 
 
@@ -1460,7 +1733,8 @@ function controlarBordes(
         circulo.vx =
             -Math.abs(
                 circulo.vx
-            ) * 0.8;
+            ) *
+            0.8;
     }
 
 
@@ -1475,7 +1749,8 @@ function controlarBordes(
         circulo.vy =
             Math.abs(
                 circulo.vy
-            ) * 0.8;
+            ) *
+            0.8;
     }
 
 
@@ -1492,7 +1767,8 @@ function controlarBordes(
         circulo.vy =
             -Math.abs(
                 circulo.vy
-            ) * 0.8;
+            ) *
+            0.8;
     }
 }
 
@@ -1504,6 +1780,15 @@ function controlarBordes(
 function actualizarCirculo(
     circulo
 ) {
+
+    // ========================================================
+    // ANIMACIÓN DE APARICIÓN / DESAPARICIÓN
+    // ========================================================
+
+    actualizarEscala(
+        circulo
+    );
+
 
     // ========================================================
     // RESPIRACIÓN
@@ -1539,14 +1824,16 @@ function actualizarCirculo(
         const movimientoX =
             Math.sin(
                 circulo.faseMovimiento
-            ) * 0.018;
+            ) *
+            0.018;
 
 
         const movimientoY =
             Math.cos(
                 circulo.faseMovimiento *
                 0.83
-            ) * 0.018;
+            ) *
+            0.018;
 
 
         circulo.vx +=
@@ -1628,6 +1915,20 @@ function resolverColisiones() {
                 circulos[j];
 
 
+            // ------------------------------------------------
+            // Los que están desapareciendo
+            // no interfieren físicamente.
+            // ------------------------------------------------
+
+            if (
+                a.eliminando ||
+                b.eliminando
+            ) {
+
+                continue;
+            }
+
+
             const dx =
                 b.x - a.x;
 
@@ -1644,13 +1945,15 @@ function resolverColisiones() {
 
 
             const radioA =
-                a.radio +
-                a.respiracion;
+                obtenerRadioReal(
+                    a
+                );
 
 
             const radioB =
-                b.radio +
-                b.respiracion;
+                obtenerRadioReal(
+                    b
+                );
 
 
             const distanciaMinima =
@@ -1728,15 +2031,19 @@ function resolverColisiones() {
                     (
                         b.vx -
                         a.vx
-                    ) * nx +
+                    ) *
+                    nx +
+
                     (
                         b.vy -
                         a.vy
-                    ) * ny;
+                    ) *
+                    ny;
 
 
                 if (
-                    velocidadRelativa < 0
+                    velocidadRelativa <
+                    0
                 ) {
 
                     const impulso =
@@ -1903,12 +2210,6 @@ function obtenerGradiente(
 // ============================================================
 // DIBUJAR CONEXIÓN DE PUNTITOS
 // ============================================================
-//
-// IMPORTANTE:
-//
-// Ahora los puntitos forman una línea COMPLETAMENTE RECTA
-// entre los dos círculos.
-// ============================================================
 
 function dibujarConexionPunteada(
     circuloA,
@@ -1949,10 +2250,6 @@ function dibujarConexionPunteada(
     }
 
 
-    // --------------------------------------------------------
-    // Dirección de la línea
-    // --------------------------------------------------------
-
     const ux =
         dx /
         distancia;
@@ -1963,20 +2260,16 @@ function dibujarConexionPunteada(
         distancia;
 
 
-    // --------------------------------------------------------
-    // No poner puntos dentro de los círculos.
-    // La conexión comienza en el borde de uno
-    // y termina en el borde del otro.
-    // --------------------------------------------------------
-
     const radioA =
-        circuloA.radio +
-        circuloA.respiracion;
+        obtenerRadioReal(
+            circuloA
+        );
 
 
     const radioB =
-        circuloB.radio +
-        circuloB.respiracion;
+        obtenerRadioReal(
+            circuloB
+        );
 
 
     const inicioX =
@@ -2029,12 +2322,7 @@ function dibujarConexionPunteada(
     }
 
 
-    // --------------------------------------------------------
-    // Cantidad de pequeños círculos
-    // --------------------------------------------------------
-
-    const separacion =
-        10;
+    const separacion = 10;
 
 
     const cantidad =
@@ -2067,7 +2355,8 @@ function dibujarConexionPunteada(
             (
                 finalX -
                 inicioX
-            ) * t;
+            ) *
+            t;
 
 
         const y =
@@ -2075,7 +2364,8 @@ function dibujarConexionPunteada(
             (
                 finalY -
                 inicioY
-            ) * t;
+            ) *
+            t;
 
 
         ctx.beginPath();
@@ -2118,7 +2408,8 @@ function dibujarConexionPunteada(
             (
                 finalX -
                 inicioX
-            ) * t;
+            ) *
+            t;
 
 
         const y =
@@ -2126,7 +2417,8 @@ function dibujarConexionPunteada(
             (
                 finalY -
                 inicioY
-            ) * t;
+            ) *
+            t;
 
 
         ctx.beginPath();
@@ -2156,25 +2448,11 @@ function dibujarConexionPunteada(
 
 function dibujarConexiones() {
 
-    // ========================================================
-    // PRIMERO:
-    // conexiones visuales mientras todavía estamos
-    // en la primera colaboración.
-    //
-    // Esto hace que con 2 círculos ya se vean los puntitos.
-    // ========================================================
-
     dibujarConexionesPrevias();
 
 
-    // ========================================================
-    // DESPUÉS:
-    // conexiones reales
-    // ========================================================
-
     conexiones.forEach(
         conexion => {
-
 
             // =================================================
             // CONEXIÓN INICIAL
@@ -2191,16 +2469,12 @@ function dibujarConexiones() {
                             id =>
                                 circulos.find(
                                     c =>
-                                        c.id === id
+                                        c.id ===
+                                        id
                                 )
                         )
                         .filter(Boolean);
 
-
-                // ------------------------------------------------
-                // Conectar todos los círculos iniciales
-                // mediante puntitos rectos.
-                // ------------------------------------------------
 
                 for (
                     let i = 0;
@@ -2277,9 +2551,14 @@ function dibujarCirculo(
     circulo
 ) {
 
+    // ========================================================
+    // RADIO CON ANIMACIÓN
+    // ========================================================
+
     const radio =
-        circulo.radio +
-        circulo.respiracion;
+        obtenerRadioReal(
+            circulo
+        );
 
 
     // ========================================================
@@ -2473,7 +2752,7 @@ function animar() {
 
 
     // --------------------------------------------------------
-    // Movimiento y respiración
+    // Movimiento, respiración y aparición/desaparición
     // --------------------------------------------------------
 
     circulos.forEach(
@@ -2507,11 +2786,29 @@ function animar() {
     circulos.forEach(
         circulo => {
 
+            // Si está completamente desaparecido
+            // no se dibuja.
+            if (
+                circulo.escala <= 0
+            ) {
+
+                return;
+            }
+
+
             dibujarCirculo(
                 circulo
             );
         }
     );
+
+
+    // --------------------------------------------------------
+    // Eliminar definitivamente los que terminaron
+    // su animación de desaparición.
+    // --------------------------------------------------------
+
+    actualizarDesapariciones();
 
 
     requestAnimationFrame(
