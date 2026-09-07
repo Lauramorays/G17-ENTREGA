@@ -7,18 +7,18 @@
 // - Comienzan 4 cuadrados.
 // - Se mueven solos.
 // - Chocan entre ellos y con los bordes.
-// - Los cuadrados tienen movimiento orgánico.
-// - La interacción se realiza con DOS dedos.
-// - Cada dedo debe tocar un cuadrado diferente.
-// - Al mantener los dos dedos sobre los cuadrados,
-//   comienza la CADUCIDAD.
-// - Los cuadrados pierden progresivamente:
-//      • tamaño
-//      • opacidad
-//      • grosor visual
-// - Al dejar de tocar, la caducidad se detiene.
-// - Cuando un cuadrado llega al tamaño mínimo,
-//   desaparece.
+// - Movimiento orgánico.
+// - Respiración visual como en MEMORIA.
+// - Con UN dedo / mouse se puede agarrar y mover un cuadrado.
+// - Con DOS dedos se pueden agarrar DOS cuadrados diferentes.
+// - Al acercar los dos cuadrados comienza la CADUCIDAD.
+// - El desgaste es lento y progresivo.
+// - El cuadrado pierde tamaño lentamente.
+// - La opacidad prácticamente se mantiene.
+// - Aparecen pequeños restos que se desprenden y caen.
+// - El borde se desgasta de manera irregular.
+// - AL SOLTAR NO SE RECUPERA.
+// - Si se vuelve a tocar, continúa desde el desgaste anterior.
 // ============================================================
 
 
@@ -41,48 +41,83 @@ const COLORES = [
     "#2B538E"
 ];
 
+const COLOR_SELECCION = "#C4CEE5";
+
 
 // ============================================================
 // CONFIGURACIÓN
 // ============================================================
 
-// Tamaño inicial de los cuadrados.
 const TAMANO_INICIAL = 110;
+const TAMANO_MINIMO = 25;
 
-// Tamaño mínimo antes de desaparecer.
-const TAMANO_MINIMO = 8;
-
-// Velocidad de movimiento.
 const VELOCIDAD = 0.7;
 
-// Fuerza del choque.
 const FUERZA_CHOQUE = 0.8;
-
-// Velocidad de caducidad.
-const VELOCIDAD_CADUCIDAD = 0.18;
-
-// Velocidad de recuperación cuando se dejan de tocar.
-const VELOCIDAD_RECUPERACION = 0.04;
 
 
 // ============================================================
-// ARRAY DE FIGURAS
+// CADUCIDAD
+// ============================================================
+
+// Muy lenta.
+// Se puede ver claramente cómo se desgasta.
+const VELOCIDAD_CADUCIDAD = 0.0018;
+
+
+// Distancia entre centros necesaria
+// para comenzar el desgaste.
+const DISTANCIA_CADUCIDAD = 145;
+
+
+// ============================================================
+// RESPIRACIÓN
+// ============================================================
+
+const VELOCIDAD_RESPIRACION_MIN = 0.012;
+const VELOCIDAD_RESPIRACION_EXTRA = 0.005;
+
+const AMPLITUD_RESPIRACION_MIN = 0.045;
+const AMPLITUD_RESPIRACION_EXTRA = 0.015;
+
+
+// ============================================================
+// RESTOS
+// ============================================================
+
+let restos = [];
+
+
+// ============================================================
+// FIGURAS
 // ============================================================
 
 let figuras = [];
 
 
 // ============================================================
-// VARIABLES DEL GESTO DE DOS DEDOS
+// PUNTEROS
+// ============================================================
+//
+// Cada dedo queda asociado a un cuadrado.
+//
+// touch:
+//   identifier → figura
+//
+// mouse:
+//   "mouse" → figura
+//
 // ============================================================
 
-let dedo1ID = null;
-let dedo2ID = null;
+const punteros = new Map();
 
-let figura1Seleccionada = null;
-let figura2Seleccionada = null;
 
-let dosDedosActivos = false;
+// ============================================================
+// MOUSE
+// ============================================================
+
+let mouseActivo = false;
+let mouseFigura = null;
 
 
 // ============================================================
@@ -91,10 +126,14 @@ let dosDedosActivos = false;
 
 function ajustarCanvas() {
 
-    const rect = canvas.getBoundingClientRect();
+    const rect =
+        canvas.getBoundingClientRect();
 
-    canvas.width = rect.width;
-    canvas.height = rect.height;
+    canvas.width =
+        rect.width;
+
+    canvas.height =
+        rect.height;
 }
 
 
@@ -106,67 +145,153 @@ function crearFigura(x, y, color) {
 
     return {
 
-        // -------------------------
+        // ----------------------------------------------------
         // POSICIÓN
-        // -------------------------
+        // ----------------------------------------------------
 
         x: x,
         y: y,
 
-        // -------------------------
+        // ----------------------------------------------------
         // TAMAÑO
-        // -------------------------
+        // ----------------------------------------------------
 
-        tamano: TAMANO_INICIAL,
+        tamano:
+            TAMANO_INICIAL,
 
-        tamanoOriginal: TAMANO_INICIAL,
+        tamanoOriginal:
+            TAMANO_INICIAL,
 
-        // -------------------------
+        // ----------------------------------------------------
         // COLOR
-        // -------------------------
+        // ----------------------------------------------------
 
-        color: color,
+        color:
+            color,
 
-        // -------------------------
+        // ----------------------------------------------------
         // MOVIMIENTO
-        // -------------------------
+        // ----------------------------------------------------
 
-        vx: (Math.random() - 0.5) * VELOCIDAD,
-        vy: (Math.random() - 0.5) * VELOCIDAD,
+        vx:
+            (Math.random() - 0.5) *
+            VELOCIDAD,
 
-        // -------------------------
+        vy:
+            (Math.random() - 0.5) *
+            VELOCIDAD,
+
+        // ----------------------------------------------------
         // ROTACIÓN
-        // -------------------------
+        // ----------------------------------------------------
 
-        rotacion: Math.random() * Math.PI * 2,
+        rotacion:
+            (Math.random() - 0.5) *
+            4,
 
         velocidadRotacion:
-            (Math.random() - 0.5) * 0.004,
+            (Math.random() - 0.5) *
+            0.015,
 
-        // -------------------------
+        // ----------------------------------------------------
         // MOVIMIENTO ORGÁNICO
-        // -------------------------
+        // ----------------------------------------------------
 
-        fase: Math.random() * Math.PI * 2,
+        fase:
+            Math.random() *
+            Math.PI *
+            2,
 
-        // -------------------------
+        // ----------------------------------------------------
+        // RESPIRACIÓN
+        // ----------------------------------------------------
+
+        faseRespiracion:
+            Math.random() *
+            Math.PI *
+            2,
+
+        faseSecundaria:
+            Math.random() *
+            Math.PI *
+            2,
+
+        velocidadRespiracion:
+            VELOCIDAD_RESPIRACION_MIN +
+            Math.random() *
+            VELOCIDAD_RESPIRACION_EXTRA,
+
+        amplitudRespiracion:
+            AMPLITUD_RESPIRACION_MIN +
+            Math.random() *
+            AMPLITUD_RESPIRACION_EXTRA,
+
+        respiracionX:
+            1,
+
+        respiracionY:
+            1,
+
+        // ----------------------------------------------------
+        // MOVIMIENTO VERTICAL SUAVE
+        // ----------------------------------------------------
+
+        faseVertical:
+            Math.random() *
+            Math.PI *
+            2,
+
+        velocidadVertical:
+            0.008 +
+            Math.random() *
+            0.008,
+
+        // ----------------------------------------------------
+        // EMPUJE DE COLISIONES
+        // ----------------------------------------------------
+
+        empujeX:
+            0,
+
+        empujeY:
+            0,
+
+        // ----------------------------------------------------
         // CADUCIDAD
-        // -------------------------
+        // ----------------------------------------------------
 
-        caducidad: 0,
+        caducidad:
+            0,
 
-        // 0 = nueva
-        // 1 = completamente caducada
+        desgaste:
+            0,
 
-        opacidad: 1,
+        // ----------------------------------------------------
+        // OPACIDAD
+        // ----------------------------------------------------
 
-        // -------------------------
+        opacidad:
+            1,
+
+        // ----------------------------------------------------
         // ESTADO
-        // -------------------------
+        // ----------------------------------------------------
 
-        muriendo: false,
+        siendoArrastrada:
+            false,
 
-        activa: true
+        enCaducidad:
+            false,
+
+        activa:
+            true,
+
+        // ----------------------------------------------------
+        // TIEMPO PARA GENERAR RESTOS
+        // ----------------------------------------------------
+
+        tiempoRestos:
+            Math.random() * 100
     };
 }
 
@@ -219,16 +344,23 @@ function crearFigurasIniciales() {
 
 function limitarFigura(figura) {
 
-    const radio = figura.tamano / 2;
+    const radio =
+        figura.tamano / 2;
 
-    if (figura.x - radio < 0) {
+    if (
+        figura.x - radio < 0
+    ) {
 
-        figura.x = radio;
+        figura.x =
+            radio;
 
         figura.vx *= -1;
     }
 
-    if (figura.x + radio > canvas.width) {
+    if (
+        figura.x + radio >
+        canvas.width
+    ) {
 
         figura.x =
             canvas.width - radio;
@@ -236,14 +368,20 @@ function limitarFigura(figura) {
         figura.vx *= -1;
     }
 
-    if (figura.y - radio < 0) {
+    if (
+        figura.y - radio < 0
+    ) {
 
-        figura.y = radio;
+        figura.y =
+            radio;
 
         figura.vy *= -1;
     }
 
-    if (figura.y + radio > canvas.height) {
+    if (
+        figura.y + radio >
+        canvas.height
+    ) {
 
         figura.y =
             canvas.height - radio;
@@ -265,27 +403,117 @@ function actualizarMovimiento() {
             return;
         }
 
-        // Movimiento principal.
+        // ----------------------------------------------------
+        // Si está siendo arrastrada,
+        // no se mueve automáticamente.
+        // ----------------------------------------------------
 
-        figura.x += figura.vx;
-        figura.y += figura.vy;
+        if (
+            figura.siendoArrastrada
+        ) {
+            return;
+        }
 
-        // Movimiento orgánico.
+        // ----------------------------------------------------
+        // MOVIMIENTO VERTICAL SUAVE
+        // Como en MEMORIA.
+        // ----------------------------------------------------
 
-        figura.fase += 0.015;
+        figura.faseVertical +=
+            figura.velocidadVertical;
+
+        const movimientoVertical =
+            Math.sin(
+                figura.faseVertical
+            ) * 0.08;
+
+
+        // ----------------------------------------------------
+        // MOVIMIENTO
+        // ----------------------------------------------------
 
         figura.x +=
-            Math.sin(figura.fase) * 0.15;
+            figura.vx +
+            figura.empujeX;
 
         figura.y +=
-            Math.cos(figura.fase * 0.8) * 0.15;
+            figura.vy +
+            figura.empujeY +
+            movimientoVertical;
 
-        // Rotación.
+
+        // ----------------------------------------------------
+        // EL EMPUJE DESAPARECE POCO A POCO
+        // ----------------------------------------------------
+
+        figura.empujeX *= 0.94;
+        figura.empujeY *= 0.94;
+
+
+        // ----------------------------------------------------
+        // ROTACIÓN
+        // ----------------------------------------------------
 
         figura.rotacion +=
             figura.velocidadRotacion;
 
-        // Limitar a pantalla.
+
+        // ----------------------------------------------------
+        // FASE GENERAL
+        // ----------------------------------------------------
+
+        figura.fase +=
+            0.015;
+
+
+        // ----------------------------------------------------
+        // RESPIRACIÓN
+        //
+        // MISMA LÓGICA DE MEMORIA.
+        // ----------------------------------------------------
+
+        figura.faseRespiracion +=
+            figura.velocidadRespiracion;
+
+        figura.faseSecundaria +=
+            figura.velocidadRespiracion *
+            0.47;
+
+
+        const ondaPrincipal =
+            Math.sin(
+                figura.faseRespiracion
+            );
+
+
+        const ondaSecundaria =
+            Math.sin(
+                figura.faseSecundaria
+            );
+
+
+        const respiracion =
+            ondaPrincipal *
+            figura.amplitudRespiracion
+            +
+            ondaSecundaria *
+            0.006;
+
+
+        figura.respiracionX =
+            1 +
+            respiracion;
+
+
+        figura.respiracionY =
+            1 +
+            respiracion *
+            0.94;
+
+
+        // ----------------------------------------------------
+        // BORDE
+        // ----------------------------------------------------
 
         limitarFigura(figura);
     });
@@ -310,8 +538,12 @@ function detectarColisiones() {
             j++
         ) {
 
-            const a = figuras[i];
-            const b = figuras[j];
+            const a =
+                figuras[i];
+
+            const b =
+                figuras[j];
+
 
             if (
                 !a.activa ||
@@ -320,8 +552,23 @@ function detectarColisiones() {
                 continue;
             }
 
-            const dx = b.x - a.x;
-            const dy = b.y - a.y;
+
+            // Si los dos están siendo arrastrados
+            // dejamos que puedan acercarse.
+            if (
+                a.siendoArrastrada &&
+                b.siendoArrastrada
+            ) {
+                continue;
+            }
+
+
+            const dx =
+                b.x - a.x;
+
+            const dy =
+                b.y - a.y;
+
 
             const distancia =
                 Math.sqrt(
@@ -329,11 +576,17 @@ function detectarColisiones() {
                     dy * dy
                 );
 
+
             const distanciaMinima =
-                (a.tamano + b.tamano) / 2;
+                (
+                    a.tamano +
+                    b.tamano
+                ) / 2;
+
 
             if (
-                distancia < distanciaMinima &&
+                distancia <
+                distanciaMinima &&
                 distancia > 0
             ) {
 
@@ -343,36 +596,100 @@ function detectarColisiones() {
                 const ny =
                     dy / distancia;
 
+
                 const solapamiento =
-                    distanciaMinima - distancia;
+                    distanciaMinima -
+                    distancia;
 
-                // Separar.
 
-                a.x -=
-                    nx * solapamiento * 0.5;
+                // ------------------------------------------------
+                // SEPARACIÓN
+                // ------------------------------------------------
 
-                a.y -=
-                    ny * solapamiento * 0.5;
+                if (
+                    !a.siendoArrastrada
+                ) {
 
-                b.x +=
-                    nx * solapamiento * 0.5;
+                    a.x -=
+                        nx *
+                        solapamiento *
+                        0.5;
 
-                b.y +=
-                    ny * solapamiento * 0.5;
+                    a.y -=
+                        ny *
+                        solapamiento *
+                        0.5;
+                }
 
-                // Impulso.
 
-                a.vx -=
-                    nx * FUERZA_CHOQUE;
+                if (
+                    !b.siendoArrastrada
+                ) {
 
-                a.vy -=
-                    ny * FUERZA_CHOQUE;
+                    b.x +=
+                        nx *
+                        solapamiento *
+                        0.5;
 
-                b.vx +=
-                    nx * FUERZA_CHOQUE;
+                    b.y +=
+                        ny *
+                        solapamiento *
+                        0.5;
+                }
 
-                b.vy +=
-                    ny * FUERZA_CHOQUE;
+
+                // ------------------------------------------------
+                // IMPULSO
+                // ------------------------------------------------
+
+                if (
+                    !a.siendoArrastrada
+                ) {
+
+                    a.vx -=
+                        nx *
+                        FUERZA_CHOQUE;
+
+                    a.vy -=
+                        ny *
+                        FUERZA_CHOQUE;
+                }
+
+
+                if (
+                    !b.siendoArrastrada
+                ) {
+
+                    b.vx +=
+                        nx *
+                        FUERZA_CHOQUE;
+
+                    b.vy +=
+                        ny *
+                        FUERZA_CHOQUE;
+                }
+
+
+                // ------------------------------------------------
+                // PEQUEÑO EMPUJE ORGÁNICO
+                // ------------------------------------------------
+
+                a.empujeX -=
+                    nx *
+                    0.12;
+
+                a.empujeY -=
+                    ny *
+                    0.12;
+
+                b.empujeX +=
+                    nx *
+                    0.12;
+
+                b.empujeY +=
+                    ny *
+                    0.12;
+
 
                 limitarFigura(a);
                 limitarFigura(b);
@@ -389,25 +706,54 @@ function detectarColisiones() {
 function buscarFigura(x, y) {
 
     for (
-        let i = figuras.length - 1;
+        let i =
+            figuras.length - 1;
         i >= 0;
         i--
     ) {
 
-        const figura = figuras[i];
+        const figura =
+            figuras[i];
 
-        if (!figura.activa) {
+
+        if (
+            !figura.activa
+        ) {
             continue;
         }
+
 
         const mitad =
             figura.tamano / 2;
 
+
+        // Área ligeramente mayor
+        // para facilitar la selección.
+
+        const margen =
+            15;
+
+
         if (
-            x >= figura.x - mitad &&
-            x <= figura.x + mitad &&
-            y >= figura.y - mitad &&
-            y <= figura.y + mitad
+            x >=
+                figura.x -
+                mitad -
+                margen &&
+
+            x <=
+                figura.x +
+                mitad +
+                margen &&
+
+            y >=
+                figura.y -
+                mitad -
+                margen &&
+
+            y <=
+                figura.y +
+                mitad +
+                margen
         ) {
 
             return figura;
@@ -419,7 +765,7 @@ function buscarFigura(x, y) {
 
 
 // ============================================================
-// OBTENER POSICIÓN DEL TOUCH
+// POSICIÓN DEL TOUCH
 // ============================================================
 
 function obtenerTouch(touch) {
@@ -430,53 +776,229 @@ function obtenerTouch(touch) {
     return {
 
         x:
-            touch.clientX - rect.left,
+            touch.clientX -
+            rect.left,
 
         y:
-            touch.clientY - rect.top
+            touch.clientY -
+            rect.top
     };
 }
 
 
 // ============================================================
-// INICIAR INTERACCIÓN
+// MOVER FIGURA
 // ============================================================
 
-function iniciarInteraccion() {
+function moverFigura(
+    figura,
+    x,
+    y
+) {
 
-    if (
-        dedo1ID === null ||
-        dedo2ID === null
-    ) {
+    if (!figura) {
         return;
     }
 
-    if (
-        !figura1Seleccionada ||
-        !figura2Seleccionada
+
+    figura.x =
+        x;
+
+    figura.y =
+        y;
+
+
+    // Cuando la persona la mueve,
+    // se detiene el movimiento automático.
+
+    figura.vx =
+        0;
+
+    figura.vy =
+        0;
+
+
+    limitarFigura(figura);
+}
+
+
+// ============================================================
+// CREAR RESTOS
+// ============================================================
+
+function crearRestos(figura) {
+
+    const cantidad =
+        1 +
+        Math.floor(
+            Math.random() * 2
+        );
+
+
+    for (
+        let i = 0;
+        i < cantidad;
+        i++
     ) {
-        return;
+
+        const angulo =
+            Math.random() *
+            Math.PI *
+            2;
+
+
+        const radio =
+            figura.tamano / 2;
+
+
+        const distancia =
+            radio *
+            (
+                0.60 +
+                Math.random() *
+                0.40
+            );
+
+
+        restos.push({
+
+            x:
+                figura.x +
+                Math.cos(angulo) *
+                distancia,
+
+            y:
+                figura.y +
+                Math.sin(angulo) *
+                distancia,
+
+
+            tamano:
+                2 +
+                Math.random() *
+                5,
+
+
+            vx:
+                (Math.random() - 0.5) *
+                0.35,
+
+
+            vy:
+                0.15 +
+                Math.random() *
+                0.65,
+
+
+            rotacion:
+                Math.random() *
+                Math.PI *
+                2,
+
+
+            velocidadRotacion:
+                (Math.random() - 0.5) *
+                0.03,
+
+
+            opacidad:
+                0.65 +
+                Math.random() *
+                0.25,
+
+
+            color:
+                figura.color,
+
+
+            vida:
+                1
+        });
     }
 
-    // Los dos dedos tienen que estar
-    // sobre DOS cuadrados diferentes.
+
+    // Limitar cantidad de restos.
 
     if (
-        figura1Seleccionada ===
-        figura2Seleccionada
+        restos.length > 180
     ) {
-        figura1Seleccionada = null;
-        figura2Seleccionada = null;
 
-        dosDedosActivos = false;
-
-        return;
+        restos.splice(
+            0,
+            restos.length - 180
+        );
     }
+}
 
-    dosDedosActivos = true;
 
-    figura1Seleccionada.muriendo = true;
-    figura2Seleccionada.muriendo = true;
+// ============================================================
+// ACTUALIZAR RESTOS
+// ============================================================
+
+function actualizarRestos() {
+
+    for (
+        let i =
+            restos.length - 1;
+        i >= 0;
+        i--
+    ) {
+
+        const resto =
+            restos[i];
+
+
+        // ----------------------------------------------------
+        // GRAVEDAD MUY SUAVE
+        // ----------------------------------------------------
+
+        resto.vy +=
+            0.012;
+
+
+        resto.x +=
+            resto.vx;
+
+        resto.y +=
+            resto.vy;
+
+
+        // ----------------------------------------------------
+        // ROTACIÓN
+        // ----------------------------------------------------
+
+        resto.rotacion +=
+            resto.velocidadRotacion;
+
+
+        // ----------------------------------------------------
+        // DESAPARICIÓN LENTA
+        // ----------------------------------------------------
+
+        resto.vida -=
+            0.0018;
+
+        resto.opacidad *=
+            0.9985;
+
+
+        // ----------------------------------------------------
+        // ELIMINAR
+        // ----------------------------------------------------
+
+        if (
+            resto.vida <= 0 ||
+            resto.y >
+                canvas.height + 30 ||
+            resto.opacidad < 0.02
+        ) {
+
+            restos.splice(
+                i,
+                1
+            );
+        }
+    }
 }
 
 
@@ -486,89 +1008,591 @@ function iniciarInteraccion() {
 
 function actualizarCaducidad() {
 
-    figuras.forEach(figura => {
+    // --------------------------------------------------------
+    // PRIMERO TODOS LOS CUADRADOS
+    // --------------------------------------------------------
 
-        if (!figura.activa) {
-            return;
+    figuras.forEach(
+        figura => {
+
+            figura.enCaducidad =
+                false;
         }
+    );
+
+
+    // --------------------------------------------------------
+    // BUSCAR PARES CON DOS PUNTEROS
+    // --------------------------------------------------------
+
+    if (
+        punteros.size >= 2
+    ) {
+
+        const figurasSeleccionadas =
+            [
+                ...new Set(
+                    [
+                        ...punteros.values()
+                    ]
+                )
+            ];
+
 
         // ----------------------------------------------------
-        // CADUCIDAD
+        // Necesitamos dos cuadrados diferentes.
         // ----------------------------------------------------
 
         if (
-            dosDedosActivos &&
-            (
-                figura === figura1Seleccionada ||
-                figura === figura2Seleccionada
-            )
+            figurasSeleccionadas.length >= 2
         ) {
 
-            figura.caducidad +=
-                VELOCIDAD_CADUCIDAD;
+            const figuraA =
+                figurasSeleccionadas[0];
 
-            figura.caducidad =
-                Math.min(
-                    figura.caducidad,
-                    1
+            const figuraB =
+                figurasSeleccionadas[1];
+
+
+            const dx =
+                figuraB.x -
+                figuraA.x;
+
+            const dy =
+                figuraB.y -
+                figuraA.y;
+
+
+            const distancia =
+                Math.sqrt(
+                    dx * dx +
+                    dy * dy
                 );
+
+
+            // ------------------------------------------------
+            // SI SE ACERCAN
+            // ------------------------------------------------
+
+            if (
+                distancia <
+                DISTANCIA_CADUCIDAD
+            ) {
+
+                figuraA.enCaducidad =
+                    true;
+
+                figuraB.enCaducidad =
+                    true;
+            }
         }
+    }
 
-        // ----------------------------------------------------
-        // RECUPERACIÓN
-        // ----------------------------------------------------
 
-        else if (
-            figura.caducidad > 0 &&
-            !figura.muriendo
-        ) {
+    // ========================================================
+    // APLICAR DESGASTE
+    // ========================================================
 
-            figura.caducidad -=
-                VELOCIDAD_RECUPERACION;
+    figuras.forEach(
+        figura => {
 
-            figura.caducidad =
-                Math.max(
-                    figura.caducidad,
-                    0
-                );
-        }
+            if (
+                !figura.activa
+            ) {
+                return;
+            }
 
-        // ----------------------------------------------------
-        // APLICAR CADUCIDAD
-        // ----------------------------------------------------
 
-        figura.tamano =
-            figura.tamanoOriginal *
-            (
+            // ------------------------------------------------
+            // SI ESTÁN JUNTOS
+            // ------------------------------------------------
+
+            if (
+                figura.enCaducidad
+            ) {
+
+                // El desgaste es PERMANENTE.
+                //
+                // No existe recuperación.
+
+                figura.caducidad +=
+                    VELOCIDAD_CADUCIDAD;
+
+
+                figura.caducidad =
+                    Math.min(
+                        figura.caducidad,
+                        1
+                    );
+
+
+                figura.desgaste =
+                    figura.caducidad;
+
+
+                // ------------------------------------------------
+                // RESTOS
+                // ------------------------------------------------
+
+                figura.tiempoRestos +=
+                    1;
+
+
+                if (
+                    figura.tiempoRestos >
+                    28
+                ) {
+
+                    crearRestos(figura);
+
+                    figura.tiempoRestos =
+                        0;
+                }
+            }
+
+
+            // ------------------------------------------------
+            // TAMAÑO
+            // ------------------------------------------------
+
+            figura.tamano =
+                TAMANO_INICIAL -
+                (
+                    TAMANO_INICIAL -
+                    TAMANO_MINIMO
+                ) *
+                figura.caducidad;
+
+
+            // ------------------------------------------------
+            // OPACIDAD
+            //
+            // Casi no cambia.
+            // ------------------------------------------------
+
+            figura.opacidad =
                 1 -
-                figura.caducidad * 0.92
-            );
+                (
+                    figura.caducidad *
+                    0.08
+                );
 
-        figura.opacidad =
-            1 -
-            figura.caducidad;
 
-        // ----------------------------------------------------
-        // DESAPARECER
-        // ----------------------------------------------------
+            // ------------------------------------------------
+            // No permitimos que desaparezca completamente.
+            // ------------------------------------------------
 
-        if (
-            figura.tamano <= TAMANO_MINIMO ||
-            figura.opacidad <= 0.02
-        ) {
+            if (
+                figura.tamano <
+                TAMANO_MINIMO
+            ) {
 
-            figura.activa = false;
-
-            figura.muriendo = false;
+                figura.tamano =
+                    TAMANO_MINIMO;
+            }
         }
-    });
+    );
+}
 
-    // Limpiar figuras desaparecidas.
 
-    figuras =
-        figuras.filter(
-            figura => figura.activa
+// ============================================================
+// OBTENER GRADIENTE
+// ============================================================
+
+function obtenerGradiente(
+    figura,
+    mitad
+) {
+
+    let colorClaro;
+    let colorMedio;
+    let colorOscuro;
+
+
+    // --------------------------------------------------------
+    // GRADIENTES DE MEMORIA
+    // --------------------------------------------------------
+
+    if (
+        figura.color ===
+        "#D9D9D9"
+    ) {
+
+        colorClaro =
+            "#FFFFFF";
+
+        colorMedio =
+            "#D9D9D9";
+
+        colorOscuro =
+            "#AEB4BA";
+    }
+
+
+    else if (
+        figura.color ===
+        "#8BB2D3"
+    ) {
+
+        colorClaro =
+            "#DCECF9";
+
+        colorMedio =
+            "#8BB2D3";
+
+        colorOscuro =
+            "#527A9C";
+    }
+
+
+    else if (
+        figura.color ===
+        "#202D64"
+    ) {
+
+        colorClaro =
+            "#6674A5";
+
+        colorMedio =
+            "#202D64";
+
+        colorOscuro =
+            "#10183B";
+    }
+
+
+    else {
+
+        colorClaro =
+            "#7EA7D0";
+
+        colorMedio =
+            "#2B538E";
+
+        colorOscuro =
+            "#18355F";
+    }
+
+
+    // --------------------------------------------------------
+    // POSICIÓN DEL BRILLO
+    // --------------------------------------------------------
+
+    const gradiente =
+        ctx.createRadialGradient(
+
+            -mitad * 0.30,
+            -mitad * 0.35,
+            0,
+
+            0,
+            0,
+            mitad * 1.45
         );
+
+
+    gradiente.addColorStop(
+        0,
+        colorClaro
+    );
+
+    gradiente.addColorStop(
+        0.48,
+        colorMedio
+    );
+
+    gradiente.addColorStop(
+        1,
+        colorOscuro
+    );
+
+
+    return gradiente;
+}
+
+
+// ============================================================
+// OBTENER SOMBRA
+// ============================================================
+
+function obtenerSombra(
+    figura
+) {
+
+    if (
+        figura.color ===
+        "#D9D9D9"
+    ) {
+
+        return {
+            color:
+                "rgba(217,217,217,0.25)",
+            blur:
+                18
+        };
+    }
+
+
+    if (
+        figura.color ===
+        "#8BB2D3"
+    ) {
+
+        return {
+            color:
+                "rgba(139,178,211,0.25)",
+            blur:
+                18
+        };
+    }
+
+
+    if (
+        figura.color ===
+        "#202D64"
+    ) {
+
+        return {
+            color:
+                "rgba(32,45,100,0.35)",
+            blur:
+                18
+        };
+    }
+
+
+    return {
+        color:
+            "rgba(43,83,142,0.35)",
+        blur:
+            18
+    };
+}
+
+
+// ============================================================
+// DIBUJAR RESTO
+// ============================================================
+
+function dibujarResto(resto) {
+
+    ctx.save();
+
+
+    ctx.translate(
+        resto.x,
+        resto.y
+    );
+
+
+    ctx.rotate(
+        resto.rotacion
+    );
+
+
+    ctx.globalAlpha =
+        resto.opacidad;
+
+
+    ctx.fillStyle =
+        resto.color;
+
+
+    // Pequeño brillo.
+
+    ctx.shadowColor =
+        resto.color;
+
+    ctx.shadowBlur =
+        5;
+
+
+    ctx.fillRect(
+        -resto.tamano / 2,
+        -resto.tamano / 2,
+        resto.tamano,
+        resto.tamano
+    );
+
+
+    ctx.restore();
+}
+
+
+// ============================================================
+// DIBUJAR CUADRADO DESGASTADO
+// ============================================================
+
+function dibujarFormaDesgastada(
+    figura,
+    mitad
+) {
+
+    const desgaste =
+        figura.desgaste;
+
+
+    // --------------------------------------------------------
+    // DEFORMACIÓN DEL BORDE
+    // --------------------------------------------------------
+
+    const deformacion =
+        mitad *
+        0.18 *
+        desgaste;
+
+
+    ctx.beginPath();
+
+
+    // --------------------------------------------------------
+    // ARRIBA IZQUIERDA
+    // --------------------------------------------------------
+
+    ctx.moveTo(
+        -mitad,
+        -mitad +
+        deformacion *
+        Math.sin(
+            figura.fase * 2
+        )
+    );
+
+
+    // --------------------------------------------------------
+    // ARRIBA
+    // --------------------------------------------------------
+
+    ctx.lineTo(
+        -mitad * 0.35,
+        -mitad +
+        deformacion *
+        Math.sin(
+            figura.fase * 3
+        )
+    );
+
+
+    ctx.lineTo(
+        mitad * 0.25,
+        -mitad +
+        deformacion *
+        Math.cos(
+            figura.fase * 2
+        )
+    );
+
+
+    ctx.lineTo(
+        mitad,
+        -mitad +
+        deformacion *
+        Math.sin(
+            figura.fase * 4
+        )
+    );
+
+
+    // --------------------------------------------------------
+    // DERECHA
+    // --------------------------------------------------------
+
+    ctx.lineTo(
+        mitad -
+        deformacion *
+        Math.abs(
+            Math.sin(
+                figura.fase * 2
+            )
+        ),
+        -mitad * 0.30
+    );
+
+
+    ctx.lineTo(
+        mitad -
+        deformacion *
+        Math.abs(
+            Math.cos(
+                figura.fase * 3
+            )
+        ),
+        mitad * 0.25
+    );
+
+
+    ctx.lineTo(
+        mitad,
+        mitad
+    );
+
+
+    // --------------------------------------------------------
+    // ABAJO
+    // --------------------------------------------------------
+
+    ctx.lineTo(
+        mitad * 0.30,
+        mitad -
+        deformacion *
+        Math.abs(
+            Math.sin(
+                figura.fase * 3
+            )
+        )
+    );
+
+
+    ctx.lineTo(
+        -mitad * 0.30,
+        mitad -
+        deformacion *
+        Math.abs(
+            Math.cos(
+                figura.fase * 2
+            )
+        )
+    );
+
+
+    ctx.lineTo(
+        -mitad,
+        mitad
+    );
+
+
+    // --------------------------------------------------------
+    // IZQUIERDA
+    // --------------------------------------------------------
+
+    ctx.lineTo(
+        -mitad +
+        deformacion *
+        Math.abs(
+            Math.sin(
+                figura.fase * 2
+            )
+        ),
+        mitad * 0.25
+    );
+
+
+    ctx.lineTo(
+        -mitad +
+        deformacion *
+        Math.abs(
+            Math.cos(
+                figura.fase * 3
+            )
+        ),
+        -mitad * 0.30
+    );
+
+
+    ctx.closePath();
+
+
+    ctx.fill();
 }
 
 
@@ -576,45 +1600,156 @@ function actualizarCaducidad() {
 // DIBUJAR FIGURA
 // ============================================================
 
-function dibujarFigura(figura) {
+function dibujarFigura(
+    figura
+) {
 
-    if (!figura.activa) {
+    if (
+        !figura.activa
+    ) {
         return;
     }
 
+
     ctx.save();
 
-    // Centro.
+
+    // --------------------------------------------------------
+    // CENTRO
+    // --------------------------------------------------------
 
     ctx.translate(
         figura.x,
         figura.y
     );
 
-    // Rotación.
+
+    // --------------------------------------------------------
+    // RESPIRACIÓN
+    //
+    // Igual que MEMORIA.
+    // --------------------------------------------------------
+
+    const escala =
+        1;
+
+
+    ctx.scale(
+        escala *
+        figura.respiracionX,
+
+        escala *
+        figura.respiracionY
+    );
+
+
+    // --------------------------------------------------------
+    // ROTACIÓN
+    // --------------------------------------------------------
 
     ctx.rotate(
         figura.rotacion
     );
 
-    // Opacidad.
+
+    // --------------------------------------------------------
+    // OPACIDAD
+    // --------------------------------------------------------
 
     ctx.globalAlpha =
         figura.opacidad;
 
-    // Color.
+
+    // --------------------------------------------------------
+    // TAMAÑO
+    // --------------------------------------------------------
+
+    const mitad =
+        figura.tamano / 2;
+
+
+    // --------------------------------------------------------
+    // GRADIENTE
+    // --------------------------------------------------------
 
     ctx.fillStyle =
-        figura.color;
+        obtenerGradiente(
+            figura,
+            mitad
+        );
 
-    // Cuadrado.
 
-    ctx.fillRect(
-        -figura.tamano / 2,
-        -figura.tamano / 2,
-        figura.tamano,
-        figura.tamano
-    );
+    // --------------------------------------------------------
+    // SOMBRA
+    // --------------------------------------------------------
+
+    const sombra =
+        obtenerSombra(
+            figura
+        );
+
+
+    ctx.shadowColor =
+        sombra.color;
+
+    ctx.shadowBlur =
+        sombra.blur;
+
+
+    // --------------------------------------------------------
+    // SELECCIÓN
+    // --------------------------------------------------------
+
+    const estaSeleccionada =
+        figura.siendoArrastrada;
+
+
+    if (
+        estaSeleccionada
+    ) {
+
+        ctx.shadowColor =
+            COLOR_SELECCION;
+
+        ctx.shadowBlur =
+            30;
+    }
+
+
+    // ========================================================
+    // FORMA
+    // ========================================================
+
+    if (
+        figura.desgaste <=
+        0.01
+    ) {
+
+        // ----------------------------------------------------
+        // CUADRADO NORMAL
+        // ----------------------------------------------------
+
+        ctx.fillRect(
+            -mitad,
+            -mitad,
+            figura.tamano,
+            figura.tamano
+        );
+
+    }
+
+    else {
+
+        // ----------------------------------------------------
+        // CUADRADO DESGASTADO
+        // ----------------------------------------------------
+
+        dibujarFormaDesgastada(
+            figura,
+            mitad
+        );
+    }
+
 
     ctx.restore();
 }
@@ -633,6 +1768,20 @@ function dibujar() {
         canvas.height
     );
 
+
+    // --------------------------------------------------------
+    // RESTOS DETRÁS
+    // --------------------------------------------------------
+
+    restos.forEach(
+        dibujarResto
+    );
+
+
+    // --------------------------------------------------------
+    // CUADRADOS
+    // --------------------------------------------------------
+
     figuras.forEach(
         dibujarFigura
     );
@@ -649,70 +1798,63 @@ canvas.addEventListener(
 
         evento.preventDefault();
 
-        // ----------------------------------------------------
-        // PRIMER DEDO
-        // ----------------------------------------------------
 
-        if (
-            evento.touches.length === 1
+        for (
+            let i = 0;
+            i <
+            evento.changedTouches.length;
+            i++
         ) {
 
             const touch =
-                evento.touches[0];
+                evento.changedTouches[i];
 
-            dedo1ID =
-                touch.identifier;
 
             const posicion =
-                obtenerTouch(touch);
+                obtenerTouch(
+                    touch
+                );
 
-            figura1Seleccionada =
+
+            const figura =
                 buscarFigura(
                     posicion.x,
                     posicion.y
                 );
-        }
 
-        // ----------------------------------------------------
-        // SEGUNDO DEDO
-        // ----------------------------------------------------
 
-        if (
-            evento.touches.length >= 2
-        ) {
+            // ------------------------------------------------
+            // No permitir que dos dedos agarren
+            // el mismo cuadrado.
+            // ------------------------------------------------
 
-            const touch1 =
-                evento.touches[0];
+            if (
+                figura &&
+                ![
+                    ...punteros.values()
+                ].includes(
+                    figura
+                )
+            ) {
 
-            const touch2 =
-                evento.touches[1];
-
-            dedo1ID =
-                touch1.identifier;
-
-            dedo2ID =
-                touch2.identifier;
-
-            const posicion1 =
-                obtenerTouch(touch1);
-
-            const posicion2 =
-                obtenerTouch(touch2);
-
-            figura1Seleccionada =
-                buscarFigura(
-                    posicion1.x,
-                    posicion1.y
+                punteros.set(
+                    touch.identifier,
+                    figura
                 );
 
-            figura2Seleccionada =
-                buscarFigura(
-                    posicion2.x,
-                    posicion2.y
-                );
 
-            iniciarInteraccion();
+                figura.siendoArrastrada =
+                    true;
+
+
+                moverFigura(
+                    figura,
+                    posicion.x,
+                    posicion.y
+                );
+            }
         }
+
     },
     {
         passive: false
@@ -730,15 +1872,42 @@ canvas.addEventListener(
 
         evento.preventDefault();
 
-        if (!dosDedosActivos) {
-            return;
+
+        for (
+            let i = 0;
+            i <
+            evento.changedTouches.length;
+            i++
+        ) {
+
+            const touch =
+                evento.changedTouches[i];
+
+
+            const figura =
+                punteros.get(
+                    touch.identifier
+                );
+
+
+            if (!figura) {
+                continue;
+            }
+
+
+            const posicion =
+                obtenerTouch(
+                    touch
+                );
+
+
+            moverFigura(
+                figura,
+                posicion.x,
+                posicion.y
+            );
         }
 
-        // No necesitamos mover las figuras
-        // con los dedos.
-        //
-        // Los dedos solamente mantienen
-        // activa la caducidad.
     },
     {
         passive: false
@@ -747,35 +1916,71 @@ canvas.addEventListener(
 
 
 // ============================================================
-// FINALIZAR INTERACCIÓN
+// FINALIZAR TOUCH
 // ============================================================
 
-function finalizarInteraccion(evento) {
+function finalizarDedos(
+    evento
+) {
 
     evento.preventDefault();
 
-    // Al retirar cualquiera de los dedos,
-    // termina la interacción.
 
-    if (
-        evento.touches.length < 2
+    for (
+        let i = 0;
+        i <
+        evento.changedTouches.length;
+        i++
     ) {
 
-        dosDedosActivos = false;
+        const touch =
+            evento.changedTouches[i];
 
-        if (figura1Seleccionada) {
-            figura1Seleccionada.muriendo = false;
+
+        const figura =
+            punteros.get(
+                touch.identifier
+            );
+
+
+        if (
+            figura
+        ) {
+
+            // ------------------------------------------------
+            // SOLTAR
+            // ------------------------------------------------
+
+            figura.siendoArrastrada =
+                false;
+
+
+            // ------------------------------------------------
+            // CONTINÚA MOVIÉNDOSE
+            // ------------------------------------------------
+
+            figura.vx =
+                (Math.random() - 0.5) *
+                VELOCIDAD;
+
+            figura.vy =
+                (Math.random() - 0.5) *
+                VELOCIDAD;
+
+
+            // ------------------------------------------------
+            // IMPORTANTE:
+            //
+            // NO SE MODIFICA figura.caducidad.
+            //
+            // El desgaste queda guardado.
+            // ------------------------------------------------
         }
 
-        if (figura2Seleccionada) {
-            figura2Seleccionada.muriendo = false;
-        }
 
-        figura1Seleccionada = null;
-        figura2Seleccionada = null;
-
-        dedo1ID = null;
-        dedo2ID = null;
+        punteros.delete(
+            touch.identifier
+        );
     }
 }
 
@@ -786,7 +1991,7 @@ function finalizarInteraccion(evento) {
 
 canvas.addEventListener(
     "touchend",
-    finalizarInteraccion,
+    finalizarDedos,
     {
         passive: false
     }
@@ -799,9 +2004,199 @@ canvas.addEventListener(
 
 canvas.addEventListener(
     "touchcancel",
-    finalizarInteraccion,
+    finalizarDedos,
     {
         passive: false
+    }
+);
+
+
+// ============================================================
+// MOUSE DOWN
+// ============================================================
+
+canvas.addEventListener(
+    "mousedown",
+    function(evento) {
+
+        // Solo botón izquierdo.
+
+        if (
+            evento.button !== 0
+        ) {
+            return;
+        }
+
+
+        const rect =
+            canvas.getBoundingClientRect();
+
+
+        const x =
+            evento.clientX -
+            rect.left;
+
+
+        const y =
+            evento.clientY -
+            rect.top;
+
+
+        const figura =
+            buscarFigura(
+                x,
+                y
+            );
+
+
+        if (
+            figura
+        ) {
+
+            mouseActivo =
+                true;
+
+            mouseFigura =
+                figura;
+
+
+            figura.siendoArrastrada =
+                true;
+
+
+            punteros.set(
+                "mouse",
+                figura
+            );
+
+
+            moverFigura(
+                figura,
+                x,
+                y
+            );
+        }
+    }
+);
+
+
+// ============================================================
+// MOUSE MOVE
+// ============================================================
+
+canvas.addEventListener(
+    "mousemove",
+    function(evento) {
+
+        if (
+            !mouseActivo ||
+            !mouseFigura
+        ) {
+            return;
+        }
+
+
+        const rect =
+            canvas.getBoundingClientRect();
+
+
+        const x =
+            evento.clientX -
+            rect.left;
+
+
+        const y =
+            evento.clientY -
+            rect.top;
+
+
+        moverFigura(
+            mouseFigura,
+            x,
+            y
+        );
+    }
+);
+
+
+// ============================================================
+// MOUSE UP
+// ============================================================
+
+canvas.addEventListener(
+    "mouseup",
+    function() {
+
+        if (
+            mouseFigura
+        ) {
+
+            mouseFigura.siendoArrastrada =
+                false;
+
+
+            mouseFigura.vx =
+                (Math.random() - 0.5) *
+                VELOCIDAD;
+
+
+            mouseFigura.vy =
+                (Math.random() - 0.5) *
+                VELOCIDAD;
+        }
+
+
+        punteros.delete(
+            "mouse"
+        );
+
+
+        mouseActivo =
+            false;
+
+        mouseFigura =
+            null;
+    }
+);
+
+
+// ============================================================
+// MOUSE SALE DEL CANVAS
+// ============================================================
+
+canvas.addEventListener(
+    "mouseleave",
+    function() {
+
+        if (
+            mouseFigura
+        ) {
+
+            mouseFigura.siendoArrastrada =
+                false;
+
+
+            mouseFigura.vx =
+                (Math.random() - 0.5) *
+                VELOCIDAD;
+
+
+            mouseFigura.vy =
+                (Math.random() - 0.5) *
+                VELOCIDAD;
+        }
+
+
+        punteros.delete(
+            "mouse"
+        );
+
+
+        mouseActivo =
+            false;
+
+        mouseFigura =
+            null;
     }
 );
 
@@ -827,12 +2222,16 @@ function animar() {
 
     actualizarCaducidad();
 
+    actualizarRestos();
+
     dibujar();
+
 
     requestAnimationFrame(
         animar
     );
 }
+
 
 animar();
 
