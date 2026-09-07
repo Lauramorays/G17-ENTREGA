@@ -16,9 +16,12 @@
 // - El cuadrado pierde tamaño lentamente.
 // - La opacidad prácticamente se mantiene.
 // - Aparecen pequeños restos que se desprenden y caen.
-// - El borde se desgasta de manera irregular.
-// - AL SOLTAR NO SE RECUPERA.
-// - Si se vuelve a tocar, continúa desde el desgaste anterior.
+// - El borde se desgasta de manera irregular mientras se toca.
+// - AL SOLTAR:
+//      • mantiene el tamaño que perdió
+//      • recupera lentamente su forma cuadrada
+// - Con el paso del tiempo pierde energía y se mueve cada vez más lento.
+// - Cuando llega al tamaño mínimo, desaparece.
 // ============================================================
 
 
@@ -49,6 +52,10 @@ const COLOR_SELECCION = "#C4CEE5";
 // ============================================================
 
 const TAMANO_INICIAL = 110;
+
+// Cuando llega a este tamaño,
+// ya no puede continuar la interacción
+// y desaparece.
 const TAMANO_MINIMO = 25;
 
 const VELOCIDAD = 0.7;
@@ -60,25 +67,41 @@ const FUERZA_CHOQUE = 0.8;
 // CADUCIDAD
 // ============================================================
 
-// Muy lenta.
-// Se puede ver claramente cómo se desgasta.
 const VELOCIDAD_CADUCIDAD = 0.0018;
 
-
-// Distancia entre centros necesaria
-// para comenzar el desgaste.
 const DISTANCIA_CADUCIDAD = 145;
 
 
 // ============================================================
-// RESPIRACIÓN
+// RECUPERACIÓN DE LA FORMA
 // ============================================================
+//
+// IMPORTANTE:
+//
+// Esto NO recupera el tamaño.
+//
+// Solamente hace que el borde vuelva
+// lentamente a ser un cuadrado regular
+// cuando se sueltan los dedos.
+//
 
-const VELOCIDAD_RESPIRACION_MIN = 0.012;
-const VELOCIDAD_RESPIRACION_EXTRA = 0.005;
+const VELOCIDAD_RECUPERACION_FORMA = 0.025;
 
-const AMPLITUD_RESPIRACION_MIN = 0.045;
-const AMPLITUD_RESPIRACION_EXTRA = 0.015;
+
+// ============================================================
+// PÉRDIDA DE ENERGÍA
+// ============================================================
+//
+// Cuanto más tiempo pasa,
+// más lentamente se mueven.
+//
+// No se detienen inmediatamente.
+// La pérdida es progresiva.
+//
+
+const PERDIDA_ENERGIA = 0.9997;
+
+const VELOCIDAD_MINIMA = 0.025;
 
 
 // ============================================================
@@ -97,16 +120,6 @@ let figuras = [];
 
 // ============================================================
 // PUNTEROS
-// ============================================================
-//
-// Cada dedo queda asociado a un cuadrado.
-//
-// touch:
-//   identifier → figura
-//
-// mouse:
-//   "mouse" → figura
-//
 // ============================================================
 
 const punteros = new Map();
@@ -182,6 +195,13 @@ function crearFigura(x, y, color) {
             VELOCIDAD,
 
         // ----------------------------------------------------
+        // ENERGÍA
+        // ----------------------------------------------------
+
+        energia:
+            1,
+
+        // ----------------------------------------------------
         // ROTACIÓN
         // ----------------------------------------------------
 
@@ -217,14 +237,14 @@ function crearFigura(x, y, color) {
             2,
 
         velocidadRespiracion:
-            VELOCIDAD_RESPIRACION_MIN +
+            0.012 +
             Math.random() *
-            VELOCIDAD_RESPIRACION_EXTRA,
+            0.005,
 
         amplitudRespiracion:
-            AMPLITUD_RESPIRACION_MIN +
+            0.045 +
             Math.random() *
-            AMPLITUD_RESPIRACION_EXTRA,
+            0.015,
 
         respiracionX:
             1,
@@ -233,7 +253,7 @@ function crearFigura(x, y, color) {
             1,
 
         // ----------------------------------------------------
-        // MOVIMIENTO VERTICAL SUAVE
+        // MOVIMIENTO VERTICAL
         // ----------------------------------------------------
 
         faseVertical:
@@ -247,7 +267,7 @@ function crearFigura(x, y, color) {
             0.008,
 
         // ----------------------------------------------------
-        // EMPUJE DE COLISIONES
+        // EMPUJE
         // ----------------------------------------------------
 
         empujeX:
@@ -267,11 +287,15 @@ function crearFigura(x, y, color) {
             0,
 
         // ----------------------------------------------------
-        // OPACIDAD
+        // RECUPERACIÓN DE FORMA
         // ----------------------------------------------------
+        //
+        // 1 = totalmente deformado
+        // 0 = cuadrado perfecto
+        //
 
-        opacidad:
-            1,
+        deformacionForma:
+            0,
 
         // ----------------------------------------------------
         // ESTADO
@@ -287,7 +311,7 @@ function crearFigura(x, y, color) {
             true,
 
         // ----------------------------------------------------
-        // TIEMPO PARA GENERAR RESTOS
+        // RESTOS
         // ----------------------------------------------------
 
         tiempoRestos:
@@ -403,20 +427,94 @@ function actualizarMovimiento() {
             return;
         }
 
+
         // ----------------------------------------------------
-        // Si está siendo arrastrada,
-        // no se mueve automáticamente.
+        // PÉRDIDA DE ENERGÍA
+        // ----------------------------------------------------
+        //
+        // Solamente ocurre cuando no está siendo agarrada.
+        //
+
+        if (
+            !figura.siendoArrastrada
+        ) {
+
+            figura.energia *=
+                PERDIDA_ENERGIA;
+
+            figura.energia =
+                Math.max(
+                    figura.energia,
+                    0
+                );
+        }
+
+
+        // ----------------------------------------------------
+        // SI ESTÁ SIENDO ARRASTRADA
         // ----------------------------------------------------
 
         if (
             figura.siendoArrastrada
         ) {
+
             return;
         }
 
+
+        // ----------------------------------------------------
+        // VELOCIDAD ACTUAL
+        // ----------------------------------------------------
+
+        figura.vx *=
+            PERDIDA_ENERGIA;
+
+        figura.vy *=
+            PERDIDA_ENERGIA;
+
+
+        // Evitamos que desaparezca completamente
+        // su movimiento demasiado rápido.
+
+        if (
+            Math.abs(figura.vx) <
+            VELOCIDAD_MINIMA
+        ) {
+
+            figura.vx =
+                figura.vx >= 0
+                    ? VELOCIDAD_MINIMA
+                    : -VELOCIDAD_MINIMA;
+        }
+
+
+        if (
+            Math.abs(figura.vy) <
+            VELOCIDAD_MINIMA
+        ) {
+
+            figura.vy =
+                figura.vy >= 0
+                    ? VELOCIDAD_MINIMA
+                    : -VELOCIDAD_MINIMA;
+        }
+
+
+        // ----------------------------------------------------
+        // MOVIMIENTO
+        // ----------------------------------------------------
+
+        figura.x +=
+            figura.vx *
+            figura.energia;
+
+        figura.y +=
+            figura.vy *
+            figura.energia;
+
+
         // ----------------------------------------------------
         // MOVIMIENTO VERTICAL SUAVE
-        // Como en MEMORIA.
         // ----------------------------------------------------
 
         figura.faseVertical +=
@@ -425,29 +523,31 @@ function actualizarMovimiento() {
         const movimientoVertical =
             Math.sin(
                 figura.faseVertical
-            ) * 0.08;
+            ) *
+            0.08 *
+            figura.energia;
 
-
-        // ----------------------------------------------------
-        // MOVIMIENTO
-        // ----------------------------------------------------
-
-        figura.x +=
-            figura.vx +
-            figura.empujeX;
 
         figura.y +=
-            figura.vy +
-            figura.empujeY +
             movimientoVertical;
 
 
         // ----------------------------------------------------
-        // EL EMPUJE DESAPARECE POCO A POCO
+        // EMPUJE
         // ----------------------------------------------------
 
-        figura.empujeX *= 0.94;
-        figura.empujeY *= 0.94;
+        figura.x +=
+            figura.empujeX;
+
+        figura.y +=
+            figura.empujeY;
+
+
+        figura.empujeX *=
+            0.94;
+
+        figura.empujeY *=
+            0.94;
 
 
         // ----------------------------------------------------
@@ -455,7 +555,8 @@ function actualizarMovimiento() {
         // ----------------------------------------------------
 
         figura.rotacion +=
-            figura.velocidadRotacion;
+            figura.velocidadRotacion *
+            figura.energia;
 
 
         // ----------------------------------------------------
@@ -463,13 +564,15 @@ function actualizarMovimiento() {
         // ----------------------------------------------------
 
         figura.fase +=
-            0.015;
+            0.015 *
+            Math.max(
+                figura.energia,
+                0.15
+            );
 
 
         // ----------------------------------------------------
         // RESPIRACIÓN
-        //
-        // MISMA LÓGICA DE MEMORIA.
         // ----------------------------------------------------
 
         figura.faseRespiracion +=
@@ -512,8 +615,28 @@ function actualizarMovimiento() {
 
 
         // ----------------------------------------------------
-        // BORDE
+        // RECUPERAR FORMA
         // ----------------------------------------------------
+        //
+        // Solo si NO está siendo tocada.
+        //
+        // El tamaño NO cambia.
+        //
+
+        if (
+            !figura.enCaducidad
+        ) {
+
+            figura.deformacionForma -=
+                VELOCIDAD_RECUPERACION_FORMA;
+
+            figura.deformacionForma =
+                Math.max(
+                    figura.deformacionForma,
+                    0
+                );
+        }
+
 
         limitarFigura(figura);
     });
@@ -553,8 +676,6 @@ function detectarColisiones() {
             }
 
 
-            // Si los dos están siendo arrastrados
-            // dejamos que puedan acercarse.
             if (
                 a.siendoArrastrada &&
                 b.siendoArrastrada
@@ -602,10 +723,6 @@ function detectarColisiones() {
                     distancia;
 
 
-                // ------------------------------------------------
-                // SEPARACIÓN
-                // ------------------------------------------------
-
                 if (
                     !a.siendoArrastrada
                 ) {
@@ -638,21 +755,19 @@ function detectarColisiones() {
                 }
 
 
-                // ------------------------------------------------
-                // IMPULSO
-                // ------------------------------------------------
-
                 if (
                     !a.siendoArrastrada
                 ) {
 
                     a.vx -=
                         nx *
-                        FUERZA_CHOQUE;
+                        FUERZA_CHOQUE *
+                        a.energia;
 
                     a.vy -=
                         ny *
-                        FUERZA_CHOQUE;
+                        FUERZA_CHOQUE *
+                        a.energia;
                 }
 
 
@@ -662,17 +777,15 @@ function detectarColisiones() {
 
                     b.vx +=
                         nx *
-                        FUERZA_CHOQUE;
+                        FUERZA_CHOQUE *
+                        b.energia;
 
                     b.vy +=
                         ny *
-                        FUERZA_CHOQUE;
+                        FUERZA_CHOQUE *
+                        b.energia;
                 }
 
-
-                // ------------------------------------------------
-                // PEQUEÑO EMPUJE ORGÁNICO
-                // ------------------------------------------------
 
                 a.empujeX -=
                     nx *
@@ -727,9 +840,6 @@ function buscarFigura(x, y) {
             figura.tamano / 2;
 
 
-        // Área ligeramente mayor
-        // para facilitar la selección.
-
         const margen =
             15;
 
@@ -765,7 +875,7 @@ function buscarFigura(x, y) {
 
 
 // ============================================================
-// POSICIÓN DEL TOUCH
+// POSICIÓN TOUCH
 // ============================================================
 
 function obtenerTouch(touch) {
@@ -807,9 +917,6 @@ function moverFigura(
     figura.y =
         y;
 
-
-    // Cuando la persona la mueve,
-    // se detiene el movimiento automático.
 
     figura.vx =
         0;
@@ -872,52 +979,42 @@ function crearRestos(figura) {
                 Math.sin(angulo) *
                 distancia,
 
-
             tamano:
                 2 +
                 Math.random() *
                 5,
 
-
             vx:
                 (Math.random() - 0.5) *
                 0.35,
-
 
             vy:
                 0.15 +
                 Math.random() *
                 0.65,
 
-
             rotacion:
                 Math.random() *
                 Math.PI *
                 2,
 
-
             velocidadRotacion:
                 (Math.random() - 0.5) *
                 0.03,
-
 
             opacidad:
                 0.65 +
                 Math.random() *
                 0.25,
 
-
             color:
                 figura.color,
-
 
             vida:
                 1
         });
     }
 
-
-    // Limitar cantidad de restos.
 
     if (
         restos.length > 180
@@ -948,10 +1045,6 @@ function actualizarRestos() {
             restos[i];
 
 
-        // ----------------------------------------------------
-        // GRAVEDAD MUY SUAVE
-        // ----------------------------------------------------
-
         resto.vy +=
             0.012;
 
@@ -963,28 +1056,17 @@ function actualizarRestos() {
             resto.vy;
 
 
-        // ----------------------------------------------------
-        // ROTACIÓN
-        // ----------------------------------------------------
-
         resto.rotacion +=
             resto.velocidadRotacion;
 
 
-        // ----------------------------------------------------
-        // DESAPARICIÓN LENTA
-        // ----------------------------------------------------
-
         resto.vida -=
             0.0018;
+
 
         resto.opacidad *=
             0.9985;
 
-
-        // ----------------------------------------------------
-        // ELIMINAR
-        // ----------------------------------------------------
 
         if (
             resto.vida <= 0 ||
@@ -1009,7 +1091,7 @@ function actualizarRestos() {
 function actualizarCaducidad() {
 
     // --------------------------------------------------------
-    // PRIMERO TODOS LOS CUADRADOS
+    // Reiniciar estado
     // --------------------------------------------------------
 
     figuras.forEach(
@@ -1022,7 +1104,7 @@ function actualizarCaducidad() {
 
 
     // --------------------------------------------------------
-    // BUSCAR PARES CON DOS PUNTEROS
+    // BUSCAR DOS FIGURAS
     // --------------------------------------------------------
 
     if (
@@ -1038,10 +1120,6 @@ function actualizarCaducidad() {
                 )
             ];
 
-
-        // ----------------------------------------------------
-        // Necesitamos dos cuadrados diferentes.
-        // ----------------------------------------------------
 
         if (
             figurasSeleccionadas.length >= 2
@@ -1069,10 +1147,6 @@ function actualizarCaducidad() {
                     dy * dy
                 );
 
-
-            // ------------------------------------------------
-            // SI SE ACERCAN
-            // ------------------------------------------------
 
             if (
                 distancia <
@@ -1104,16 +1178,12 @@ function actualizarCaducidad() {
 
 
             // ------------------------------------------------
-            // SI ESTÁN JUNTOS
+            // CADUCIDAD
             // ------------------------------------------------
 
             if (
                 figura.enCaducidad
             ) {
-
-                // El desgaste es PERMANENTE.
-                //
-                // No existe recuperación.
 
                 figura.caducidad +=
                     VELOCIDAD_CADUCIDAD;
@@ -1128,6 +1198,22 @@ function actualizarCaducidad() {
 
                 figura.desgaste =
                     figura.caducidad;
+
+
+                // ------------------------------------------------
+                // DEFORMACIÓN
+                // ------------------------------------------------
+                //
+                // Mientras se desgasta,
+                // el borde se vuelve irregular.
+                //
+
+                figura.deformacionForma =
+                    Math.min(
+                        figura.deformacionForma +
+                        0.015,
+                        figura.caducidad
+                    );
 
 
                 // ------------------------------------------------
@@ -1166,8 +1252,6 @@ function actualizarCaducidad() {
 
             // ------------------------------------------------
             // OPACIDAD
-            //
-            // Casi no cambia.
             // ------------------------------------------------
 
             figura.opacidad =
@@ -1179,24 +1263,40 @@ function actualizarCaducidad() {
 
 
             // ------------------------------------------------
-            // No permitimos que desaparezca completamente.
+            // SI LLEGA AL MÍNIMO
             // ------------------------------------------------
 
             if (
-                figura.tamano <
-                TAMANO_MINIMO
+                figura.tamano <=
+                TAMANO_MINIMO + 0.5
             ) {
 
-                figura.tamano =
-                    TAMANO_MINIMO;
+                // Generamos una última
+                // pequeña cantidad de restos.
+
+                crearRestos(figura);
+
+                figura.activa =
+                    false;
             }
         }
     );
+
+
+    // --------------------------------------------------------
+    // Eliminar cuadrados muertos.
+    // --------------------------------------------------------
+
+    figuras =
+        figuras.filter(
+            figura =>
+                figura.activa
+        );
 }
 
 
 // ============================================================
-// OBTENER GRADIENTE
+// GRADIENTE
 // ============================================================
 
 function obtenerGradiente(
@@ -1208,10 +1308,6 @@ function obtenerGradiente(
     let colorMedio;
     let colorOscuro;
 
-
-    // --------------------------------------------------------
-    // GRADIENTES DE MEMORIA
-    // --------------------------------------------------------
 
     if (
         figura.color ===
@@ -1228,7 +1324,6 @@ function obtenerGradiente(
             "#AEB4BA";
     }
 
-
     else if (
         figura.color ===
         "#8BB2D3"
@@ -1243,7 +1338,6 @@ function obtenerGradiente(
         colorOscuro =
             "#527A9C";
     }
-
 
     else if (
         figura.color ===
@@ -1260,7 +1354,6 @@ function obtenerGradiente(
             "#10183B";
     }
 
-
     else {
 
         colorClaro =
@@ -1273,10 +1366,6 @@ function obtenerGradiente(
             "#18355F";
     }
 
-
-    // --------------------------------------------------------
-    // POSICIÓN DEL BRILLO
-    // --------------------------------------------------------
 
     const gradiente =
         ctx.createRadialGradient(
@@ -1312,7 +1401,7 @@ function obtenerGradiente(
 
 
 // ============================================================
-// OBTENER SOMBRA
+// SOMBRA
 // ============================================================
 
 function obtenerSombra(
@@ -1398,8 +1487,6 @@ function dibujarResto(resto) {
         resto.color;
 
 
-    // Pequeño brillo.
-
     ctx.shadowColor =
         resto.color;
 
@@ -1420,7 +1507,7 @@ function dibujarResto(resto) {
 
 
 // ============================================================
-// DIBUJAR CUADRADO DESGASTADO
+// FORMA DESGASTADA
 // ============================================================
 
 function dibujarFormaDesgastada(
@@ -1428,25 +1515,17 @@ function dibujarFormaDesgastada(
     mitad
 ) {
 
-    const desgaste =
-        figura.desgaste;
-
-
-    // --------------------------------------------------------
-    // DEFORMACIÓN DEL BORDE
-    // --------------------------------------------------------
-
     const deformacion =
         mitad *
         0.18 *
-        desgaste;
+        figura.deformacionForma;
 
 
     ctx.beginPath();
 
 
     // --------------------------------------------------------
-    // ARRIBA IZQUIERDA
+    // ARRIBA
     // --------------------------------------------------------
 
     ctx.moveTo(
@@ -1458,10 +1537,6 @@ function dibujarFormaDesgastada(
         )
     );
 
-
-    // --------------------------------------------------------
-    // ARRIBA
-    // --------------------------------------------------------
 
     ctx.lineTo(
         -mitad * 0.35,
@@ -1626,19 +1701,10 @@ function dibujarFigura(
 
     // --------------------------------------------------------
     // RESPIRACIÓN
-    //
-    // Igual que MEMORIA.
     // --------------------------------------------------------
 
-    const escala =
-        1;
-
-
     ctx.scale(
-        escala *
         figura.respiracionX,
-
-        escala *
         figura.respiracionY
     );
 
@@ -1700,12 +1766,8 @@ function dibujarFigura(
     // SELECCIÓN
     // --------------------------------------------------------
 
-    const estaSeleccionada =
-        figura.siendoArrastrada;
-
-
     if (
-        estaSeleccionada
+        figura.siendoArrastrada
     ) {
 
         ctx.shadowColor =
@@ -1721,13 +1783,11 @@ function dibujarFigura(
     // ========================================================
 
     if (
-        figura.desgaste <=
+        figura.deformacionForma <=
         0.01
     ) {
 
-        // ----------------------------------------------------
-        // CUADRADO NORMAL
-        // ----------------------------------------------------
+        // Cuadrado perfecto.
 
         ctx.fillRect(
             -mitad,
@@ -1735,14 +1795,11 @@ function dibujarFigura(
             figura.tamano,
             figura.tamano
         );
-
     }
 
     else {
 
-        // ----------------------------------------------------
-        // CUADRADO DESGASTADO
-        // ----------------------------------------------------
+        // Forma desgastada.
 
         dibujarFormaDesgastada(
             figura,
@@ -1769,18 +1826,10 @@ function dibujar() {
     );
 
 
-    // --------------------------------------------------------
-    // RESTOS DETRÁS
-    // --------------------------------------------------------
-
     restos.forEach(
         dibujarResto
     );
 
-
-    // --------------------------------------------------------
-    // CUADRADOS
-    // --------------------------------------------------------
 
     figuras.forEach(
         dibujarFigura
@@ -1822,11 +1871,6 @@ canvas.addEventListener(
                     posicion.y
                 );
 
-
-            // ------------------------------------------------
-            // No permitir que dos dedos agarren
-            // el mismo cuadrado.
-            // ------------------------------------------------
 
             if (
                 figura &&
@@ -1956,25 +2000,26 @@ function finalizarDedos(
 
 
             // ------------------------------------------------
-            // CONTINÚA MOVIÉNDOSE
+            // IMPORTANTE:
+            //
+            // NO recupera tamaño.
+            //
+            // El tamaño que perdió queda permanentemente.
+            //
+            // Lo único que empieza a recuperarse lentamente
+            // es la FORMA del borde.
             // ------------------------------------------------
 
             figura.vx =
                 (Math.random() - 0.5) *
-                VELOCIDAD;
+                VELOCIDAD *
+                figura.energia;
+
 
             figura.vy =
                 (Math.random() - 0.5) *
-                VELOCIDAD;
-
-
-            // ------------------------------------------------
-            // IMPORTANTE:
-            //
-            // NO SE MODIFICA figura.caducidad.
-            //
-            // El desgaste queda guardado.
-            // ------------------------------------------------
+                VELOCIDAD *
+                figura.energia;
         }
 
 
@@ -2018,8 +2063,6 @@ canvas.addEventListener(
 canvas.addEventListener(
     "mousedown",
     function(evento) {
-
-        // Solo botón izquierdo.
 
         if (
             evento.button !== 0
@@ -2137,12 +2180,14 @@ canvas.addEventListener(
 
             mouseFigura.vx =
                 (Math.random() - 0.5) *
-                VELOCIDAD;
+                VELOCIDAD *
+                mouseFigura.energia;
 
 
             mouseFigura.vy =
                 (Math.random() - 0.5) *
-                VELOCIDAD;
+                VELOCIDAD *
+                mouseFigura.energia;
         }
 
 
@@ -2178,12 +2223,14 @@ canvas.addEventListener(
 
             mouseFigura.vx =
                 (Math.random() - 0.5) *
-                VELOCIDAD;
+                VELOCIDAD *
+                mouseFigura.energia;
 
 
             mouseFigura.vy =
                 (Math.random() - 0.5) *
-                VELOCIDAD;
+                VELOCIDAD *
+                mouseFigura.energia;
         }
 
 
