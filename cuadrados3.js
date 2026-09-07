@@ -56,7 +56,7 @@ const TAMANO_INICIAL = 110;
 // Cuando llega a este tamaño,
 // ya no puede continuar la interacción
 // y desaparece.
-const TAMANO_MINIMO = 25;
+const TAMANO_MINIMO = 30;
 
 const VELOCIDAD = 0.7;
 
@@ -1268,7 +1268,7 @@ function actualizarCaducidad() {
 
             if (
                 figura.tamano <=
-                TAMANO_MINIMO + 0.5
+                TAMANO_MINIMO + 8
             ) {
 
                 // Generamos una última
