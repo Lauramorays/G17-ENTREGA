@@ -3,48 +3,30 @@
 // circulos2.js
 // ============================================================
 //
-// - 4 círculos comienzan tranquilos.
-// - Esperan 1 segundo.
-// - Después comienzan a alterarse progresivamente.
-// - Cada círculo respira con un ritmo diferente.
-// - Todos permanecen en movimiento constante.
-// - Mouse y touch habilitados.
-// - Se puede agarrar y mover cada círculo.
+// COMPORTAMIENTO:
 //
-// INTERACCIÓN:
-//
-// - 1 círculo seleccionado:
-//      → se puede mover
-//      → NO se calma
-//
-// - 2 o más círculos seleccionados:
-//      → comienzan a calmarse
-//
-// - Un círculo calmado:
-//      → permanece calmado al soltarlo
-//
-// - Si un círculo calmado choca con uno alterado:
-//      → vuelve a alterarse
-//
-// - Calmado + calmado:
-//      → permanecen calmados
-//
-// - Cuando los 4 están calmados:
-//      → permanecen calmados
-//
-// - Clic fuera de un círculo:
-//      → no ocurre nada
-//
-// - Sin brillo ni aro exterior.
-// - Estética basada en IDENTIDAD.
+// - Los 4 círculos comienzan tranquilos.
+// - Permanecen tranquilos durante unos segundos.
+// - Después cada círculo se altera en un momento diferente.
+// - Cada círculo se altera directamente, sin transición lenta.
+// - Los círculos alterados respiran fuerte y rápido.
+// - Los círculos alterados se mueven rápido y de forma errática.
+// - Al tocar 2 o más círculos al mismo tiempo, se calman.
+// - Se pueden calmar grupos de 2, 3 o 4.
+// - Al soltar los dedos permanecen calmados.
+// - Calmado + calmado = siguen calmados.
+// - Calmado + alterado = el calmado se altera.
+// - Si todos están calmados, permanecen calmados.
 //
 // ============================================================
 
 
+// ============================================================
+// CANVAS
+// ============================================================
+
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-
-canvas.style.touchAction = "none";
 
 
 // ============================================================
@@ -58,34 +40,92 @@ const colores = [
     "#2B538E"
 ];
 
+const COLOR_SELECCION = "#C4CEE5";
+
 
 // ============================================================
 // CONFIGURACIÓN
 // ============================================================
 
-const CANTIDAD_CIRCULOS = 4;
+const TAMAÑO_INICIAL = 55;
 
-const RADIO_BASE = 55;
 
-const VELOCIDAD_MAXIMA = 1.5;
+// ------------------------------------------------------------
+// VELOCIDAD
+// ------------------------------------------------------------
+//
+// Alterados = mucho más rápidos
+//
 
-// Tiempo inicial tranquilo
-const TIEMPO_TRANQUILO = 1000;
+const VELOCIDAD_MAXIMA = 1.35;
 
-// Tiempo que tarda en aparecer la alteración
-const TIEMPO_TRANSICION = 1800;
+const VELOCIDAD_MINIMA_ALTERADA = 0.75;
+
+
+// ------------------------------------------------------------
+// COLISIONES
+// ------------------------------------------------------------
+
+const FUERZA_COLISION = 0.7;
 
 
 // ============================================================
-// POSICIONES INICIALES
-// IGUALES A IDENTIDAD
+// RESPIRACIÓN ALTERADA
+// ============================================================
+//
+// Mucho más visible y rápida.
+//
+
+const AMPLITUD_RESPIRACION_MIN = 7;
+
+const AMPLITUD_RESPIRACION_MAX = 13;
+
+const VELOCIDAD_RESPIRACION_MIN = 0.025;
+
+const VELOCIDAD_RESPIRACION_MAX = 0.045;
+
+
+// ============================================================
+// RESPIRACIÓN CALMADA
 // ============================================================
 
-const posiciones = [
-    { x: 0.25, y: 0.30 },
-    { x: 0.75, y: 0.30 },
-    { x: 0.25, y: 0.70 },
-    { x: 0.75, y: 0.70 }
+const AMPLITUD_RESPIRACION_CALMADA = 0.7;
+
+const VELOCIDAD_RESPIRACION_CALMADA = 0.0035;
+
+
+// ============================================================
+// MOVIMIENTO CALMADO
+// ============================================================
+
+const VELOCIDAD_MOVIMIENTO_CALMADO = 0.18;
+
+
+// ============================================================
+// TIEMPO INICIAL TRANQUILO
+// ============================================================
+
+const TIEMPO_TRANQUILO_INICIAL = 2500;
+
+
+// ============================================================
+// TIEMPO INDIVIDUAL DE ALTERACIÓN
+// ============================================================
+//
+// Después de los 2.5 segundos:
+//
+// círculo 1 -> inmediatamente
+// círculo 2 -> 0.85 s después
+// círculo 3 -> 1.75 s después
+// círculo 4 -> 2.85 s después
+//
+// ============================================================
+
+const TIEMPOS_ALTERACION = [
+    0,
+    850,
+    1750,
+    2850
 ];
 
 
@@ -97,9 +137,9 @@ let circulos = [];
 
 let punteros = new Map();
 
-let tiempoInicio = 0;
+let siguienteId = 0;
 
-let transicionComenzada = false;
+let tiempoInicio = performance.now();
 
 
 // ============================================================
@@ -111,770 +151,326 @@ function ajustarCanvas() {
     const rect =
         canvas.getBoundingClientRect();
 
-    canvas.width = rect.width;
-    canvas.height = rect.height;
+    canvas.width =
+        rect.width;
 
-    if (circulos.length === 0) {
-
-        crearCirculos();
-
-        tiempoInicio =
-            performance.now();
-    }
+    canvas.height =
+        rect.height;
 }
 
 
 // ============================================================
-// CREAR CÍRCULOS
+// LIMITAR
 // ============================================================
 
-function crearCirculos() {
+function limitar(valor, minimo, maximo) {
+
+    return Math.max(
+        minimo,
+        Math.min(
+            maximo,
+            valor
+        )
+    );
+}
+
+
+// ============================================================
+// CREAR CÍRCULO
+// ============================================================
+
+function crearCirculo(
+    x,
+    y,
+    color,
+    indice
+) {
+
+    // --------------------------------------------------------
+    // VELOCIDAD INDIVIDUAL
+    // --------------------------------------------------------
+
+    const velocidadMovimiento =
+        0.35 +
+        Math.random() *
+        0.30;
+
+
+    // --------------------------------------------------------
+    // RESPIRACIÓN INDIVIDUAL
+    // --------------------------------------------------------
+
+    const amplitudRespiracion =
+        AMPLITUD_RESPIRACION_MIN +
+        Math.random() *
+        (
+            AMPLITUD_RESPIRACION_MAX -
+            AMPLITUD_RESPIRACION_MIN
+        );
+
+
+    const velocidadRespiracion =
+        VELOCIDAD_RESPIRACION_MIN +
+        Math.random() *
+        (
+            VELOCIDAD_RESPIRACION_MAX -
+            VELOCIDAD_RESPIRACION_MIN
+        );
+
+
+    return {
+
+        id: siguienteId++,
+
+        indice: indice,
+
+
+        // ====================================================
+        // POSICIÓN
+        // ====================================================
+
+        x: x,
+
+        y: y,
+
+
+        // ====================================================
+        // TAMAÑO
+        // ====================================================
+
+        radio: TAMAÑO_INICIAL,
+
+        radioOriginal: TAMAÑO_INICIAL,
+
+
+        // ====================================================
+        // COLOR
+        // ====================================================
+
+        color: color,
+
+
+        // ====================================================
+        // MOVIMIENTO
+        // ====================================================
+
+        vx:
+            (Math.random() * 2 - 1) *
+            velocidadMovimiento,
+
+        vy:
+            (Math.random() * 2 - 1) *
+            velocidadMovimiento,
+
+
+        velocidadMovimiento:
+            velocidadMovimiento,
+
+        velocidadMovimientoOriginal:
+            velocidadMovimiento,
+
+
+        // ====================================================
+        // RESPIRACIÓN
+        // ====================================================
+
+        faseRespiracion:
+            Math.random() *
+            Math.PI *
+            2,
+
+
+        velocidadRespiracion:
+            VELOCIDAD_RESPIRACION_CALMADA,
+
+
+        velocidadRespiracionOriginal:
+            velocidadRespiracion,
+
+
+        amplitudRespiracion:
+            AMPLITUD_RESPIRACION_CALMADA,
+
+
+        amplitudRespiracionOriginal:
+            amplitudRespiracion,
+
+
+        respiracion: 0,
+
+
+        // ====================================================
+        // MOVIMIENTO ORGÁNICO
+        // ====================================================
+
+        faseMovimiento:
+            Math.random() *
+            Math.PI *
+            2,
+
+
+        velocidadFaseMovimiento:
+            0.004 +
+            Math.random() *
+            0.004,
+
+
+        // ====================================================
+        // MOVIMIENTO ERRÁTICO
+        // ====================================================
+
+        faseErratica:
+            Math.random() *
+            Math.PI *
+            2,
+
+
+        velocidadErratica:
+            0.025 +
+            Math.random() *
+            0.035,
+
+
+        fuerzaErratica:
+            0.018 +
+            Math.random() *
+            0.028,
+
+
+        // Segundo movimiento errático
+        // para evitar que sea demasiado regular
+
+        faseErraticaSecundaria:
+            Math.random() *
+            Math.PI *
+            2,
+
+
+        velocidadErraticaSecundaria:
+            0.04 +
+            Math.random() *
+            0.04,
+
+
+        // ====================================================
+        // CAMBIO DE DIRECCIÓN
+        // ====================================================
+
+        objetivoDireccionX:
+            Math.random() * 2 - 1,
+
+        objetivoDireccionY:
+            Math.random() * 2 - 1,
+
+
+        tiempoCambioDireccion:
+            500 +
+            Math.random() *
+            900,
+
+
+        siguienteCambioDireccion:
+            performance.now() +
+            500 +
+            Math.random() *
+            900,
+
+
+        // ====================================================
+        // INTERACCIÓN
+        // ====================================================
+
+        siendoMovido: false,
+
+        punterosMovimiento: [],
+
+
+        // ====================================================
+        // ESTADO
+        // ====================================================
+
+        calmado: true,
+
+        alterandose: false,
+
+        yaSeAltero: false,
+
+
+        // ====================================================
+        // TIEMPO DE ALTERACIÓN
+        // ====================================================
+
+        tiempoAlteracion:
+            TIEMPOS_ALTERACION[indice],
+
+
+        // ====================================================
+        // DEFORMACIÓN
+        // ====================================================
+
+        escalaX: 1,
+
+        escalaY: 1,
+
+        anguloDeformacion: 0
+    };
+}
+
+
+// ============================================================
+// CREAR LOS 4 CÍRCULOS
+// ============================================================
+
+function crearCirculosIniciales() {
 
     circulos = [];
 
-    for (
-        let i = 0;
-        i < CANTIDAD_CIRCULOS;
-        i++
-    ) {
-
-        // ----------------------------------------------------
-        // DIRECCIÓN DE MOVIMIENTO
-        // ----------------------------------------------------
-
-        const angulo =
-            Math.random() *
-            Math.PI *
-            2;
+    siguienteId = 0;
 
 
-        // ----------------------------------------------------
-        // VELOCIDAD
-        // ----------------------------------------------------
+    const posiciones = [
 
-        const velocidadInicial =
-            0.08 +
-            Math.random() * 0.10;
+        {
+            x: 0.25,
+            y: 0.30
+        },
 
+        {
+            x: 0.75,
+            y: 0.30
+        },
 
-        const velocidadFinal =
-            0.55 +
-            Math.random() *
-            (VELOCIDAD_MAXIMA - 0.55);
+        {
+            x: 0.25,
+            y: 0.70
+        },
 
+        {
+            x: 0.75,
+            y: 0.70
+        }
 
-        const velocidadObjetivoX =
-            Math.cos(angulo) *
-            velocidadFinal;
-
-
-        const velocidadObjetivoY =
-            Math.sin(angulo) *
-            velocidadFinal;
-
-
-        // ----------------------------------------------------
-        // RESPIRACIÓN
-        // ----------------------------------------------------
-
-        const frecuenciaRespiracion =
-            0.002 +
-            Math.random() *
-            0.0035;
+    ];
 
 
-        const amplitudRespiracion =
-            5 +
-            Math.random() * 8;
+    for (let i = 0; i < 4; i++) {
 
+        const circulo =
+            crearCirculo(
 
-        const faseRespiracion =
-            Math.random() *
-            Math.PI *
-            2;
-
-
-        // ----------------------------------------------------
-        // CÍRCULO
-        // ----------------------------------------------------
-
-        circulos.push({
-
-            // ------------------------------------------------
-            // POSICIÓN
-            // ------------------------------------------------
-
-            x:
                 canvas.width *
                 posiciones[i].x,
 
-            y:
                 canvas.height *
                 posiciones[i].y,
 
+                colores[i],
 
-            // ------------------------------------------------
-            // TAMAÑO
-            // ------------------------------------------------
-
-            radioBase:
-                RADIO_BASE,
-
-            radio:
-                RADIO_BASE,
-
-
-            // ------------------------------------------------
-            // COLOR
-            // ------------------------------------------------
-
-            color:
-                colores[
-                    i %
-                    colores.length
-                ],
-
-
-            // ------------------------------------------------
-            // MOVIMIENTO
-            // ------------------------------------------------
-
-            vx:
-                Math.cos(angulo) *
-                velocidadInicial,
-
-            vy:
-                Math.sin(angulo) *
-                velocidadInicial,
-
-
-            velocidadObjetivoX:
-                velocidadObjetivoX,
-
-            velocidadObjetivoY:
-                velocidadObjetivoY,
-
-
-            // ------------------------------------------------
-            // ALTERACIÓN
-            // ------------------------------------------------
-
-            alteracion:
-                false,
-
-
-            // ------------------------------------------------
-            // RESPIRACIÓN
-            // ------------------------------------------------
-
-            frecuenciaRespiracion:
-                frecuenciaRespiracion,
-
-            amplitudRespiracion:
-                amplitudRespiracion,
-
-            faseRespiracion:
-                faseRespiracion,
-
-
-            // ------------------------------------------------
-            // CALMA
-            // ------------------------------------------------
-
-            nivelCalma:
-                1,
-
-            calmadoPermanentemente:
-                false,
-
-
-            // ------------------------------------------------
-            // SELECCIÓN
-            // ------------------------------------------------
-
-            seleccionado:
-                false,
-
-            punterosSobre:
-                new Set()
-        });
-    }
-}
-
-
-// ============================================================
-// DETECTAR CÍRCULO
-// ============================================================
-
-function detectarCirculo(
-    x,
-    y
-) {
-
-    for (
-        let i = circulos.length - 1;
-        i >= 0;
-        i--
-    ) {
-
-        const circulo =
-            circulos[i];
-
-        const distancia =
-            Math.hypot(
-                x - circulo.x,
-                y - circulo.y
+                i
             );
 
-        if (
-            distancia <=
-            circulo.radio + 15
-        ) {
 
-            return circulo;
-        }
-    }
-
-    return null;
-}
-
-
-// ============================================================
-// INICIAR ALTERACIÓN
-// ============================================================
-//
-// Después de 1 segundo comienza una transición.
-// Los círculos que hayan sido calmados no vuelven a
-// alterarse por esta función.
-//
-// ============================================================
-
-function actualizarAlteracion(
-    tiempo
-) {
-
-    if (
-        tiempoInicio === 0
-    ) {
-        return;
-    }
-
-
-    const tiempoTranscurrido =
-        tiempo -
-        tiempoInicio;
-
-
-    // --------------------------------------------------------
-    // PRIMER SEGUNDO
-    // TODOS TRANQUILOS
-    // --------------------------------------------------------
-
-    if (
-        tiempoTranscurrido <
-        TIEMPO_TRANQUILO
-    ) {
-
-        return;
-    }
-
-
-    // --------------------------------------------------------
-    // TRANSICIÓN
-    // --------------------------------------------------------
-
-    const tiempoDesdeAlteracion =
-        tiempoTranscurrido -
-        TIEMPO_TRANQUILO;
-
-
-    let progreso =
-        tiempoDesdeAlteracion /
-        TIEMPO_TRANSICION;
-
-
-    progreso =
-        Math.max(
-            0,
-            Math.min(
-                1,
-                progreso
-            )
-        );
-
-
-    // --------------------------------------------------------
-    // SUAVIZAR TRANSICIÓN
-    // --------------------------------------------------------
-
-    const suavizado =
-        progreso *
-        progreso *
-        (
-            3 -
-            2 *
-            progreso
-        );
-
-
-    transicionComenzada =
-        true;
-
-
-    // --------------------------------------------------------
-    // ACTUALIZAR CADA CÍRCULO
-    // --------------------------------------------------------
-
-    for (
-        const circulo
-        of circulos
-    ) {
-
-        // ----------------------------------------------------
-        // SI ESTÁ CALMADO
-        //
-        // NO SE ALTERA POR EL PASO DEL TIEMPO.
-        // ----------------------------------------------------
-
-        if (
-            circulo.calmadoPermanentemente
-        ) {
-
-            continue;
-        }
-
-
-        // ----------------------------------------------------
-        // ALTERACIÓN PROGRESIVA
-        // ----------------------------------------------------
-
-        circulo.nivelCalma =
-            1 -
-            suavizado;
-
-
-        circulo.alteracion =
-            suavizado > 0.05;
-
-
-        // ----------------------------------------------------
-        // ALTERACIÓN COMPLETA
-        // ----------------------------------------------------
-
-        if (
-            suavizado >= 0.999
-        ) {
-
-            circulo.nivelCalma =
-                0;
-
-            circulo.alteracion =
-                true;
-        }
-    }
-}
-
-
-// ============================================================
-// ACTUALIZAR CALMA
-// ============================================================
-//
-// 2 o más círculos seleccionados:
-// comienzan a recuperar la calma.
-//
-// Una vez calmados, quedan así hasta que tengan contacto
-// con un círculo alterado.
-//
-// ============================================================
-
-function actualizarCalma() {
-
-    // --------------------------------------------------------
-    // BUSCAR CÍRCULOS SELECCIONADOS
-    // --------------------------------------------------------
-
-    const seleccionados =
-        circulos.filter(
-            circulo =>
-                circulo.seleccionado
-        );
-
-
-    const cantidadSeleccionados =
-        seleccionados.length;
-
-
-    // --------------------------------------------------------
-    // 2 O MÁS CÍRCULOS
-    // COMIENZAN A CALMARSE
-    // --------------------------------------------------------
-
-    if (
-        cantidadSeleccionados >= 2
-    ) {
-
-        for (
-            const circulo
-            of seleccionados
-        ) {
-
-            // -----------------------------------------------
-            // SI YA ESTÁ CALMADO
-            // NO HAY NADA QUE HACER
-            // -----------------------------------------------
-
-            if (
-                circulo.calmadoPermanentemente
-            ) {
-
-                continue;
-            }
-
-
-            // -----------------------------------------------
-            // AUMENTAR CALMA
-            // -----------------------------------------------
-
-            circulo.nivelCalma +=
-                0.018;
-
-
-            if (
-                circulo.nivelCalma >= 1
-            ) {
-
-                circulo.nivelCalma =
-                    1;
-
-                circulo.calmadoPermanentemente =
-                    true;
-
-                circulo.alteracion =
-                    false;
-            }
-        }
-    }
-
-
-    // --------------------------------------------------------
-    // LOS CÍRCULOS CALMADOS CONSERVAN SU CALMA
-    // --------------------------------------------------------
-
-    for (
-        const circulo
-        of circulos
-    ) {
-
-        if (
-            circulo.calmadoPermanentemente
-        ) {
-
-            circulo.nivelCalma +=
-                (
-                    1 -
-                    circulo.nivelCalma
-                ) *
-                0.04;
-
-
-            if (
-                circulo.nivelCalma >
-                0.999
-            ) {
-
-                circulo.nivelCalma =
-                    1;
-            }
-        }
-    }
-}
-
-
-// ============================================================
-// VERIFICAR SI TODOS ESTÁN CALMADOS
-// ============================================================
-
-function todosCalmados() {
-
-    return circulos.length > 0 &&
-        circulos.every(
-            circulo =>
-                circulo.calmadoPermanentemente
-        );
-}
-
-
-// ============================================================
-// CALMA POR CONTACTO
-// ============================================================
-//
-// Si un círculo calmado toca a uno alterado:
-//
-//     CALMADO + ALTERADO
-//              ↓
-//        el calmado vuelve
-//        progresivamente
-//        a estar alterado.
-//
-// Si ambos están calmados:
-//
-//     CALMADO + CALMADO
-//              ↓
-//        permanecen calmados.
-//
-// Cuando todos están calmados:
-//
-//     CALMADO + CALMADO
-//              ↓
-//        permanecen calmados.
-//
-// ============================================================
-
-function actualizarCalmaPorContacto() {
-
-    // --------------------------------------------------------
-    // Si todos ya están calmados, termina la interacción.
-    // --------------------------------------------------------
-
-    if (
-        todosCalmados()
-    ) {
-
-        return;
-    }
-
-
-    // --------------------------------------------------------
-    // RECORRER PARES DE CÍRCULOS
-    // --------------------------------------------------------
-
-    for (
-        let i = 0;
-        i < circulos.length;
-        i++
-    ) {
-
-        for (
-            let j = i + 1;
-            j < circulos.length;
-            j++
-        ) {
-
-            const a =
-                circulos[i];
-
-            const b =
-                circulos[j];
-
-
-            // ------------------------------------------------
-            // DISTANCIA
-            // ------------------------------------------------
-
-            const dx =
-                b.x - a.x;
-
-            const dy =
-                b.y - a.y;
-
-            const distancia =
-                Math.hypot(
-                    dx,
-                    dy
-                );
-
-
-            const distanciaContacto =
-                a.radio +
-                b.radio;
-
-
-            // ------------------------------------------------
-            // NO HAY CONTACTO
-            // ------------------------------------------------
-
-            if (
-                distancia >
-                distanciaContacto
-            ) {
-
-                continue;
-            }
-
-
-            // ------------------------------------------------
-            // CALMADO + ALTERADO
-            // ------------------------------------------------
-
-            if (
-                a.calmadoPermanentemente &&
-                !b.calmadoPermanentemente
-            ) {
-
-                alterarCirculoPorContacto(
-                    a
-                );
-            }
-
-
-            else if (
-                b.calmadoPermanentemente &&
-                !a.calmadoPermanentemente
-            ) {
-
-                alterarCirculoPorContacto(
-                    b
-                );
-            }
-        }
-    }
-}
-
-
-// ============================================================
-// ALTERAR CÍRCULO POR CONTACTO
-// ============================================================
-
-function alterarCirculoPorContacto(
-    circulo
-) {
-
-    // --------------------------------------------------------
-    // Si todos están calmados no se modifica.
-    // --------------------------------------------------------
-
-    if (
-        todosCalmados()
-    ) {
-
-        return;
-    }
-
-
-    // --------------------------------------------------------
-    // PERDER LA CALMA
-    // --------------------------------------------------------
-
-    circulo.calmadoPermanentemente =
-        false;
-
-
-    circulo.alteracion =
-        true;
-
-
-    // --------------------------------------------------------
-    // VUELVE ALTERADO
-    // --------------------------------------------------------
-
-    circulo.nivelCalma =
-        Math.max(
-            0,
-            circulo.nivelCalma -
-            0.12
-        );
-}
-
-
-// ============================================================
-// MOVER CÍRCULOS
-// ============================================================
-
-function moverCirculos() {
-
-    for (
-        const circulo
-        of circulos
-    ) {
-
-        // ----------------------------------------------------
-        // SI ESTÁ SELECCIONADO
-        // LO CONTROLA EL MOUSE / DEDO
-        // ----------------------------------------------------
-
-        if (
-            circulo.seleccionado
-        ) {
-
-            continue;
-        }
-
-
-        // ----------------------------------------------------
-        // CÍRCULO CALMADO
-        // ----------------------------------------------------
-
-        if (
-            circulo.calmadoPermanentemente
-        ) {
-
-            // Movimiento lento y constante
-
-            circulo.vx +=
-                (
-                    circulo.velocidadObjetivoX *
-                    0.28 -
-                    circulo.vx
-                ) *
-                0.01;
-
-
-            circulo.vy +=
-                (
-                    circulo.velocidadObjetivoY *
-                    0.28 -
-                    circulo.vy
-                ) *
-                0.01;
-
-
-            circulo.x +=
-                circulo.vx;
-
-            circulo.y +=
-                circulo.vy;
-        }
-
-
-        // ----------------------------------------------------
-        // CÍRCULO ALTERADO
-        // ----------------------------------------------------
-
-        else {
-
-            circulo.vx +=
-                (
-                    circulo.velocidadObjetivoX -
-                    circulo.vx
-                ) *
-                0.03;
-
-
-            circulo.vy +=
-                (
-                    circulo.velocidadObjetivoY -
-                    circulo.vy
-                ) *
-                0.03;
-
-
-            const factorMovimiento =
-                1 -
-                circulo.nivelCalma;
-
-
-            circulo.x +=
-                circulo.vx *
-                factorMovimiento;
-
-
-            circulo.y +=
-                circulo.vy *
-                factorMovimiento;
-        }
-
-
-        controlarBordes(
+        circulos.push(
             circulo
         );
     }
@@ -882,74 +478,915 @@ function moverCirculos() {
 
 
 // ============================================================
-// BORDES
+// INICIALIZAR
 // ============================================================
 
-function controlarBordes(
-    circulo
-) {
+ajustarCanvas();
 
-    const margen =
-        circulo.radio;
+crearCirculosIniciales();
+
+
+// ============================================================
+// RESIZE
+// ============================================================
+
+window.addEventListener(
+    "resize",
+    () => {
+
+        ajustarCanvas();
+
+    }
+);
+
+
+// ============================================================
+// ¿TODOS ESTÁN CALMADOS?
+// ============================================================
+
+function todosCalmados() {
+
+    return (
+        circulos.length > 0 &&
+        circulos.every(
+            circulo =>
+                circulo.calmado
+        )
+    );
+}
+
+
+// ============================================================
+// ALTERAR CÍRCULO
+// ============================================================
+
+function alterarCirculo(circulo) {
+
+    // --------------------------------------------------------
+    // SI TODOS ESTÁN CALMADOS
+    // NO SE ALTERA NINGUNO
+    // --------------------------------------------------------
+
+    if (todosCalmados()) {
+
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // SI YA ESTÁ ALTERADO
+    // --------------------------------------------------------
+
+    if (!circulo.calmado) {
+
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // ALTERAR
+    // --------------------------------------------------------
+
+    circulo.calmado = false;
+
+    circulo.alterandose = false;
+
+    circulo.yaSeAltero = true;
+
+
+    // ========================================================
+    // RESPIRACIÓN FUERTE INMEDIATA
+    // ========================================================
+
+    circulo.amplitudRespiracion =
+        circulo.amplitudRespiracionOriginal;
+
+
+    circulo.velocidadRespiracion =
+        circulo.velocidadRespiracionOriginal;
+
+
+    // ========================================================
+    // MOVIMIENTO RÁPIDO
+    // ========================================================
+
+    circulo.velocidadMovimiento =
+        circulo.velocidadMovimientoOriginal *
+        2.2;
+
+
+    // --------------------------------------------------------
+    // Dirección aleatoria
+    // --------------------------------------------------------
+
+    const angulo =
+        Math.random() *
+        Math.PI *
+        2;
+
+
+    const velocidad =
+        VELOCIDAD_MINIMA_ALTERADA +
+        Math.random() *
+        (
+            VELOCIDAD_MAXIMA -
+            VELOCIDAD_MINIMA_ALTERADA
+        );
+
+
+    circulo.vx =
+        Math.cos(angulo) *
+        velocidad;
+
+
+    circulo.vy =
+        Math.sin(angulo) *
+        velocidad;
+
+
+    // --------------------------------------------------------
+    // Nuevo cambio de dirección
+    // --------------------------------------------------------
+
+    circulo.siguienteCambioDireccion =
+        performance.now() +
+        250 +
+        Math.random() *
+        500;
+}
+
+
+// ============================================================
+// CALMAR CÍRCULO
+// ============================================================
+
+function calmarCirculo(circulo) {
+
+    // --------------------------------------------------------
+    // YA CALMADO
+    // --------------------------------------------------------
+
+    if (circulo.calmado) {
+
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // CALMAR
+    // --------------------------------------------------------
+
+    circulo.calmado = true;
+
+    circulo.alterandose = false;
+
+
+    // ========================================================
+    // REDUCIR VELOCIDAD
+    // ========================================================
+
+    const velocidadActual =
+        Math.sqrt(
+            circulo.vx *
+            circulo.vx +
+
+            circulo.vy *
+            circulo.vy
+        );
 
 
     if (
-        circulo.x - margen < 0
+        velocidadActual >
+        VELOCIDAD_MOVIMIENTO_CALMADO
+    ) {
+
+        const factor =
+            VELOCIDAD_MOVIMIENTO_CALMADO /
+            velocidadActual;
+
+
+        circulo.vx *=
+            factor;
+
+
+        circulo.vy *=
+            factor;
+    }
+
+
+    circulo.velocidadMovimiento =
+        VELOCIDAD_MOVIMIENTO_CALMADO;
+
+
+    // ========================================================
+    // REDUCIR RESPIRACIÓN
+    // ========================================================
+
+    circulo.amplitudRespiracion =
+        AMPLITUD_RESPIRACION_CALMADA;
+
+
+    circulo.velocidadRespiracion =
+        VELOCIDAD_RESPIRACION_CALMADA;
+}
+
+
+// ============================================================
+// ALTERACIÓN INICIAL INDIVIDUAL
+// ============================================================
+
+function actualizarAlteracionInicial(ahora) {
+
+    const tiempo =
+        ahora -
+        tiempoInicio;
+
+
+    // ========================================================
+    // PRIMEROS 2.5 SEGUNDOS
+    // TODOS TRANQUILOS
+    // ========================================================
+
+    if (
+        tiempo <
+        TIEMPO_TRANQUILO_INICIAL
+    ) {
+
+        for (
+            const circulo of circulos
+        ) {
+
+            circulo.amplitudRespiracion =
+                AMPLITUD_RESPIRACION_CALMADA;
+
+
+            circulo.velocidadRespiracion =
+                VELOCIDAD_RESPIRACION_CALMADA;
+
+
+            circulo.velocidadMovimiento =
+                VELOCIDAD_MOVIMIENTO_CALMADO;
+        }
+
+
+        return;
+    }
+
+
+    // ========================================================
+    // TIEMPO DESDE QUE TERMINÓ LA CALMA
+    // ========================================================
+
+    const tiempoAlteracion =
+        tiempo -
+        TIEMPO_TRANQUILO_INICIAL;
+
+
+    // ========================================================
+    // ALTERAR INDIVIDUALMENTE
+    // ========================================================
+
+    for (
+        const circulo of circulos
+    ) {
+
+        // ----------------------------------------------------
+        // SI YA ESTÁ ALTERADO
+        // ----------------------------------------------------
+
+        if (
+            circulo.yaSeAltero
+        ) {
+
+            continue;
+        }
+
+
+        // ----------------------------------------------------
+        // LLEGÓ SU MOMENTO
+        // ----------------------------------------------------
+
+        if (
+            tiempoAlteracion >=
+            circulo.tiempoAlteracion
+        ) {
+
+            // -----------------------------------------------
+            // IMPORTANTE:
+            //
+            // Entra directamente alterado.
+            // No existe una transición gradual.
+            // -----------------------------------------------
+
+            circulo.calmado =
+                false;
+
+
+            circulo.yaSeAltero =
+                true;
+
+
+            // -----------------------------------------------
+            // RESPIRACIÓN FUERTE
+            // -----------------------------------------------
+
+            circulo.amplitudRespiracion =
+                circulo.amplitudRespiracionOriginal;
+
+
+            circulo.velocidadRespiracion =
+                circulo.velocidadRespiracionOriginal;
+
+
+            // -----------------------------------------------
+            // MOVIMIENTO RÁPIDO
+            // -----------------------------------------------
+
+            circulo.velocidadMovimiento =
+                circulo.velocidadMovimientoOriginal *
+                2.2;
+
+
+            // -----------------------------------------------
+            // DIRECCIÓN ALEATORIA
+            // -----------------------------------------------
+
+            const angulo =
+                Math.random() *
+                Math.PI *
+                2;
+
+
+            const velocidad =
+                VELOCIDAD_MINIMA_ALTERADA +
+                Math.random() *
+                (
+                    VELOCIDAD_MAXIMA -
+                    VELOCIDAD_MINIMA_ALTERADA
+                );
+
+
+            circulo.vx =
+                Math.cos(angulo) *
+                velocidad;
+
+
+            circulo.vy =
+                Math.sin(angulo) *
+                velocidad;
+
+
+            // -----------------------------------------------
+            // PRIMER CAMBIO DE DIRECCIÓN
+            // -----------------------------------------------
+
+            circulo.siguienteCambioDireccion =
+                ahora +
+                250 +
+                Math.random() *
+                500;
+        }
+    }
+}
+
+
+// ============================================================
+// ACTUALIZAR RESPIRACIÓN
+// ============================================================
+
+function actualizarRespiracion(circulo) {
+
+    circulo.faseRespiracion +=
+        circulo.velocidadRespiracion;
+
+
+    // ========================================================
+    // ALTERADO
+    // ========================================================
+
+    if (
+        !circulo.calmado
+    ) {
+
+        // ----------------------------------------------------
+        // Variación irregular de amplitud
+        // ----------------------------------------------------
+
+        const variacion =
+            Math.sin(
+                circulo.faseRespiracion *
+                0.37
+            ) *
+            0.18;
+
+
+        // ----------------------------------------------------
+        // Segundo movimiento respiratorio
+        // ----------------------------------------------------
+
+        const variacionSecundaria =
+            Math.sin(
+                circulo.faseRespiracion *
+                1.71
+            ) *
+            0.08;
+
+
+        const amplitud =
+            circulo.amplitudRespiracion *
+            (
+                1 +
+                variacion +
+                variacionSecundaria
+            );
+
+
+        circulo.respiracion =
+            Math.sin(
+                circulo.faseRespiracion
+            ) *
+            amplitud;
+    }
+
+
+    // ========================================================
+    // CALMADO
+    // ========================================================
+
+    else {
+
+        circulo.respiracion =
+            Math.sin(
+                circulo.faseRespiracion
+            ) *
+            circulo.amplitudRespiracion;
+    }
+}
+
+
+// ============================================================
+// ACTUALIZAR MOVIMIENTO
+// ============================================================
+
+function actualizarMovimiento(circulo, ahora) {
+
+    // ========================================================
+    // CÍRCULO ALTERADO
+    // ========================================================
+
+    if (
+        !circulo.calmado
+    ) {
+
+        // ----------------------------------------------------
+        // FASE ERRÁTICA
+        // ----------------------------------------------------
+
+        circulo.faseErratica +=
+            circulo.velocidadErratica;
+
+
+        circulo.faseErraticaSecundaria +=
+            circulo.velocidadErraticaSecundaria;
+
+
+        // ----------------------------------------------------
+        // CAMBIOS CONTINUOS DE DIRECCIÓN
+        // ----------------------------------------------------
+
+        const cambioX =
+            Math.sin(
+                circulo.faseErratica
+            ) *
+            circulo.fuerzaErratica;
+
+
+        const cambioY =
+            Math.cos(
+                circulo.faseErratica *
+                1.37
+            ) *
+            circulo.fuerzaErratica;
+
+
+        const cambioSecundarioX =
+            Math.cos(
+                circulo.faseErraticaSecundaria
+            ) *
+            circulo.fuerzaErratica *
+            0.65;
+
+
+        const cambioSecundarioY =
+            Math.sin(
+                circulo.faseErraticaSecundaria *
+                1.43
+            ) *
+            circulo.fuerzaErratica *
+            0.65;
+
+
+        circulo.vx +=
+            cambioX +
+            cambioSecundarioX;
+
+
+        circulo.vy +=
+            cambioY +
+            cambioSecundarioY;
+
+
+        // ====================================================
+        // CAMBIO DE DIRECCIÓN MÁS BRUSCO
+        // ====================================================
+
+        if (
+            ahora >
+            circulo.siguienteCambioDireccion
+        ) {
+
+            circulo.objetivoDireccionX =
+                Math.random() * 2 - 1;
+
+
+            circulo.objetivoDireccionY =
+                Math.random() * 2 - 1;
+
+
+            const objetivoModulo =
+                Math.sqrt(
+                    circulo.objetivoDireccionX *
+                    circulo.objetivoDireccionX +
+
+                    circulo.objetivoDireccionY *
+                    circulo.objetivoDireccionY
+                );
+
+
+            if (
+                objetivoModulo > 0
+            ) {
+
+                circulo.objetivoDireccionX /=
+                    objetivoModulo;
+
+
+                circulo.objetivoDireccionY /=
+                    objetivoModulo;
+            }
+
+
+            // ------------------------------------------------
+            // Cambios rápidos e impredecibles
+            // ------------------------------------------------
+
+            const nuevaVelocidad =
+                VELOCIDAD_MINIMA_ALTERADA +
+                Math.random() *
+                (
+                    VELOCIDAD_MAXIMA -
+                    VELOCIDAD_MINIMA_ALTERADA
+                );
+
+
+            circulo.vx +=
+                circulo.objetivoDireccionX *
+                nuevaVelocidad *
+                0.45;
+
+
+            circulo.vy +=
+                circulo.objetivoDireccionY *
+                nuevaVelocidad *
+                0.45;
+
+
+            circulo.siguienteCambioDireccion =
+                ahora +
+                circulo.tiempoCambioDireccion *
+                (
+                    0.35 +
+                    Math.random() *
+                    0.65
+                );
+        }
+
+
+        // ====================================================
+        // LIMITAR VELOCIDAD ALTERADA
+        // ====================================================
+
+        const velocidad =
+            Math.sqrt(
+                circulo.vx *
+                circulo.vx +
+
+                circulo.vy *
+                circulo.vy
+            );
+
+
+        if (
+            velocidad >
+            VELOCIDAD_MAXIMA
+        ) {
+
+            const factor =
+                VELOCIDAD_MAXIMA /
+                velocidad;
+
+
+            circulo.vx *=
+                factor;
+
+
+            circulo.vy *=
+                factor;
+        }
+
+
+        // ----------------------------------------------------
+        // Evitar que se vuelva demasiado lento
+        // ----------------------------------------------------
+
+        else if (
+            velocidad <
+            VELOCIDAD_MINIMA_ALTERADA
+        ) {
+
+            const factor =
+                VELOCIDAD_MINIMA_ALTERADA /
+                Math.max(
+                    velocidad,
+                    0.001
+                );
+
+
+            circulo.vx *=
+                factor;
+
+
+            circulo.vy *=
+                factor;
+        }
+    }
+
+
+    // ========================================================
+    // CÍRCULO CALMADO
+    // ========================================================
+
+    else {
+
+        circulo.faseMovimiento +=
+            circulo.velocidadFaseMovimiento;
+
+
+        const movimientoCalmoX =
+            Math.sin(
+                circulo.faseMovimiento
+            ) *
+            0.012;
+
+
+        const movimientoCalmoY =
+            Math.cos(
+                circulo.faseMovimiento *
+                0.83
+            ) *
+            0.012;
+
+
+        circulo.vx *=
+            0.995;
+
+
+        circulo.vy *=
+            0.995;
+
+
+        circulo.x +=
+            circulo.vx +
+            movimientoCalmoX;
+
+
+        circulo.y +=
+            circulo.vy +
+            movimientoCalmoY;
+
+
+        // ----------------------------------------------------
+        // Límites
+        // ----------------------------------------------------
+
+        mantenerDentroCanvas(
+            circulo
+        );
+
+
+        return;
+    }
+
+
+    // ========================================================
+    // MOVIMIENTO ALTERADO
+    // ========================================================
+
+    circulo.x +=
+        circulo.vx;
+
+
+    circulo.y +=
+        circulo.vy;
+
+
+    // ========================================================
+    // MOVIMIENTO ORGÁNICO ADICIONAL
+    // ========================================================
+
+    circulo.faseMovimiento +=
+        circulo.velocidadFaseMovimiento *
+        2;
+
+
+    circulo.x +=
+        Math.sin(
+            circulo.faseMovimiento
+        ) *
+        0.035;
+
+
+    circulo.y +=
+        Math.cos(
+            circulo.faseMovimiento *
+            0.83
+        ) *
+        0.035;
+
+
+    // ========================================================
+    // LÍMITES
+    // ========================================================
+
+    mantenerDentroCanvas(
+        circulo
+    );
+}
+
+
+// ============================================================
+// MANTENER DENTRO DEL CANVAS
+// ============================================================
+
+function mantenerDentroCanvas(circulo) {
+
+    const radio =
+        circulo.radio +
+        Math.abs(
+            circulo.respiracion
+        );
+
+
+    // --------------------------------------------------------
+    // IZQUIERDA
+    // --------------------------------------------------------
+
+    if (
+        circulo.x -
+        radio <
+        0
     ) {
 
         circulo.x =
-            margen;
+            radio;
+
 
         circulo.vx =
             Math.abs(
                 circulo.vx
             );
+
+
+        // Alterados salen con una pequeña desviación
+        if (
+            !circulo.calmado
+        ) {
+
+            circulo.vy +=
+                (
+                    Math.random() *
+                    2 -
+                    1
+                ) *
+                0.15;
+        }
     }
 
 
+    // --------------------------------------------------------
+    // DERECHA
+    // --------------------------------------------------------
+
     if (
-        circulo.x + margen >
+        circulo.x +
+        radio >
         canvas.width
     ) {
 
         circulo.x =
             canvas.width -
-            margen;
+            radio;
+
 
         circulo.vx =
             -Math.abs(
                 circulo.vx
             );
+
+
+        if (
+            !circulo.calmado
+        ) {
+
+            circulo.vy +=
+                (
+                    Math.random() *
+                    2 -
+                    1
+                ) *
+                0.15;
+        }
     }
 
 
+    // --------------------------------------------------------
+    // ARRIBA
+    // --------------------------------------------------------
+
     if (
-        circulo.y - margen < 0
+        circulo.y -
+        radio <
+        0
     ) {
 
         circulo.y =
-            margen;
+            radio;
+
 
         circulo.vy =
             Math.abs(
                 circulo.vy
             );
+
+
+        if (
+            !circulo.calmado
+        ) {
+
+            circulo.vx +=
+                (
+                    Math.random() *
+                    2 -
+                    1
+                ) *
+                0.15;
+        }
     }
 
 
+    // --------------------------------------------------------
+    // ABAJO
+    // --------------------------------------------------------
+
     if (
-        circulo.y + margen >
+        circulo.y +
+        radio >
         canvas.height
     ) {
 
         circulo.y =
             canvas.height -
-            margen;
+            radio;
+
 
         circulo.vy =
             -Math.abs(
                 circulo.vy
             );
+
+
+        if (
+            !circulo.calmado
+        ) {
+
+            circulo.vx +=
+                (
+                    Math.random() *
+                    2 -
+                    1
+                ) *
+                0.15;
+        }
     }
 }
 
@@ -975,31 +1412,64 @@ function detectarColisiones() {
             const a =
                 circulos[i];
 
+
             const b =
                 circulos[j];
 
 
             const dx =
-                b.x - a.x;
+                b.x -
+                a.x;
+
 
             const dy =
-                b.y - a.y;
+                b.y -
+                a.y;
 
 
             const distancia =
-                Math.hypot(
-                    dx,
-                    dy
+                Math.sqrt(
+                    dx * dx +
+                    dy * dy
+                );
+
+
+            if (
+                distancia <= 0
+            ) {
+
+                continue;
+            }
+
+
+            // =================================================
+            // RADIOS
+            // =================================================
+
+            const radioA =
+                a.radio +
+                Math.abs(
+                    a.respiracion
+                );
+
+
+            const radioB =
+                b.radio +
+                Math.abs(
+                    b.respiracion
                 );
 
 
             const distanciaMinima =
-                a.radio +
-                b.radio;
+                radioA +
+                radioB;
 
+
+            // =================================================
+            // COLISIÓN
+            // =================================================
 
             if (
-                distancia > 0 &&
                 distancia <
                 distanciaMinima
             ) {
@@ -1008,10 +1478,15 @@ function detectarColisiones() {
                     dx /
                     distancia;
 
+
                 const ny =
                     dy /
                     distancia;
 
+
+                // ------------------------------------------------
+                // SEPARACIÓN
+                // ------------------------------------------------
 
                 const penetracion =
                     distanciaMinima -
@@ -1023,17 +1498,14 @@ function detectarColisiones() {
                     0.5;
 
 
-                // ------------------------------------------------
-                // SEPARACIÓN
-                // ------------------------------------------------
-
                 if (
-                    !a.seleccionado
+                    !a.siendoMovido
                 ) {
 
                     a.x -=
                         nx *
                         separacion;
+
 
                     a.y -=
                         ny *
@@ -1042,12 +1514,13 @@ function detectarColisiones() {
 
 
                 if (
-                    !b.seleccionado
+                    !b.siendoMovido
                 ) {
 
                     b.x +=
                         nx *
                         separacion;
+
 
                     b.y +=
                         ny *
@@ -1056,7 +1529,7 @@ function detectarColisiones() {
 
 
                 // ------------------------------------------------
-                // REBOTE
+                // VELOCIDAD RELATIVA
                 // ------------------------------------------------
 
                 const velocidadRelativaX =
@@ -1076,46 +1549,74 @@ function detectarColisiones() {
                     ny;
 
 
+                // ------------------------------------------------
+                // IMPULSO
+                // ------------------------------------------------
+
                 if (
                     velocidadNormal < 0
                 ) {
 
-                    const rebote =
-                        0.8;
-
-
                     const impulso =
-                        -(1 + rebote) *
-                        velocidadNormal /
-                        2;
+                        velocidadNormal *
+                        FUERZA_COLISION;
 
 
-                    if (
-                        !a.seleccionado
-                    ) {
-
-                        a.vx -=
-                            impulso *
-                            nx;
-
-                        a.vy -=
-                            impulso *
-                            ny;
-                    }
+                    a.vx +=
+                        nx *
+                        impulso;
 
 
-                    if (
-                        !b.seleccionado
-                    ) {
+                    a.vy +=
+                        ny *
+                        impulso;
 
-                        b.vx +=
-                            impulso *
-                            nx;
 
-                        b.vy +=
-                            impulso *
-                            ny;
-                    }
+                    b.vx -=
+                        nx *
+                        impulso;
+
+
+                    b.vy -=
+                        ny *
+                        impulso;
+                }
+
+
+                // =================================================
+                // EMPATÍA
+                // =================================================
+                //
+                // Calmado + alterado:
+                // el calmado se altera.
+                //
+                // Calmado + calmado:
+                // no pasa nada.
+                //
+                // Alterado + alterado:
+                // no pasa nada.
+                //
+                // =================================================
+
+                if (
+                    a.calmado &&
+                    !b.calmado
+                ) {
+
+                    alterarCirculo(
+                        a
+                    );
+                }
+
+
+                if (
+                    b.calmado &&
+                    !a.calmado
+                ) {
+
+                    alterarCirculo(
+                        b
+                    );
                 }
             }
         }
@@ -1124,35 +1625,452 @@ function detectarColisiones() {
 
 
 // ============================================================
-// GRADIENTE
+// OBTENER CÍRCULO BAJO EL PUNTERO
 // ============================================================
 
-function obtenerGradiente(
-    circulo,
-    radio
-) {
+function obtenerCirculo(x, y) {
 
-    const gradiente =
-        ctx.createRadialGradient(
+    for (
+        let i = circulos.length - 1;
+        i >= 0;
+        i--
+    ) {
 
-            circulo.x -
-            radio *
-            0.35,
+        const circulo =
+            circulos[i];
 
-            circulo.y -
-            radio *
-            0.35,
 
-            radio *
-            0.1,
+        const dx =
+            x -
+            circulo.x;
 
-            circulo.x,
 
-            circulo.y,
+        const dy =
+            y -
+            circulo.y;
 
-            radio *
-            1.35
+
+        const radio =
+            circulo.radio +
+            Math.abs(
+                circulo.respiracion
+            );
+
+
+        if (
+            dx * dx +
+            dy * dy <=
+            radio * radio
+        ) {
+
+            return circulo;
+        }
+    }
+
+
+    return null;
+}
+
+
+// ============================================================
+// OBTENER CÍRCULOS SELECCIONADOS
+// ============================================================
+
+function obtenerCirculosSeleccionados() {
+
+    const seleccionados = [];
+
+
+    for (
+        const circulo of circulos
+    ) {
+
+        if (
+            circulo.punterosMovimiento.length >
+            0
+        ) {
+
+            seleccionados.push(
+                circulo
+            );
+        }
+    }
+
+
+    return seleccionados;
+}
+
+
+// ============================================================
+// CALMAR GRUPO
+// ============================================================
+
+function calmarGrupo() {
+
+    const seleccionados =
+        obtenerCirculosSeleccionados();
+
+
+    // --------------------------------------------------------
+    // NECESITAMOS 2 O MÁS
+    // --------------------------------------------------------
+
+    if (
+        seleccionados.length <
+        2
+    ) {
+
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // CALMAR TODOS LOS SELECCIONADOS
+    // --------------------------------------------------------
+
+    for (
+        const circulo of seleccionados
+    ) {
+
+        calmarCirculo(
+            circulo
         );
+    }
+}
+
+
+// ============================================================
+// POINTER DOWN
+// ============================================================
+
+function manejarPointerDown(event) {
+
+    event.preventDefault();
+
+
+    const rect =
+        canvas.getBoundingClientRect();
+
+
+    const x =
+        event.clientX -
+        rect.left;
+
+
+    const y =
+        event.clientY -
+        rect.top;
+
+
+    const circulo =
+        obtenerCirculo(
+            x,
+            y
+        );
+
+
+    if (!circulo) {
+
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // CAPTURAR POINTER
+    // --------------------------------------------------------
+
+    try {
+
+        canvas.setPointerCapture(
+            event.pointerId
+        );
+
+    }
+    catch (error) {}
+
+
+    // --------------------------------------------------------
+    // GUARDAR POINTER
+    // --------------------------------------------------------
+
+    punteros.set(
+        event.pointerId,
+        {
+            circulo: circulo,
+
+            x: x,
+
+            y: y
+        }
+    );
+
+
+    // --------------------------------------------------------
+    // ASOCIAR POINTER
+    // --------------------------------------------------------
+
+    if (
+        !circulo.punterosMovimiento.includes(
+            event.pointerId
+        )
+    ) {
+
+        circulo.punterosMovimiento.push(
+            event.pointerId
+        );
+    }
+
+
+    circulo.siendoMovido =
+        true;
+
+
+    // --------------------------------------------------------
+    // INTENTAR CALMAR GRUPO
+    // --------------------------------------------------------
+
+    calmarGrupo();
+}
+
+
+// ============================================================
+// POINTER MOVE
+// ============================================================
+
+function manejarPointerMove(event) {
+
+    if (
+        !punteros.has(
+            event.pointerId
+        )
+    ) {
+
+        return;
+    }
+
+
+    event.preventDefault();
+
+
+    const datos =
+        punteros.get(
+            event.pointerId
+        );
+
+
+    const circulo =
+        datos.circulo;
+
+
+    const rect =
+        canvas.getBoundingClientRect();
+
+
+    const x =
+        event.clientX -
+        rect.left;
+
+
+    const y =
+        event.clientY -
+        rect.top;
+
+
+    // --------------------------------------------------------
+    // DELTA
+    // --------------------------------------------------------
+
+    const dx =
+        x -
+        datos.x;
+
+
+    const dy =
+        y -
+        datos.y;
+
+
+    datos.x =
+        x;
+
+
+    datos.y =
+        y;
+
+
+    // --------------------------------------------------------
+    // MOVER
+    // --------------------------------------------------------
+
+    circulo.x +=
+        dx;
+
+
+    circulo.y +=
+        dy;
+
+
+    // --------------------------------------------------------
+    // VELOCIDAD DEL ARRASTRE
+    // --------------------------------------------------------
+
+    circulo.vx =
+        circulo.vx *
+        0.85 +
+        dx *
+        0.15;
+
+
+    circulo.vy =
+        circulo.vy *
+        0.85 +
+        dy *
+        0.15;
+
+
+    // --------------------------------------------------------
+    // CALMAR GRUPO
+    // --------------------------------------------------------
+
+    calmarGrupo();
+}
+
+
+// ============================================================
+// POINTER UP
+// ============================================================
+
+function manejarPointerUp(event) {
+
+    event.preventDefault();
+
+
+    if (
+        !punteros.has(
+            event.pointerId
+        )
+    ) {
+
+        return;
+    }
+
+
+    const datos =
+        punteros.get(
+            event.pointerId
+        );
+
+
+    const circulo =
+        datos.circulo;
+
+
+    // --------------------------------------------------------
+    // QUITAR POINTER
+    // --------------------------------------------------------
+
+    circulo.punterosMovimiento =
+        circulo.punterosMovimiento.filter(
+            id =>
+                id !==
+                event.pointerId
+        );
+
+
+    circulo.siendoMovido =
+        circulo.punterosMovimiento.length >
+        0;
+
+
+    punteros.delete(
+        event.pointerId
+    );
+
+
+    // --------------------------------------------------------
+    // IMPORTANTE:
+    //
+    // AL SOLTAR NO SE ALTERA.
+    //
+    // Si estaba calmado, queda calmado.
+    // --------------------------------------------------------
+}
+
+
+// ============================================================
+// EVENTOS POINTER
+// ============================================================
+
+canvas.addEventListener(
+    "pointerdown",
+    manejarPointerDown
+);
+
+
+canvas.addEventListener(
+    "pointermove",
+    manejarPointerMove
+);
+
+
+canvas.addEventListener(
+    "pointerup",
+    manejarPointerUp
+);
+
+
+canvas.addEventListener(
+    "pointercancel",
+    manejarPointerUp
+);
+
+
+canvas.addEventListener(
+    "pointerleave",
+    manejarPointerUp
+);
+
+
+// ============================================================
+// DIBUJAR CÍRCULO
+// ============================================================
+
+function dibujarCirculo(circulo) {
+
+    const radio =
+        circulo.radio +
+        circulo.respiracion;
+
+
+    ctx.save();
+
+
+    ctx.translate(
+        circulo.x,
+        circulo.y
+    );
+
+
+    // --------------------------------------------------------
+    // DEFORMACIÓN
+    // --------------------------------------------------------
+
+    ctx.rotate(
+        circulo.anguloDeformacion
+    );
+
+
+    ctx.scale(
+        circulo.escalaX,
+        circulo.escalaY
+    );
+
+
+    // ========================================================
+    // GRADIENTES
+    // ========================================================
+
+    let gradiente;
 
 
     if (
@@ -1160,15 +2078,34 @@ function obtenerGradiente(
         "#D9D9D9"
     ) {
 
+        gradiente =
+            ctx.createRadialGradient(
+
+                -radio * 0.35,
+
+                -radio * 0.35,
+
+                radio * 0.05,
+
+                0,
+
+                0,
+
+                radio
+            );
+
+
         gradiente.addColorStop(
             0,
             "#FFFFFF"
         );
 
+
         gradiente.addColorStop(
             0.45,
             "#D9D9D9"
         );
+
 
         gradiente.addColorStop(
             1,
@@ -1182,15 +2119,34 @@ function obtenerGradiente(
         "#8BB2D3"
     ) {
 
+        gradiente =
+            ctx.createRadialGradient(
+
+                -radio * 0.35,
+
+                -radio * 0.35,
+
+                radio * 0.05,
+
+                0,
+
+                0,
+
+                radio
+            );
+
+
         gradiente.addColorStop(
             0,
             "#DCECF9"
         );
 
+
         gradiente.addColorStop(
             0.48,
             "#8BB2D3"
         );
+
 
         gradiente.addColorStop(
             1,
@@ -1204,15 +2160,34 @@ function obtenerGradiente(
         "#202D64"
     ) {
 
+        gradiente =
+            ctx.createRadialGradient(
+
+                -radio * 0.35,
+
+                -radio * 0.35,
+
+                radio * 0.05,
+
+                0,
+
+                0,
+
+                radio
+            );
+
+
         gradiente.addColorStop(
             0,
             "#6674A5"
         );
 
+
         gradiente.addColorStop(
             0.50,
             "#202D64"
         );
+
 
         gradiente.addColorStop(
             1,
@@ -1221,20 +2196,36 @@ function obtenerGradiente(
     }
 
 
-    else if (
-        circulo.color ===
-        "#2B538E"
-    ) {
+    else {
+
+        gradiente =
+            ctx.createRadialGradient(
+
+                -radio * 0.35,
+
+                -radio * 0.35,
+
+                radio * 0.05,
+
+                0,
+
+                0,
+
+                radio
+            );
+
 
         gradiente.addColorStop(
             0,
             "#7EA7D0"
         );
 
+
         gradiente.addColorStop(
             0.50,
             "#2B538E"
         );
+
 
         gradiente.addColorStop(
             1,
@@ -1243,465 +2234,91 @@ function obtenerGradiente(
     }
 
 
-    return gradiente;
-}
-
-
-// ============================================================
-// DIBUJAR CÍRCULO
-// ============================================================
-
-function dibujarCirculo(
-    circulo,
-    tiempo
-) {
-
-    // --------------------------------------------------------
-    // RESPIRACIÓN
-    // --------------------------------------------------------
-
-    let factorRespiracion;
-
+    // ========================================================
+    // SOMBRA
+    // ========================================================
 
     if (
-        circulo.calmadoPermanentemente
+        circulo.siendoMovido
     ) {
 
-        // Respiración muy tranquila
+        ctx.shadowColor =
+            "rgba(196,206,229,0.18)";
 
-        factorRespiracion =
-            0.18;
+        ctx.shadowBlur =
+            7;
     }
 
     else {
 
-        // Alteración:
-        // cuanto menor es la calma,
-        // más fuerte respira.
+        ctx.shadowColor =
+            "rgba(30,60,100,0.10)";
 
-        factorRespiracion =
-            1 -
-            circulo.nivelCalma;
+        ctx.shadowBlur =
+            4;
     }
 
 
-    const respiracion =
-        Math.sin(
-
-            tiempo *
-            circulo.frecuenciaRespiracion +
-
-            circulo.faseRespiracion
-
-        ) *
-
-        circulo.amplitudRespiracion *
-
-        factorRespiracion;
-
-
-    const radioVisual =
-        circulo.radioBase +
-        respiracion;
-
-
-    circulo.radio =
-        radioVisual;
-
-
-    // --------------------------------------------------------
-    // SIN SOMBRA EXTERIOR
-    // --------------------------------------------------------
-
-    ctx.shadowColor =
-        "transparent";
-
-    ctx.shadowBlur =
-        0;
-
-    ctx.shadowOffsetX =
-        0;
-
-    ctx.shadowOffsetY =
-        0;
-
-
-    // --------------------------------------------------------
+    // ========================================================
     // CÍRCULO
-    // --------------------------------------------------------
+    // ========================================================
 
     ctx.beginPath();
 
+
     ctx.arc(
-        circulo.x,
-        circulo.y,
-        radioVisual,
+        0,
+        0,
+        radio,
         0,
         Math.PI * 2
     );
 
-    ctx.closePath();
-
 
     ctx.fillStyle =
-        obtenerGradiente(
-            circulo,
-            radioVisual
-        );
+        gradiente;
+
 
     ctx.fill();
 
 
-    // --------------------------------------------------------
-    // BORDE MUY SUTIL
-    // --------------------------------------------------------
+    // ========================================================
+    // BORDE
+    // ========================================================
 
-    ctx.strokeStyle =
-        circulo.seleccionado
-            ? "rgba(196,206,229,0.40)"
-            : "rgba(190,205,225,0.15)";
+    if (
+        circulo.siendoMovido
+    ) {
 
+        ctx.strokeStyle =
+            "rgba(196,206,229,0.55)";
 
-    ctx.lineWidth =
-        circulo.seleccionado
-            ? 1.1
-            : 0.7;
+        ctx.lineWidth =
+            1.2;
+    }
+
+    else {
+
+        ctx.strokeStyle =
+            "rgba(190,205,225,0.16)";
+
+        ctx.lineWidth =
+            0.7;
+    }
 
 
     ctx.stroke();
 
 
-    // --------------------------------------------------------
-    // LUZ INTERNA
-    // --------------------------------------------------------
-
-    const luz =
-        ctx.createRadialGradient(
-
-            circulo.x -
-            radioVisual *
-            0.35,
-
-            circulo.y -
-            radioVisual *
-            0.40,
-
-            radioVisual *
-            0.05,
-
-            circulo.x,
-
-            circulo.y,
-
-            radioVisual
-        );
-
-
-    luz.addColorStop(
-        0,
-        "rgba(255,255,255,0.25)"
-    );
-
-
-    luz.addColorStop(
-        0.35,
-        "rgba(255,255,255,0.06)"
-    );
-
-
-    luz.addColorStop(
-        0.70,
-        "rgba(255,255,255,0)"
-    );
-
-
-    luz.addColorStop(
-        1,
-        "rgba(0,0,0,0.10)"
-    );
-
-
-    ctx.beginPath();
-
-    ctx.arc(
-        circulo.x,
-        circulo.y,
-        radioVisual,
-        0,
-        Math.PI * 2
-    );
-
-    ctx.fillStyle =
-        luz;
-
-    ctx.fill();
+    ctx.restore();
 }
 
 
 // ============================================================
-// POSICIÓN DEL PUNTERO
+// DIBUJAR TODO
 // ============================================================
 
-function obtenerPosicion(e) {
-
-    const rect =
-        canvas.getBoundingClientRect();
-
-
-    return {
-
-        x:
-            (
-                e.clientX -
-                rect.left
-            ) *
-            (
-                canvas.width /
-                rect.width
-            ),
-
-        y:
-            (
-                e.clientY -
-                rect.top
-            ) *
-            (
-                canvas.height /
-                rect.height
-            )
-    };
-}
-
-
-// ============================================================
-// POINTER DOWN
-// ============================================================
-
-canvas.addEventListener(
-    "pointerdown",
-    function(e) {
-
-        e.preventDefault();
-
-
-        const posicion =
-            obtenerPosicion(e);
-
-
-        const circulo =
-            detectarCirculo(
-                posicion.x,
-                posicion.y
-            );
-
-
-        // ----------------------------------------------------
-        // TOCAR FUERA
-        // NO HACE NADA
-        // ----------------------------------------------------
-
-        if (!circulo) {
-
-            return;
-        }
-
-
-        try {
-
-            canvas.setPointerCapture(
-                e.pointerId
-            );
-
-        } catch (_) {}
-
-
-        // ----------------------------------------------------
-        // GUARDAR PUNTERO
-        // ----------------------------------------------------
-
-        punteros.set(
-            e.pointerId,
-            {
-
-                x:
-                    posicion.x,
-
-                y:
-                    posicion.y,
-
-                circulo:
-                    circulo,
-
-                offsetX:
-                    circulo.x -
-                    posicion.x,
-
-                offsetY:
-                    circulo.y -
-                    posicion.y
-            }
-        );
-
-
-        circulo.punterosSobre.add(
-            e.pointerId
-        );
-
-
-        circulo.seleccionado =
-            true;
-    },
-    {
-        passive: false
-    }
-);
-
-
-// ============================================================
-// POINTER MOVE
-// ============================================================
-
-canvas.addEventListener(
-    "pointermove",
-    function(e) {
-
-        e.preventDefault();
-
-
-        const puntero =
-            punteros.get(
-                e.pointerId
-            );
-
-
-        if (!puntero) {
-
-            return;
-        }
-
-
-        const posicion =
-            obtenerPosicion(e);
-
-
-        puntero.x =
-            posicion.x;
-
-        puntero.y =
-            posicion.y;
-
-
-        const circulo =
-            puntero.circulo;
-
-
-        // ----------------------------------------------------
-        // ARRASTRAR
-        // ----------------------------------------------------
-
-        circulo.x =
-            posicion.x +
-            puntero.offsetX;
-
-
-        circulo.y =
-            posicion.y +
-            puntero.offsetY;
-    },
-    {
-        passive: false
-    }
-);
-
-
-// ============================================================
-// TERMINAR PUNTERO
-// ============================================================
-
-function terminarPuntero(e) {
-
-    const puntero =
-        punteros.get(
-            e.pointerId
-        );
-
-
-    if (!puntero) {
-
-        return;
-    }
-
-
-    const circulo =
-        puntero.circulo;
-
-
-    circulo.punterosSobre.delete(
-        e.pointerId
-    );
-
-
-    punteros.delete(
-        e.pointerId
-    );
-
-
-    circulo.seleccionado =
-        circulo.punterosSobre.size >
-        0;
-
-
-    try {
-
-        canvas.releasePointerCapture(
-            e.pointerId
-        );
-
-    } catch (_) {}
-}
-
-
-// ============================================================
-// POINTER UP
-// ============================================================
-
-canvas.addEventListener(
-    "pointerup",
-    function(e) {
-
-        e.preventDefault();
-
-        terminarPuntero(e);
-    },
-    {
-        passive: false
-    }
-);
-
-
-// ============================================================
-// POINTER CANCEL
-// ============================================================
-
-canvas.addEventListener(
-    "pointercancel",
-    function(e) {
-
-        e.preventDefault();
-
-        terminarPuntero(e);
-    },
-    {
-        passive: false
-    }
-);
-
-
-// ============================================================
-// ANIMACIÓN
-// ============================================================
-
-function animar(tiempo) {
+function dibujar() {
 
     ctx.clearRect(
         0,
@@ -1711,89 +2328,85 @@ function animar(tiempo) {
     );
 
 
+    for (
+        const circulo of circulos
+    ) {
+
+        dibujarCirculo(
+            circulo
+        );
+    }
+}
+
+
+// ============================================================
+// ACTUALIZAR
+// ============================================================
+
+function actualizar(ahora) {
+
     // --------------------------------------------------------
-    // TRANQUILO → ALTERADO
+    // ALTERACIÓN INDIVIDUAL
     // --------------------------------------------------------
 
-    actualizarAlteracion(
-        tiempo
+    actualizarAlteracionInicial(
+        ahora
     );
 
 
     // --------------------------------------------------------
-    // EMPATÍA
-    //
-    // 2 o más seleccionados → calma
+    // ACTUALIZAR CÍRCULOS
     // --------------------------------------------------------
 
-    actualizarCalma();
+    for (
+        const circulo of circulos
+    ) {
+
+        actualizarRespiracion(
+            circulo
+        );
+
+
+        if (
+            !circulo.siendoMovido
+        ) {
+
+            actualizarMovimiento(
+                circulo,
+                ahora
+            );
+        }
+    }
 
 
     // --------------------------------------------------------
-    // MOVIMIENTO
-    // --------------------------------------------------------
-
-    moverCirculos();
-
-
-    // --------------------------------------------------------
-    // COLISIONES FÍSICAS
+    // COLISIONES
     // --------------------------------------------------------
 
     detectarColisiones();
 
 
     // --------------------------------------------------------
-    // CONTACTO ENTRE ESTADOS
-    //
-    // CALMADO + ALTERADO
-    // → el calmado vuelve a alterarse
-    // --------------------------------------------------------
-
-    actualizarCalmaPorContacto();
-
-
-    // --------------------------------------------------------
     // DIBUJAR
     // --------------------------------------------------------
 
-    for (
-        const circulo
-        of circulos
-    ) {
+    dibujar();
 
-        dibujarCirculo(
-            circulo,
-            tiempo
-        );
-    }
 
+    // --------------------------------------------------------
+    // SIGUIENTE FRAME
+    // --------------------------------------------------------
 
     requestAnimationFrame(
-        animar
+        actualizar
     );
 }
 
 
 // ============================================================
-// REDIMENSIONAR
+// INICIAR
 // ============================================================
-
-window.addEventListener(
-    "resize",
-    function() {
-
-        ajustarCanvas();
-    }
-);
-
-
-// ============================================================
-// INICIO
-// ============================================================
-
-ajustarCanvas();
 
 requestAnimationFrame(
-    animar
+    actualizar
 );
