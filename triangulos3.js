@@ -3,18 +3,28 @@
 // triangulos3.js
 // ============================================================
 //
-// - 4 triángulos equiláteros.
-// - Al comenzar forman PERFECTAMENTE un triángulo grande.
-// - Todos respiran suavemente.
-// - Al tocar la figura se desarma.
-// - 1 dedo = mover.
-// - 2 dedos = rotar.
-// - Al acercarse a su lugar, la pieza encaja.
-// - Cuando quedan 3 piezas colocadas:
-//      resultado 1 o 2 = falla y se desarma
-//      resultado 3 = permite completar
+// INICIO:
+// - 4 triángulos forman un triángulo grande.
+// - La figura respira suavemente.
+//
+// AL TOCAR:
+// - La figura se desarma LENTAMENTE.
+// - Las piezas se alejan desde su posición original.
+// - NO aparecen en lugares aleatorios.
+//
+// INTERACCIÓN:
+// - 1 dedo sobre una pieza = moverla.
+// - 2 dedos sobre 2 piezas diferentes = mover ambas.
+// - 2 dedos sobre la misma pieza = rotarla.
+//
+// ARMADO:
+// - Al acercar una pieza a su lugar, se encaja.
+// - Con 3 piezas colocadas, la última puede:
+//      * completar
+//      * ser rechazada
 //
 // ============================================================
+
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
@@ -40,11 +50,12 @@ const COLORES = [
 
 const LADO = 135;
 
-const ALTURA = LADO * Math.sqrt(3) / 2;
+const ALTURA =
+    LADO * Math.sqrt(3) / 2;
 
 
 // ============================================================
-// VARIABLES
+// VARIABLES DEL CANVAS
 // ============================================================
 
 let piezas = [];
@@ -58,20 +69,27 @@ let primeraCarga = true;
 
 
 // ============================================================
-// INTERACCIÓN
+// ESTADO DEL DESARME
+// ============================================================
+
+let desarmando = false;
+
+let tiempoDesarme = 0;
+
+const DURACION_DESARME = 1100;
+
+
+// ============================================================
+// INTERACCIÓN MULTITOUCH
+// ============================================================
+//
+// Cada dedo puede controlar una pieza diferente.
+//
+// pointerId -> pieza
+//
 // ============================================================
 
 const punteros = new Map();
-
-let piezaSeleccionada = null;
-
-let modoRotacion = false;
-
-let offsetX = 0;
-let offsetY = 0;
-
-let anguloInicialDedos = 0;
-let anguloInicialPieza = 0;
 
 
 // ============================================================
@@ -91,7 +109,7 @@ const AMPLITUD_RESPIRACION = 0.035;
 
 const VELOCIDAD_RESPIRACION = 0.0025;
 
-const FUERZA_COLISION = 0.45;
+const FUERZA_COLISION = 0.35;
 
 
 // ============================================================
@@ -136,13 +154,27 @@ const ESTILOS = {
 
 function ajustarCanvas() {
 
-    const rect = canvas.getBoundingClientRect();
+    const rect =
+        canvas.getBoundingClientRect();
 
-    canvas.width = rect.width || window.innerWidth * 0.95;
-    canvas.height = rect.height || window.innerHeight * 0.95;
 
-    centroX = canvas.width / 2;
-    centroY = canvas.height / 2;
+    canvas.width =
+        rect.width ||
+        window.innerWidth * 0.95;
+
+
+    canvas.height =
+        rect.height ||
+        window.innerHeight * 0.95;
+
+
+    centroX =
+        canvas.width / 2;
+
+
+    centroY =
+        canvas.height / 2;
+
 
     if (primeraCarga) {
 
@@ -156,151 +188,141 @@ function ajustarCanvas() {
 // ============================================================
 // CREAR FIGURA
 // ============================================================
-//
-// ESTA ES LA PARTE CORREGIDA.
-//
-// Los cuatro triángulos comparten exactamente los mismos
-// vértices.
-//
-//                 A
-//                / \
-//               /   \
-//              /_____\
-//             B\     /C
-//               \   /
-//              / \ / \
-//             /___E___\
-//            D         F
-//
-// ============================================================
 
 function crearFigura() {
 
     piezas = [];
 
 
-    // --------------------------------------------------------
-    // VÉRTICES EXACTOS DEL TRIÁNGULO GRANDE
-    // --------------------------------------------------------
-    //
-    // El triángulo grande tiene lado 2 * LADO.
-    //
-    // Su altura es 2 * ALTURA.
-    //
-    // --------------------------------------------------------
+    // ========================================================
+    // VÉRTICES DEL TRIÁNGULO GRANDE
+    // ========================================================
 
     const A = {
+
         x: centroX,
-        y: centroY - ALTURA * 2 / 3
+
+        y:
+            centroY -
+            ALTURA * 2 / 3
     };
 
 
     const B = {
-        x: centroX - LADO / 2,
-        y: centroY + ALTURA / 3
+
+        x:
+            centroX -
+            LADO / 2,
+
+        y:
+            centroY +
+            ALTURA / 3
     };
 
 
     const C = {
-        x: centroX + LADO / 2,
-        y: centroY + ALTURA / 3
+
+        x:
+            centroX +
+            LADO / 2,
+
+        y:
+            centroY +
+            ALTURA / 3
     };
 
 
     const D = {
-        x: centroX - LADO,
-        y: centroY + ALTURA * 4 / 3
+
+        x:
+            centroX -
+            LADO,
+
+        y:
+            centroY +
+            ALTURA * 4 / 3
     };
 
 
     const E = {
-        x: centroX,
-        y: centroY + ALTURA * 4 / 3
+
+        x:
+            centroX,
+
+        y:
+            centroY +
+            ALTURA * 4 / 3
     };
 
 
     const F = {
-        x: centroX + LADO,
-        y: centroY + ALTURA * 4 / 3
+
+        x:
+            centroX +
+            LADO,
+
+        y:
+            centroY +
+            ALTURA * 4 / 3
     };
 
 
     // ========================================================
-    // TRIÁNGULO SUPERIOR
-    // ========================================================
-
-    const superior = {
-
-        a: A,
-        b: B,
-        c: C
-    };
-
-
-    // ========================================================
-    // TRIÁNGULO INFERIOR IZQUIERDO
-    // ========================================================
-
-    const izquierdo = {
-
-        a: B,
-        b: D,
-        c: E
-    };
-
-
-    // ========================================================
-    // TRIÁNGULO INFERIOR DERECHO
-    // ========================================================
-
-    const derecho = {
-
-        a: C,
-        b: E,
-        c: F
-    };
-
-
-    // ========================================================
-    // TRIÁNGULO CENTRAL INVERTIDO
-    // ========================================================
-
-    const central = {
-
-        a: B,
-        b: C,
-        c: E
-    };
-
-
-    // ========================================================
-    // CREAR PIEZAS
+    // PIEZA SUPERIOR
     // ========================================================
 
     agregarPieza(
         0,
-        superior,
+        {
+            a: A,
+            b: B,
+            c: C
+        },
         false
     );
 
+
+    // ========================================================
+    // PIEZA IZQUIERDA
+    // ========================================================
 
     agregarPieza(
         1,
-        izquierdo,
+        {
+            a: B,
+            b: D,
+            c: E
+        },
         false
     );
 
+
+    // ========================================================
+    // PIEZA DERECHA
+    // ========================================================
 
     agregarPieza(
         2,
-        derecho,
+        {
+            a: C,
+            b: E,
+            c: F
+        },
         false
     );
 
 
+    // ========================================================
+    // PIEZA CENTRAL
+    // ========================================================
+
     agregarPieza(
         3,
-        central,
+        {
+            a: B,
+            b: C,
+            c: E
+        },
         true
     );
 
@@ -331,34 +353,95 @@ function agregarPieza(
 
         id: id,
 
+
+        // ----------------------------------------------------
+        // POSICIÓN ACTUAL
+        // ----------------------------------------------------
+
         x: centro.x,
+
         y: centro.y,
 
+
+        // ----------------------------------------------------
+        // POSICIÓN OBJETIVO
+        // ----------------------------------------------------
+
         objetivoX: centro.x,
+
         objetivoY: centro.y,
 
+
+        // ----------------------------------------------------
+        // POSICIÓN DE DESARME
+        // ----------------------------------------------------
+
+        desarmeX: centro.x,
+
+        desarmeY: centro.y,
+
+
+        // ----------------------------------------------------
+        // VELOCIDAD
+        // ----------------------------------------------------
+
         vx: 0,
+
         vy: 0,
 
+
+        // ----------------------------------------------------
+        // ROTACIÓN
+        // ----------------------------------------------------
+
         angulo: 0,
+
         anguloObjetivo: 0,
+
+
+        // ----------------------------------------------------
+        // FORMA
+        // ----------------------------------------------------
 
         invertido: invertido,
 
+
+        // ----------------------------------------------------
+        // COLOR
+        // ----------------------------------------------------
+
         color: COLORES[id],
+
+
+        // ----------------------------------------------------
+        // RESPIRACIÓN
+        // ----------------------------------------------------
 
         fase:
             Math.random() *
             Math.PI *
             2,
 
+
         escala: 1,
+
+
+        // ----------------------------------------------------
+        // ESTADOS
+        // ----------------------------------------------------
 
         colocada: true,
 
         libre: false,
 
-        seleccionada: false
+        seleccionada: false,
+
+
+        // ----------------------------------------------------
+        // DEDO QUE LA CONTROLA
+        // ----------------------------------------------------
+
+        pointerId: null
     });
 }
 
@@ -372,16 +455,24 @@ function centroTriangulo(a, b, c) {
     return {
 
         x:
-            (a.x + b.x + c.x) / 3,
+            (
+                a.x +
+                b.x +
+                c.x
+            ) / 3,
 
         y:
-            (a.y + b.y + c.y) / 3
+            (
+                a.y +
+                b.y +
+                c.y
+            ) / 3
     };
 }
 
 
 // ============================================================
-// GENERAR RESULTADO ALEATORIO
+// GENERAR AZAR
 // ============================================================
 
 function generarAzar() {
@@ -394,158 +485,279 @@ function generarAzar() {
 
 
 // ============================================================
-// DESARMAR
+// COMENZAR DESARME
 // ============================================================
 
-function desarmar() {
+function comenzarDesarme() {
 
-    if (!figuraArmada) {
+    if (
+        desarmando ||
+        !figuraArmada
+    ) {
+
         return;
     }
 
+
     figuraArmada = false;
+
+    desarmando = true;
+
+    tiempoDesarme =
+        performance.now();
+
 
     generarAzar();
 
 
-    const posiciones = [];
-
-
-    // --------------------------------------------------------
-    // BUSCAR POSICIONES SEPARADAS
-    // --------------------------------------------------------
-
-    piezas.forEach(() => {
-
-        let x;
-        let y;
-
-        let valido = false;
-
-        let intentos = 0;
-
-
-        while (
-            !valido &&
-            intentos < 100
-        ) {
-
-            x =
-                LADO +
-                Math.random() *
-                (
-                    canvas.width -
-                    LADO * 2
-                );
-
-
-            y =
-                LADO +
-                Math.random() *
-                (
-                    canvas.height -
-                    LADO * 2
-                );
-
-
-            valido = true;
-
-
-            posiciones.forEach(
-                posicion => {
-
-                    const dx =
-                        x - posicion.x;
-
-                    const dy =
-                        y - posicion.y;
-
-                    const distancia =
-                        Math.sqrt(
-                            dx * dx +
-                            dy * dy
-                        );
-
-
-                    if (
-                        distancia <
-                        LADO * 1.2
-                    ) {
-
-                        valido = false;
-                    }
-                }
-            );
-
-
-            intentos++;
-        }
-
-
-        posiciones.push({
-            x: x,
-            y: y
-        });
-    });
-
-
-    // --------------------------------------------------------
-    // APLICAR POSICIONES
-    // --------------------------------------------------------
+    // ========================================================
+    // CADA PIEZA SE ALEJA DEL CENTRO
+    // ========================================================
 
     piezas.forEach(
-        (pieza, i) => {
+        pieza => {
 
-            pieza.x =
-                posiciones[i].x;
+            const dx =
+                pieza.x -
+                centroX;
 
-            pieza.y =
-                posiciones[i].y;
+
+            const dy =
+                pieza.y -
+                centroY;
+
+
+            const distancia =
+                Math.sqrt(
+                    dx * dx +
+                    dy * dy
+                );
+
+
+            let nx;
+            let ny;
+
+
+            if (
+                distancia > 0
+            ) {
+
+                nx =
+                    dx / distancia;
+
+                ny =
+                    dy / distancia;
+
+            } else {
+
+                nx = 0;
+
+                ny = -1;
+            }
+
+
+            // ------------------------------------------------
+            // DISTANCIA DE SEPARACIÓN
+            // ------------------------------------------------
+            //
+            // No es aleatoria.
+            // Cada pieza sabe hacia dónde alejarse.
+            //
+            // ------------------------------------------------
+
+            const distanciaExtra =
+                95 +
+                pieza.id * 12;
+
+
+            pieza.desarmeX =
+                pieza.x +
+                nx *
+                distanciaExtra;
+
+
+            pieza.desarmeY =
+                pieza.y +
+                ny *
+                distanciaExtra;
+
+
+            // ------------------------------------------------
+            // Rotación suave
+            // ------------------------------------------------
+
+            pieza.angulo =
+                0;
+
+
+            pieza.vx = 0;
+
+            pieza.vy = 0;
 
 
             pieza.colocada =
                 false;
 
+
             pieza.libre =
-                true;
+                false;
+
 
             pieza.seleccionada =
                 false;
 
 
-            const direccion =
-                Math.random() *
-                Math.PI *
-                2;
+            pieza.pointerId =
+                null;
+        }
+    );
+}
 
 
-            const velocidad =
-                0.6 +
-                Math.random() *
-                1.2;
+// ============================================================
+// ACTUALIZAR DESARME
+// ============================================================
+
+function actualizarDesarme() {
+
+    if (!desarmando) {
+
+        return;
+    }
 
 
-            pieza.vx =
-                Math.cos(
-                    direccion
-                ) * velocidad;
+    const ahora =
+        performance.now();
 
 
-            pieza.vy =
-                Math.sin(
-                    direccion
-                ) * velocidad;
+    const progreso =
+        Math.min(
+            (
+                ahora -
+                tiempoDesarme
+            ) /
+            DURACION_DESARME,
+            1
+        );
 
+
+    // --------------------------------------------------------
+    // Movimiento suave
+    // --------------------------------------------------------
+
+    const suave =
+        1 -
+        Math.pow(
+            1 - progreso,
+            3
+        );
+
+
+    piezas.forEach(
+        pieza => {
+
+            const inicioX =
+                pieza.objetivoX;
+
+
+            const inicioY =
+                pieza.objetivoY;
+
+
+            pieza.x =
+                inicioX +
+                (
+                    pieza.desarmeX -
+                    inicioX
+                ) *
+                suave;
+
+
+            pieza.y =
+                inicioY +
+                (
+                    pieza.desarmeY -
+                    inicioY
+                ) *
+                suave;
+
+
+            // ------------------------------------------------
+            // Rotación mientras se separa
+            // ------------------------------------------------
 
             pieza.angulo =
                 (
-                    Math.random() -
-                    0.5
+                    pieza.id % 2 === 0
+                        ? 1
+                        : -1
                 ) *
-                Math.PI *
-                1.8;
+                0.35 *
+                suave;
         }
     );
+
+
+    // --------------------------------------------------------
+    // TERMINÓ EL DESARME
+    // --------------------------------------------------------
+
+    if (
+        progreso >= 1
+    ) {
+
+        desarmando = false;
+
+
+        piezas.forEach(
+            pieza => {
+
+                pieza.libre = true;
+
+
+                // --------------------------------------------
+                // Movimiento suave desde el punto alcanzado
+                // --------------------------------------------
+
+                const dx =
+                    pieza.x -
+                    centroX;
+
+
+                const dy =
+                    pieza.y -
+                    centroY;
+
+
+                const distancia =
+                    Math.sqrt(
+                        dx * dx +
+                        dy * dy
+                    );
+
+
+                if (
+                    distancia > 0
+                ) {
+
+                    pieza.vx =
+                        (
+                            dx /
+                            distancia
+                        ) *
+                        0.35;
+
+
+                    pieza.vy =
+                        (
+                            dy /
+                            distancia
+                        ) *
+                        0.35;
+                }
+            }
+        );
+    }
 }
 
 
@@ -558,6 +770,17 @@ function actualizar() {
     const tiempo =
         performance.now();
 
+
+    // ========================================================
+    // DESARME
+    // ========================================================
+
+    actualizarDesarme();
+
+
+    // ========================================================
+    // RESPIRACIÓN Y MOVIMIENTO
+    // ========================================================
 
     piezas.forEach(
         pieza => {
@@ -577,7 +800,7 @@ function actualizar() {
 
 
             // ------------------------------------------------
-            // MOVIMIENTO
+            // MOVIMIENTO LIBRE
             // ------------------------------------------------
 
             if (
@@ -585,50 +808,40 @@ function actualizar() {
                 !pieza.seleccionada
             ) {
 
-                pieza.x += pieza.vx;
-                pieza.y += pieza.vy;
+                pieza.x +=
+                    pieza.vx;
+
+                pieza.y +=
+                    pieza.vy;
 
 
-                pieza.vx *= 0.998;
-                pieza.vy *= 0.998;
+                // --------------------------------------------
+                // Fricción muy suave
+                // --------------------------------------------
+
+                pieza.vx *= 0.997;
+
+                pieza.vy *= 0.997;
 
 
-                if (
-                    Math.abs(pieza.vx) < 0.03 &&
-                    Math.abs(pieza.vy) < 0.03
-                ) {
-
-                    const direccion =
-                        Math.random() *
-                        Math.PI *
-                        2;
-
-
-                    pieza.vx +=
-                        Math.cos(
-                            direccion
-                        ) * 0.02;
-
-
-                    pieza.vy +=
-                        Math.sin(
-                            direccion
-                        ) * 0.02;
-                }
-
-
-                controlarBordes(pieza);
+                controlarBordes(
+                    pieza
+                );
             }
         }
     );
 
 
+    // ========================================================
+    // COLISIONES
+    // ========================================================
+
     resolverColisiones();
 
 
-    // --------------------------------------------------------
+    // ========================================================
     // PIEZAS ENCAJADAS
-    // --------------------------------------------------------
+    // ========================================================
 
     piezas.forEach(
         pieza => {
@@ -648,6 +861,7 @@ function actualizar() {
                     pieza.anguloObjetivo;
 
                 pieza.vx = 0;
+
                 pieza.vy = 0;
             }
         }
@@ -666,50 +880,66 @@ function controlarBordes(pieza) {
 
 
     if (
-        pieza.x < margen
+        pieza.x <
+        margen
     ) {
 
-        pieza.x = margen;
+        pieza.x =
+            margen;
 
         pieza.vx =
-            Math.abs(pieza.vx);
+            Math.abs(
+                pieza.vx
+            );
     }
 
 
     if (
         pieza.x >
-        canvas.width - margen
+        canvas.width -
+        margen
     ) {
 
         pieza.x =
-            canvas.width - margen;
+            canvas.width -
+            margen;
 
         pieza.vx =
-            -Math.abs(pieza.vx);
+            -Math.abs(
+                pieza.vx
+            );
     }
 
 
     if (
-        pieza.y < margen
+        pieza.y <
+        margen
     ) {
 
-        pieza.y = margen;
+        pieza.y =
+            margen;
 
         pieza.vy =
-            Math.abs(pieza.vy);
+            Math.abs(
+                pieza.vy
+            );
     }
 
 
     if (
         pieza.y >
-        canvas.height - margen
+        canvas.height -
+        margen
     ) {
 
         pieza.y =
-            canvas.height - margen;
+            canvas.height -
+            margen;
 
         pieza.vy =
-            -Math.abs(pieza.vy);
+            -Math.abs(
+                pieza.vy
+            );
     }
 }
 
@@ -732,8 +962,11 @@ function resolverColisiones() {
             j++
         ) {
 
-            const a = piezas[i];
-            const b = piezas[j];
+            const a =
+                piezas[i];
+
+            const b =
+                piezas[j];
 
 
             if (
@@ -746,10 +979,13 @@ function resolverColisiones() {
 
 
             const dx =
-                b.x - a.x;
+                b.x -
+                a.x;
+
 
             const dy =
-                b.y - a.y;
+                b.y -
+                a.y;
 
 
             const distancia =
@@ -780,6 +1016,10 @@ function resolverColisiones() {
                     distanciaMinima -
                     distancia;
 
+
+                // ------------------------------------------------
+                // Separación
+                // ------------------------------------------------
 
                 if (
                     a.libre &&
@@ -814,6 +1054,10 @@ function resolverColisiones() {
                         0.5;
                 }
 
+
+                // ------------------------------------------------
+                // Rebote
+                // ------------------------------------------------
 
                 if (
                     a.libre &&
@@ -856,7 +1100,8 @@ function resolverColisiones() {
 function buscarPieza(x, y) {
 
     for (
-        let i = piezas.length - 1;
+        let i =
+            piezas.length - 1;
         i >= 0;
         i--
     ) {
@@ -865,16 +1110,22 @@ function buscarPieza(x, y) {
             piezas[i];
 
 
-        if (!pieza.libre) {
+        if (
+            !pieza.libre
+        ) {
+
             continue;
         }
 
 
         const dx =
-            x - pieza.x;
+            x -
+            pieza.x;
+
 
         const dy =
-            y - pieza.y;
+            y -
+            pieza.y;
 
 
         const distancia =
@@ -886,7 +1137,7 @@ function buscarPieza(x, y) {
 
         if (
             distancia <
-            LADO * 0.75
+            LADO * 0.78
         ) {
 
             return pieza;
@@ -895,37 +1146,6 @@ function buscarPieza(x, y) {
 
 
     return null;
-}
-
-
-// ============================================================
-// ÁNGULO ENTRE LOS DOS DEDOS
-// ============================================================
-
-function obtenerAnguloDedos() {
-
-    const valores =
-        Array.from(
-            punteros.values()
-        );
-
-
-    if (
-        valores.length < 2
-    ) {
-
-        return 0;
-    }
-
-
-    const p1 = valores[0];
-    const p2 = valores[1];
-
-
-    return Math.atan2(
-        p2.y - p1.y,
-        p2.x - p1.x
-    );
 }
 
 
@@ -945,23 +1165,31 @@ canvas.addEventListener(
 
 
         const x =
-            e.clientX - rect.left;
+            e.clientX -
+            rect.left;
+
 
         const y =
-            e.clientY - rect.top;
+            e.clientY -
+            rect.top;
 
 
         // ====================================================
         // FIGURA ARMADA
         // ====================================================
 
-        if (figuraArmada) {
+        if (
+            figuraArmada
+        ) {
 
             const dx =
-                x - centroX;
+                x -
+                centroX;
+
 
             const dy =
-                y - centroY;
+                y -
+                centroY;
 
 
             const distancia =
@@ -980,21 +1208,58 @@ canvas.addEventListener(
             }
 
 
-            desarmar();
+            comenzarDesarme();
 
             return;
         }
 
 
         // ====================================================
-        // FIGURA DESARMADA
+        // SI TODAVÍA SE ESTÁ DESARMANDO
+        // ====================================================
+
+        if (
+            desarmando
+        ) {
+
+            return;
+        }
+
+
+        // ====================================================
+        // BUSCAR PIEZA
+        // ====================================================
+
+        const pieza =
+            buscarPieza(
+                x,
+                y
+            );
+
+
+        if (!pieza) {
+
+            return;
+        }
+
+
+        // ====================================================
+        // REGISTRAR EL DEDO
         // ====================================================
 
         punteros.set(
             e.pointerId,
             {
                 x: x,
-                y: y
+                y: y,
+
+                pieza: pieza,
+
+                offsetX:
+                    x - pieza.x,
+
+                offsetY:
+                    y - pieza.y
             }
         );
 
@@ -1008,95 +1273,160 @@ canvas.addEventListener(
         } catch (error) {}
 
 
+        pieza.seleccionada =
+            true;
+
+
+        pieza.pointerId =
+            e.pointerId;
+
+
         // ====================================================
-        // PRIMER DEDO
+        // DOS DEDOS SOBRE LA MISMA PIEZA
+        // = ROTACIÓN
         // ====================================================
+
+        const dedosMismaPieza =
+            Array.from(
+                punteros.values()
+            ).filter(
+                p =>
+                    p.pieza === pieza
+            );
+
 
         if (
-            punteros.size === 1
+            dedosMismaPieza.length === 2
         ) {
 
+            prepararRotacion(
+                pieza,
+                dedosMismaPieza
+            );
+        }
+    }
+);
+
+
+// ============================================================
+// INFORMACIÓN DE ROTACIÓN
+// ============================================================
+
+const rotaciones = new Map();
+
+
+// ============================================================
+// PREPARAR ROTACIÓN
+// ============================================================
+
+function prepararRotacion(
+    pieza,
+    dedos
+) {
+
+    if (
+        dedos.length < 2
+    ) {
+
+        return;
+    }
+
+
+    const p1 =
+        dedos[0];
+
+    const p2 =
+        dedos[1];
+
+
+    const angulo =
+        Math.atan2(
+            p2.y - p1.y,
+            p2.x - p1.x
+        );
+
+
+    rotaciones.set(
+        pieza.id,
+        {
+
+            anguloInicial:
+                angulo,
+
+            rotacionInicial:
+                pieza.angulo
+        }
+    );
+}
+
+
+// ============================================================
+// ACTUALIZAR ROTACIONES
+// ============================================================
+
+function actualizarRotaciones() {
+
+    rotaciones.forEach(
+        (datos, piezaId) => {
+
             const pieza =
-                buscarPieza(
-                    x,
-                    y
+                piezas.find(
+                    p =>
+                        p.id === piezaId
                 );
 
 
             if (!pieza) {
+                return;
+            }
 
-                punteros.delete(
-                    e.pointerId
+
+            const dedos =
+                Array.from(
+                    punteros.values()
+                ).filter(
+                    p =>
+                        p.pieza === pieza
+                );
+
+
+            if (
+                dedos.length < 2
+            ) {
+
+                rotaciones.delete(
+                    piezaId
                 );
 
                 return;
             }
 
 
-            piezaSeleccionada =
-                pieza;
+            const p1 =
+                dedos[0];
+
+            const p2 =
+                dedos[1];
 
 
-            pieza.seleccionada =
-                true;
-
-
-            offsetX =
-                x - pieza.x;
-
-            offsetY =
-                y - pieza.y;
-
-
-            modoRotacion =
-                false;
-        }
-
-
-        // ====================================================
-        // SEGUNDO DEDO
-        // ====================================================
-
-        else if (
-            punteros.size === 2 &&
-            piezaSeleccionada
-        ) {
-
-            const dx =
-                x -
-                piezaSeleccionada.x;
-
-            const dy =
-                y -
-                piezaSeleccionada.y;
-
-
-            const distancia =
-                Math.sqrt(
-                    dx * dx +
-                    dy * dy
+            const anguloActual =
+                Math.atan2(
+                    p2.y - p1.y,
+                    p2.x - p1.x
                 );
 
 
-            if (
-                distancia <
-                LADO * 1.2
-            ) {
-
-                modoRotacion =
-                    true;
+            const diferencia =
+                anguloActual -
+                datos.anguloInicial;
 
 
-                anguloInicialDedos =
-                    obtenerAnguloDedos();
-
-
-                anguloInicialPieza =
-                    piezaSeleccionada.angulo;
-            }
+            pieza.angulo =
+                datos.rotacionInicial +
+                diferencia;
         }
-    }
-);
+    );
+}
 
 
 // ============================================================
@@ -1110,11 +1440,13 @@ canvas.addEventListener(
         e.preventDefault();
 
 
-        if (
-            !punteros.has(
+        const datos =
+            punteros.get(
                 e.pointerId
-            )
-        ) {
+            );
+
+
+        if (!datos) {
 
             return;
         }
@@ -1125,83 +1457,133 @@ canvas.addEventListener(
 
 
         const x =
-            e.clientX - rect.left;
+            e.clientX -
+            rect.left;
+
 
         const y =
-            e.clientY - rect.top;
+            e.clientY -
+            rect.top;
 
 
-        punteros.set(
-            e.pointerId,
-            {
-                x: x,
-                y: y
+        datos.x = x;
+
+        datos.y = y;
+
+
+        const pieza =
+            datos.pieza;
+
+
+        if (!pieza) {
+
+            return;
+        }
+
+
+        // ====================================================
+        // DOS DEDOS SOBRE LA MISMA PIEZA
+        // ====================================================
+
+        const dedos =
+            Array.from(
+                punteros.values()
+            ).filter(
+                p =>
+                    p.pieza === pieza
+            );
+
+
+        if (
+            dedos.length >= 2
+        ) {
+
+            if (
+                !rotaciones.has(
+                    pieza.id
+                )
+            ) {
+
+                prepararRotacion(
+                    pieza,
+                    dedos
+                );
             }
-        );
 
 
-        if (
-            !piezaSeleccionada
-        ) {
+            actualizarRotaciones();
 
             return;
         }
 
 
         // ====================================================
-        // ROTACIÓN
+        // UN DEDO = MOVER
         // ====================================================
 
         if (
-            punteros.size >= 2 &&
-            modoRotacion
+            dedos.length === 1
         ) {
 
-            const anguloActual =
-                obtenerAnguloDedos();
+            pieza.x =
+                x -
+                datos.offsetX;
 
 
-            const diferencia =
-                anguloActual -
-                anguloInicialDedos;
+            pieza.y =
+                y -
+                datos.offsetY;
 
 
-            piezaSeleccionada.angulo =
-                anguloInicialPieza +
-                diferencia;
+            pieza.vx = 0;
 
-
-            return;
-        }
-
-
-        // ====================================================
-        // MOVIMIENTO
-        // ====================================================
-
-        if (
-            punteros.size === 1
-        ) {
-
-            piezaSeleccionada.x =
-                x - offsetX;
-
-            piezaSeleccionada.y =
-                y - offsetY;
-
-
-            piezaSeleccionada.vx = 0;
-            piezaSeleccionada.vy = 0;
+            pieza.vy = 0;
         }
     }
 );
 
 
 // ============================================================
-// TERMINAR POINTER
+// POINTER UP
 // ============================================================
 
-function terminarPointer(e) {
+canvas.addEventListener(
+    "pointerup",
+    finalizarPointer
+);
+
+
+// ============================================================
+// POINTER CANCEL
+// ============================================================
+
+canvas.addEventListener(
+    "pointercancel",
+    finalizarPointer
+);
+
+
+// ============================================================
+// FINALIZAR DEDO
+// ============================================================
+
+function finalizarPointer(e) {
+
+    const datos =
+        punteros.get(
+            e.pointerId
+        );
+
+
+    if (!datos) {
+
+        return;
+    }
+
+
+    const pieza =
+        datos.pieza;
+
 
     punteros.delete(
         e.pointerId
@@ -1217,36 +1599,54 @@ function terminarPointer(e) {
     } catch (error) {}
 
 
-    // --------------------------------------------------------
-    // TODAVÍA QUEDA UN DEDO
-    // --------------------------------------------------------
+    if (!pieza) {
+
+        return;
+    }
+
+
+    // ========================================================
+    // VER SI TODAVÍA HAY OTRO DEDO EN LA MISMA PIEZA
+    // ========================================================
+
+    const dedosRestantes =
+        Array.from(
+            punteros.values()
+        ).filter(
+            p =>
+                p.pieza === pieza
+        );
+
 
     if (
-        punteros.size > 0
+        dedosRestantes.length > 0
     ) {
 
+        // -----------------------------------------------
+        // Todavía puede seguir moviéndose.
+        // -----------------------------------------------
+
         if (
-            punteros.size === 1 &&
-            piezaSeleccionada
+            dedosRestantes.length === 1
         ) {
 
-            modoRotacion = false;
+            rotaciones.delete(
+                pieza.id
+            );
 
 
             const restante =
-                Array.from(
-                    punteros.values()
-                )[0];
+                dedosRestantes[0];
 
 
-            offsetX =
+            restante.offsetX =
                 restante.x -
-                piezaSeleccionada.x;
+                pieza.x;
 
 
-            offsetY =
+            restante.offsetY =
                 restante.y -
-                piezaSeleccionada.y;
+                pieza.y;
         }
 
 
@@ -1254,58 +1654,27 @@ function terminarPointer(e) {
     }
 
 
-    // --------------------------------------------------------
-    // NO QUEDAN DEDOS
-    // --------------------------------------------------------
+    // ========================================================
+    // YA NO HAY DEDOS EN ESTA PIEZA
+    // ========================================================
 
-    if (
-        !piezaSeleccionada
-    ) {
-
-        return;
-    }
-
-
-    const pieza =
-        piezaSeleccionada;
+    rotaciones.delete(
+        pieza.id
+    );
 
 
     pieza.seleccionada =
         false;
 
 
-    piezaSeleccionada =
+    pieza.pointerId =
         null;
-
-
-    modoRotacion =
-        false;
 
 
     intentarEncajar(
         pieza
     );
 }
-
-
-// ============================================================
-// POINTER UP
-// ============================================================
-
-canvas.addEventListener(
-    "pointerup",
-    terminarPointer
-);
-
-
-// ============================================================
-// POINTER CANCEL
-// ============================================================
-
-canvas.addEventListener(
-    "pointercancel",
-    terminarPointer
-);
 
 
 // ============================================================
@@ -1326,6 +1695,7 @@ function intentarEncajar(pieza) {
     const dx =
         pieza.objetivoX -
         pieza.x;
+
 
     const dy =
         pieza.objetivoY -
@@ -1348,24 +1718,24 @@ function intentarEncajar(pieza) {
         DISTANCIA_ENCAJE
     ) {
 
-        const colocadas =
+        const cantidadColocadas =
             piezas.filter(
                 p =>
                     p.colocada
             ).length;
 
 
-        // ----------------------------------------------------
-        // SI YA HAY 3 COLOCADAS
-        // ----------------------------------------------------
-        //
-        // AQUÍ SE DECIDE EL AZAR.
-        //
-        // ----------------------------------------------------
+        // ====================================================
+        // ES LA ÚLTIMA
+        // ====================================================
 
         if (
-            colocadas === 3
+            cantidadColocadas === 3
         ) {
+
+            // -----------------------------------------------
+            // RESULTADO 1 O 2 = RECHAZAR
+            // -----------------------------------------------
 
             if (
                 resultadoAzar !== 3
@@ -1380,24 +1750,30 @@ function intentarEncajar(pieza) {
         }
 
 
-        // ----------------------------------------------------
+        // ====================================================
         // ENCAJAR
-        // ----------------------------------------------------
+        // ====================================================
 
         pieza.x =
             pieza.objetivoX;
 
+
         pieza.y =
             pieza.objetivoY;
+
 
         pieza.angulo =
             pieza.anguloObjetivo;
 
+
         pieza.vx = 0;
+
         pieza.vy = 0;
+
 
         pieza.colocada =
             true;
+
 
         pieza.libre =
             false;
@@ -1411,7 +1787,7 @@ function intentarEncajar(pieza) {
 
 
     // ========================================================
-    // NO ESTÁ CERCA
+    // NO ENCAJÓ
     // ========================================================
 
     const direccion =
@@ -1424,13 +1800,13 @@ function intentarEncajar(pieza) {
     pieza.vx =
         Math.cos(
             direccion
-        ) * 0.4;
+        ) * 0.3;
 
 
     pieza.vy =
         Math.sin(
             direccion
-        ) * 0.4;
+        ) * 0.3;
 }
 
 
@@ -1460,12 +1836,13 @@ function verificarArmado() {
 
 
 // ============================================================
-// RECHAZAR ÚLTIMA PIEZA
+// RECHAZAR ÚLTIMA
 // ============================================================
 
 function rechazarUltima(pieza) {
 
     if (!pieza) {
+
         return;
     }
 
@@ -1473,47 +1850,68 @@ function rechazarUltima(pieza) {
     pieza.colocada =
         false;
 
+
     pieza.libre =
         true;
 
 
-    // --------------------------------------------------------
+    pieza.seleccionada =
+        false;
+
+
+    // ========================================================
     // REBOTE
-    // --------------------------------------------------------
+    // ========================================================
 
-    const direccion =
-        Math.random() *
-        Math.PI *
-        2;
-
-
-    const fuerza =
-        4 +
-        Math.random() * 2;
+    const dx =
+        pieza.x -
+        centroX;
 
 
-    pieza.vx =
-        Math.cos(
-            direccion
-        ) * fuerza;
+    const dy =
+        pieza.y -
+        centroY;
 
 
-    pieza.vy =
-        Math.sin(
-            direccion
-        ) * fuerza;
+    const distancia =
+        Math.sqrt(
+            dx * dx +
+            dy * dy
+        );
+
+
+    if (
+        distancia > 0
+    ) {
+
+        pieza.vx =
+            (
+                dx /
+                distancia
+            ) * 3.5;
+
+
+        pieza.vy =
+            (
+                dy /
+                distancia
+            ) * 3.5;
+
+    } else {
+
+        pieza.vx = 0;
+
+        pieza.vy = -3.5;
+    }
 
 
     pieza.angulo +=
-        (
-            Math.random() -
-            0.5
-        ) * 1.5;
+        0.5;
 
 
-    // --------------------------------------------------------
-    // DESARMAR TODO
-    // --------------------------------------------------------
+    // ========================================================
+    // DESARMAR TODO DESPUÉS DEL RECHAZO
+    // ========================================================
 
     setTimeout(
         function() {
@@ -1521,8 +1919,125 @@ function rechazarUltima(pieza) {
             romperTodo();
 
         },
-        500
+        450
     );
+}
+
+
+// ============================================================
+// ROMPER TODO
+// ============================================================
+//
+// IMPORTANTE:
+// NO aparecen aleatoriamente.
+//
+// Se separan desde la posición actual,
+// alejándose progresivamente del centro.
+//
+// ============================================================
+
+function romperTodo() {
+
+    figuraArmada = false;
+
+    desarmando = true;
+
+    tiempoDesarme =
+        performance.now();
+
+
+    piezas.forEach(
+        pieza => {
+
+            pieza.colocada =
+                false;
+
+
+            pieza.libre =
+                false;
+
+
+            pieza.seleccionada =
+                false;
+
+
+            pieza.pointerId =
+                null;
+
+
+            // ------------------------------------------------
+            // Dirección desde el centro
+            // ------------------------------------------------
+
+            const dx =
+                pieza.x -
+                centroX;
+
+
+            const dy =
+                pieza.y -
+                centroY;
+
+
+            const distancia =
+                Math.sqrt(
+                    dx * dx +
+                    dy * dy
+                );
+
+
+            let nx;
+            let ny;
+
+
+            if (
+                distancia > 0
+            ) {
+
+                nx =
+                    dx / distancia;
+
+                ny =
+                    dy / distancia;
+
+            } else {
+
+                nx = 0;
+
+                ny = -1;
+            }
+
+
+            // ------------------------------------------------
+            // Nueva posición de separación
+            // ------------------------------------------------
+
+            pieza.desarmeX =
+                pieza.x +
+                nx *
+                (
+                    80 +
+                    pieza.id * 15
+                );
+
+
+            pieza.desarmeY =
+                pieza.y +
+                ny *
+                (
+                    80 +
+                    pieza.id * 15
+                );
+
+
+            pieza.vx = 0;
+
+            pieza.vy = 0;
+        }
+    );
+
+
+    generarAzar();
 }
 
 
@@ -1532,8 +2047,7 @@ function rechazarUltima(pieza) {
 
 function completarFigura() {
 
-    figuraArmada =
-        true;
+    figuraArmada = true;
 
 
     piezas.forEach(
@@ -1542,20 +2056,27 @@ function completarFigura() {
             pieza.x =
                 pieza.objetivoX;
 
+
             pieza.y =
                 pieza.objetivoY;
+
 
             pieza.angulo =
                 pieza.anguloObjetivo;
 
+
             pieza.vx = 0;
+
             pieza.vy = 0;
+
 
             pieza.colocada =
                 true;
 
+
             pieza.libre =
                 false;
+
 
             pieza.seleccionada =
                 false;
@@ -1564,7 +2085,7 @@ function completarFigura() {
 
 
     // --------------------------------------------------------
-    // NUEVA RONDA
+    // Nueva ronda
     // --------------------------------------------------------
 
     setTimeout(
@@ -1575,98 +2096,6 @@ function completarFigura() {
         },
         1600
     );
-}
-
-
-// ============================================================
-// ROMPER TODO
-// ============================================================
-
-function romperTodo() {
-
-    figuraArmada =
-        false;
-
-
-    piezas.forEach(
-        pieza => {
-
-            pieza.colocada =
-                false;
-
-            pieza.libre =
-                true;
-
-            pieza.seleccionada =
-                false;
-
-
-            // ------------------------------------------------
-            // POSICIÓN ALEATORIA
-            // ------------------------------------------------
-
-            pieza.x =
-                LADO +
-                Math.random() *
-                (
-                    canvas.width -
-                    LADO * 2
-                );
-
-
-            pieza.y =
-                LADO +
-                Math.random() *
-                (
-                    canvas.height -
-                    LADO * 2
-                );
-
-
-            // ------------------------------------------------
-            // MOVIMIENTO
-            // ------------------------------------------------
-
-            const direccion =
-                Math.random() *
-                Math.PI *
-                2;
-
-
-            const velocidad =
-                0.6 +
-                Math.random() *
-                1.2;
-
-
-            pieza.vx =
-                Math.cos(
-                    direccion
-                ) * velocidad;
-
-
-            pieza.vy =
-                Math.sin(
-                    direccion
-                ) * velocidad;
-
-
-            // ------------------------------------------------
-            // ROTACIÓN
-            // ------------------------------------------------
-
-            pieza.angulo =
-                (
-                    Math.random() -
-                    0.5
-                ) *
-                Math.PI *
-                1.8;
-        }
-    );
-
-
-    generarAzar();
 }
 
 
@@ -1685,25 +2114,34 @@ function nuevaRonda() {
             pieza.x =
                 pieza.objetivoX;
 
+
             pieza.y =
                 pieza.objetivoY;
+
 
             pieza.angulo =
                 pieza.anguloObjetivo;
 
 
             pieza.vx = 0;
+
             pieza.vy = 0;
 
 
             pieza.colocada =
                 true;
 
+
             pieza.libre =
                 false;
 
+
             pieza.seleccionada =
                 false;
+
+
+            pieza.pointerId =
+                null;
         }
     );
 
@@ -1755,7 +2193,7 @@ function dibujarTriangulo(pieza) {
     ) {
 
         // ----------------------------------------------------
-        // CENTRAL INVERTIDO
+        // TRIÁNGULO CENTRAL INVERTIDO
         // ----------------------------------------------------
 
         ctx.moveTo(
@@ -1763,10 +2201,12 @@ function dibujarTriangulo(pieza) {
             ALTURA * 2 / 3
         );
 
+
         ctx.lineTo(
             -LADO / 2,
             -ALTURA / 3
         );
+
 
         ctx.lineTo(
             LADO / 2,
@@ -1784,10 +2224,12 @@ function dibujarTriangulo(pieza) {
             -ALTURA * 2 / 3
         );
 
+
         ctx.lineTo(
             -LADO / 2,
             ALTURA / 3
         );
+
 
         ctx.lineTo(
             LADO / 2,
@@ -1806,11 +2248,17 @@ function dibujarTriangulo(pieza) {
     ctx.shadowColor =
         estilo.sombra;
 
+
     ctx.shadowBlur =
         12;
 
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 2;
+
+    ctx.shadowOffsetX =
+        0;
+
+
+    ctx.shadowOffsetY =
+        2;
 
 
     // ========================================================
@@ -1819,12 +2267,17 @@ function dibujarTriangulo(pieza) {
 
     const gradiente =
         ctx.createRadialGradient(
+
             -LADO * 0.18,
+
             -ALTURA * 0.25,
+
             5,
 
             0,
+
             0,
+
             LADO * 0.8
         );
 
@@ -1861,22 +2314,30 @@ function dibujarTriangulo(pieza) {
     ctx.shadowColor =
         "transparent";
 
-    ctx.shadowBlur = 0;
+
+    ctx.shadowBlur =
+        0;
 
 
     ctx.save();
+
 
     ctx.clip();
 
 
     const brillo =
         ctx.createRadialGradient(
+
             -LADO * 0.18,
+
             -ALTURA * 0.25,
+
             2,
 
             -LADO * 0.18,
+
             -ALTURA * 0.25,
+
             LADO * 0.65
         );
 
@@ -1925,10 +2386,12 @@ function dibujarTriangulo(pieza) {
             ALTURA * 2 / 3
         );
 
+
         ctx.lineTo(
             -LADO / 2,
             -ALTURA / 3
         );
+
 
         ctx.lineTo(
             LADO / 2,
@@ -1942,10 +2405,12 @@ function dibujarTriangulo(pieza) {
             -ALTURA * 2 / 3
         );
 
+
         ctx.lineTo(
             -LADO / 2,
             ALTURA / 3
         );
+
 
         ctx.lineTo(
             LADO / 2,
@@ -1960,8 +2425,10 @@ function dibujarTriangulo(pieza) {
     ctx.strokeStyle =
         "rgba(196,206,229,0.12)";
 
+
     ctx.lineWidth =
         0.7;
+
 
     ctx.stroke();
 
@@ -1984,6 +2451,10 @@ function dibujar() {
     );
 
 
+    // --------------------------------------------------------
+    // Piezas normales
+    // --------------------------------------------------------
+
     piezas.forEach(
         pieza => {
 
@@ -1998,6 +2469,10 @@ function dibujar() {
         }
     );
 
+
+    // --------------------------------------------------------
+    // Piezas seleccionadas arriba
+    // --------------------------------------------------------
 
     piezas.forEach(
         pieza => {
@@ -2032,22 +2507,33 @@ function animar() {
 
 
 // ============================================================
-// EVITAR GESTOS
+// EVITAR GESTOS DEL NAVEGADOR
 // ============================================================
 
 canvas.addEventListener(
     "gesturestart",
-    e => e.preventDefault()
+    function(e) {
+
+        e.preventDefault();
+    }
 );
+
 
 canvas.addEventListener(
     "gesturechange",
-    e => e.preventDefault()
+    function(e) {
+
+        e.preventDefault();
+    }
 );
+
 
 canvas.addEventListener(
     "gestureend",
-    e => e.preventDefault()
+    function(e) {
+
+        e.preventDefault();
+    }
 );
 
 
@@ -2057,7 +2543,10 @@ canvas.addEventListener(
 
 window.addEventListener(
     "resize",
-    ajustarCanvas
+    function() {
+
+        ajustarCanvas();
+    }
 );
 
 
