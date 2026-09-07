@@ -6,14 +6,17 @@
 // COMPORTAMIENTO:
 //
 // - Comienzan 4 círculos.
-// - Los 4 deben tocarse simultáneamente con 4 dedos.
-// - Al conectar los 4 aparece el círculo #5.
-// - La conexión inicial se mantiene mientras los 4 dedos estén
-//   apoyados.
-// - Después del primer grupo, las conexiones son independientes
-//   de a dos círculos.
-// - Para crear un nuevo círculo debe participar el círculo más
-//   nuevo + otro círculo disponible.
+// - Al tocar 2 círculos aparecen inmediatamente puntitos
+//   rectos entre ellos para mostrar que están unidos.
+// - Con solo 2 círculos NO aparece un círculo nuevo.
+// - Cuando los 4 círculos iniciales están tocados
+//   simultáneamente con 4 dedos, aparece el círculo #5.
+// - La conexión inicial se mantiene mientras los 4 dedos
+//   estén apoyados.
+// - Después del primer grupo, las conexiones son
+//   independientes de a dos círculos.
+// - Para crear un nuevo círculo debe participar el círculo
+//   más nuevo + otro círculo disponible.
 // - Solo aparece UN círculo nuevo por colaboración.
 // - No se crean conexiones duplicadas.
 // - Si se pierde una conexión, desaparece SU círculo hijo.
@@ -28,7 +31,7 @@
 // - Colisiones.
 // - Gradientes.
 // - Líneas formadas por pequeños puntos.
-// - Sin líneas sólidas.
+// - Los puntos de conexión son rectos.
 // ============================================================
 
 
@@ -132,7 +135,8 @@ function crearCirculo(x, y, color, esInicial = false) {
         // MOVIMIENTO ORGÁNICO
         // ----------------------------------------------------
 
-        faseMovimiento: Math.random() * Math.PI * 2,
+        faseMovimiento:
+            Math.random() * Math.PI * 2,
 
         velocidadMovimiento:
             0.006 + Math.random() * 0.004,
@@ -151,8 +155,10 @@ function crearCirculo(x, y, color, esInicial = false) {
         amplitudRespiracion:
             AMPLITUD_RESPIRACION_MIN +
             Math.random() *
-            (AMPLITUD_RESPIRACION_MAX -
-                AMPLITUD_RESPIRACION_MIN),
+            (
+                AMPLITUD_RESPIRACION_MAX -
+                AMPLITUD_RESPIRACION_MIN
+            ),
 
         respiracion: 0,
 
@@ -208,14 +214,27 @@ function iniciarCirculos() {
 
     primeraColaboracionRealizada = false;
 
-    for (let i = 0; i < posicionesIniciales.length; i++) {
 
-        const [px, py] = posicionesIniciales[i];
+    for (
+        let i = 0;
+        i < posicionesIniciales.length;
+        i++
+    ) {
+
+        const [px, py] =
+            posicionesIniciales[i];
+
 
         crearCirculo(
+
             canvas.width * px,
+
             canvas.height * py,
-            colores[i % colores.length],
+
+            colores[
+                i % colores.length
+            ],
+
             true
         );
     }
@@ -228,14 +247,18 @@ function iniciarCirculos() {
 
 function obtenerPosicionPuntero(e) {
 
-    const rect = canvas.getBoundingClientRect();
+    const rect =
+        canvas.getBoundingClientRect();
 
     return {
 
-        x: e.clientX - rect.left,
+        x:
+            e.clientX -
+            rect.left,
 
-        y: e.clientY - rect.top
-
+        y:
+            e.clientY -
+            rect.top
     };
 }
 
@@ -246,20 +269,39 @@ function obtenerPosicionPuntero(e) {
 
 function encontrarCirculo(x, y) {
 
-    for (let i = circulos.length - 1; i >= 0; i--) {
+    for (
+        let i = circulos.length - 1;
+        i >= 0;
+        i--
+    ) {
 
-        const circulo = circulos[i];
+        const circulo =
+            circulos[i];
 
-        const dx = x - circulo.x;
-        const dy = y - circulo.y;
+
+        const dx =
+            x - circulo.x;
+
+        const dy =
+            y - circulo.y;
+
 
         const distancia =
-            Math.sqrt(dx * dx + dy * dy);
+            Math.sqrt(
+                dx * dx +
+                dy * dy
+            );
+
 
         const radioReal =
-            circulo.radio + circulo.respiracion + 8;
+            circulo.radio +
+            circulo.respiracion +
+            8;
 
-        if (distancia <= radioReal) {
+
+        if (
+            distancia <= radioReal
+        ) {
 
             return circulo;
         }
@@ -273,115 +315,175 @@ function encontrarCirculo(x, y) {
 // POINTER DOWN
 // ============================================================
 
-canvas.addEventListener("pointerdown", function(e) {
+canvas.addEventListener(
+    "pointerdown",
+    function(e) {
 
-    const posicion =
-        obtenerPosicionPuntero(e);
+        const posicion =
+            obtenerPosicionPuntero(e);
 
-    const circulo =
-        encontrarCirculo(
-            posicion.x,
-            posicion.y
+
+        const circulo =
+            encontrarCirculo(
+                posicion.x,
+                posicion.y
+            );
+
+
+        if (!circulo) {
+            return;
+        }
+
+
+        e.preventDefault();
+
+
+        try {
+
+            canvas.setPointerCapture(
+                e.pointerId
+            );
+
+        } catch (_) {}
+
+
+        // ----------------------------------------------------
+        // Un puntero por círculo
+        // ----------------------------------------------------
+
+        if (
+            circulo.punteroMovimiento !== null
+        ) {
+
+            return;
+        }
+
+
+        // ----------------------------------------------------
+        // Registrar puntero
+        // ----------------------------------------------------
+
+        punteros.set(
+
+            e.pointerId,
+
+            {
+                id: e.pointerId,
+                circulo: circulo
+            }
         );
 
-    if (!circulo) return;
 
-    e.preventDefault();
-
-    try {
-        canvas.setPointerCapture(e.pointerId);
-    } catch (_) {}
+        circulo.punteros.add(
+            e.pointerId
+        );
 
 
-    // --------------------------------------------------------
-    // Un puntero por círculo
-    // --------------------------------------------------------
+        circulo.punteroMovimiento =
+            e.pointerId;
 
-    if (circulo.punteroMovimiento !== null) {
 
-        return;
+        circulo.siendoMovido =
+            true;
+
+
+        circulo.seleccionado =
+            true;
+
+
+        circulo.offsetX =
+            posicion.x -
+            circulo.x;
+
+
+        circulo.offsetY =
+            posicion.y -
+            circulo.y;
+
+
+        // ----------------------------------------------------
+        // Actualizar conexiones inmediatamente
+        // ----------------------------------------------------
+
+        actualizarColaboracion();
+
     }
-
-
-    // --------------------------------------------------------
-    // Registrar puntero
-    // --------------------------------------------------------
-
-    punteros.set(
-        e.pointerId,
-        {
-            id: e.pointerId,
-            circulo: circulo
-        }
-    );
-
-    circulo.punteros.add(e.pointerId);
-
-    circulo.punteroMovimiento =
-        e.pointerId;
-
-    circulo.siendoMovido = true;
-
-    circulo.seleccionado = true;
-
-
-    circulo.offsetX =
-        posicion.x - circulo.x;
-
-    circulo.offsetY =
-        posicion.y - circulo.y;
-
-
-    actualizarColaboracion();
-
-});
+);
 
 
 // ============================================================
 // POINTER MOVE
 // ============================================================
 
-canvas.addEventListener("pointermove", function(e) {
+canvas.addEventListener(
+    "pointermove",
+    function(e) {
 
-    const dato =
-        punteros.get(e.pointerId);
+        const dato =
+            punteros.get(
+                e.pointerId
+            );
 
-    if (!dato) return;
 
-    const circulo = dato.circulo;
+        if (!dato) {
+            return;
+        }
 
-    if (
-        !circulo ||
-        circulo.punteroMovimiento !== e.pointerId
-    ) {
-        return;
+
+        const circulo =
+            dato.circulo;
+
+
+        if (
+            !circulo ||
+            circulo.punteroMovimiento !==
+            e.pointerId
+        ) {
+
+            return;
+        }
+
+
+        e.preventDefault();
+
+
+        const posicion =
+            obtenerPosicionPuntero(e);
+
+
+        // ----------------------------------------------------
+        // Movimiento suave
+        // ----------------------------------------------------
+
+        circulo.x +=
+            (
+                posicion.x -
+                circulo.offsetX -
+                circulo.x
+            ) * 0.42;
+
+
+        circulo.y +=
+            (
+                posicion.y -
+                circulo.offsetY -
+                circulo.y
+            ) * 0.42;
+
+
+        controlarBordes(
+            circulo
+        );
+
+
+        // ----------------------------------------------------
+        // Actualizar conexiones
+        // ----------------------------------------------------
+
+        actualizarColaboracion();
+
     }
-
-    e.preventDefault();
-
-    const posicion =
-        obtenerPosicionPuntero(e);
-
-
-    // Movimiento suave
-    circulo.x +=
-        (
-            posicion.x -
-            circulo.offsetX -
-            circulo.x
-        ) * 0.42;
-
-    circulo.y +=
-        (
-            posicion.y -
-            circulo.offsetY -
-            circulo.y
-        ) * 0.42;
-
-
-    controlarBordes(circulo);
-
-});
+);
 
 
 // ============================================================
@@ -392,6 +494,7 @@ canvas.addEventListener(
     "pointerup",
     terminarPuntero
 );
+
 
 canvas.addEventListener(
     "pointercancel",
@@ -406,13 +509,23 @@ canvas.addEventListener(
 function terminarPuntero(e) {
 
     const dato =
-        punteros.get(e.pointerId);
+        punteros.get(
+            e.pointerId
+        );
 
-    if (!dato) return;
 
-    const circulo = dato.circulo;
+    if (!dato) {
+        return;
+    }
 
-    punteros.delete(e.pointerId);
+
+    const circulo =
+        dato.circulo;
+
+
+    punteros.delete(
+        e.pointerId
+    );
 
 
     if (circulo) {
@@ -441,15 +554,17 @@ function terminarPuntero(e) {
 
 
     try {
+
         canvas.releasePointerCapture(
             e.pointerId
         );
+
     } catch (_) {}
 
 
-    // IMPORTANTE:
-    // al soltar un dedo se comprueba
-    // inmediatamente si se perdió alguna conexión.
+    // --------------------------------------------------------
+    // Comprobar inmediatamente las conexiones
+    // --------------------------------------------------------
 
     actualizarColaboracion();
 }
@@ -461,20 +576,32 @@ function terminarPuntero(e) {
 
 function buscarConexionEntre(a, b) {
 
-    return conexiones.find(conexion => {
+    return conexiones.find(
+        conexion => {
 
-        if (conexion.tipo !== "par") {
-            return false;
+            if (
+                conexion.tipo !== "par"
+            ) {
+
+                return false;
+            }
+
+
+            const tieneA =
+                conexion.circulos.includes(
+                    a.id
+                );
+
+
+            const tieneB =
+                conexion.circulos.includes(
+                    b.id
+                );
+
+
+            return tieneA && tieneB;
         }
-
-        const tieneA =
-            conexion.circulos.includes(a.id);
-
-        const tieneB =
-            conexion.circulos.includes(b.id);
-
-        return tieneA && tieneB;
-    });
+    );
 }
 
 
@@ -492,14 +619,100 @@ function buscarConexionInicial() {
 
 
 // ============================================================
+// OBTENER CÍRCULOS INICIALES SELECCIONADOS
+// ============================================================
+
+function obtenerInicialesSeleccionados() {
+
+    return circulos.filter(
+        circulo =>
+            circulo.esInicial &&
+            circulo.punteros.size > 0
+    );
+}
+
+
+// ============================================================
+// DIBUJAR PREVISUALIZACIÓN DE CONEXIONES
+// ============================================================
+//
+// Esta función permite que al tocar solo 2 círculos
+// inmediatamente aparezcan los puntitos entre ellos.
+//
+// IMPORTANTE:
+// Estos puntitos son solamente visuales.
+// No generan un círculo nuevo.
+// ============================================================
+
+function dibujarConexionesPrevias() {
+
+    if (
+        primeraColaboracionRealizada
+    ) {
+
+        return;
+    }
+
+
+    const seleccionados =
+        obtenerInicialesSeleccionados();
+
+
+    // --------------------------------------------------------
+    // Si hay 2 o más círculos seleccionados,
+    // unir visualmente todos los seleccionados.
+    // --------------------------------------------------------
+
+    if (
+        seleccionados.length < 2
+    ) {
+
+        return;
+    }
+
+
+    for (
+        let i = 0;
+        i < seleccionados.length;
+        i++
+    ) {
+
+        for (
+            let j = i + 1;
+            j < seleccionados.length;
+            j++
+        ) {
+
+            dibujarConexionPunteada(
+
+                seleccionados[i],
+
+                seleccionados[j]
+            );
+        }
+    }
+}
+
+
+// ============================================================
 // CREAR CONEXIÓN INICIAL
 // ============================================================
 
-function crearConexionInicial(iniciales) {
+function crearConexionInicial(
+    iniciales
+) {
 
-    if (buscarConexionInicial()) {
+    if (
+        buscarConexionInicial()
+    ) {
+
         return;
     }
+
+
+    // --------------------------------------------------------
+    // CREAR EL CÍRCULO #5
+    // --------------------------------------------------------
 
     const nuevoCirculo =
         crearCirculo(
@@ -518,36 +731,51 @@ function crearConexionInicial(iniciales) {
 
 
     nuevoCirculo.creadoPor =
-        iniciales.map(c => c.id);
+        iniciales.map(
+            c => c.id
+        );
 
+
+    // --------------------------------------------------------
+    // Crear conexión inicial
+    // --------------------------------------------------------
 
     const conexion = {
 
-        id: siguienteIdConexion++,
+        id:
+            siguienteIdConexion++,
 
-        tipo: "inicial",
+        tipo:
+            "inicial",
 
         circulos:
-            iniciales.map(c => c.id),
+            iniciales.map(
+                c => c.id
+            ),
 
         hijoId:
             nuevoCirculo.id
     };
 
 
-    conexiones.push(conexion);
+    conexiones.push(
+        conexion
+    );
 
 
-    iniciales.forEach(circulo => {
+    iniciales.forEach(
+        circulo => {
 
-        circulo.conexiones.add(
-            conexion.id
-        );
+            circulo.conexiones.add(
+                conexion.id
+            );
 
-    });
+        }
+    );
 
 
-    primeraColaboracionRealizada = true;
+    primeraColaboracionRealizada =
+        true;
 }
 
 
@@ -555,23 +783,42 @@ function crearConexionInicial(iniciales) {
 // CREAR CONEXIÓN ENTRE DOS CÍRCULOS
 // ============================================================
 
-function crearConexionPar(a, b) {
+function crearConexionPar(
+    a,
+    b
+) {
 
     if (!a || !b) {
         return;
     }
 
-    if (a.id === b.id) {
+
+    if (
+        a.id === b.id
+    ) {
+
         return;
     }
 
 
+    // --------------------------------------------------------
     // No duplicar conexiones
+    // --------------------------------------------------------
 
-    if (buscarConexionEntre(a, b)) {
+    if (
+        buscarConexionEntre(
+            a,
+            b
+        )
+    ) {
+
         return;
     }
 
+
+    // --------------------------------------------------------
+    // Crear nuevo círculo
+    // --------------------------------------------------------
 
     const nuevoCirculo =
         crearCirculo(
@@ -590,14 +837,23 @@ function crearConexionPar(a, b) {
 
 
     nuevoCirculo.creadoPor =
-        [a.id, b.id];
+        [
+            a.id,
+            b.id
+        ];
 
+
+    // --------------------------------------------------------
+    // Crear conexión
+    // --------------------------------------------------------
 
     const conexion = {
 
-        id: siguienteIdConexion++,
+        id:
+            siguienteIdConexion++,
 
-        tipo: "par",
+        tipo:
+            "par",
 
         circulos: [
             a.id,
@@ -609,12 +865,15 @@ function crearConexionPar(a, b) {
     };
 
 
-    conexiones.push(conexion);
+    conexiones.push(
+        conexion
+    );
 
 
     a.conexiones.add(
         conexion.id
     );
+
 
     b.conexiones.add(
         conexion.id
@@ -630,20 +889,30 @@ function obtenerCirculoMasNuevo() {
 
     let masNuevo = null;
 
-    for (const circulo of circulos) {
 
-        if (circulo.esInicial) {
+    for (
+        const circulo of circulos
+    ) {
+
+        if (
+            circulo.esInicial
+        ) {
+
             continue;
         }
 
+
         if (
             !masNuevo ||
-            circulo.id > masNuevo.id
+            circulo.id >
+            masNuevo.id
         ) {
 
-            masNuevo = circulo;
+            masNuevo =
+                circulo;
         }
     }
+
 
     return masNuevo;
 }
@@ -655,8 +924,9 @@ function obtenerCirculoMasNuevo() {
 
 function actualizarColaboracion() {
 
-    // Primero se eliminan las conexiones
-    // que ya no tienen todos sus dedos.
+    // --------------------------------------------------------
+    // Primero eliminar conexiones que perdieron dedos
+    // --------------------------------------------------------
 
     limpiarConexionesInactivas();
 
@@ -672,7 +942,9 @@ function actualizarColaboracion() {
     // PRIMERA COLABORACIÓN
     // ========================================================
 
-    if (!primeraColaboracionRealizada) {
+    if (
+        !primeraColaboracionRealizada
+    ) {
 
         const iniciales =
             circulos.filter(
@@ -681,8 +953,9 @@ function actualizarColaboracion() {
             );
 
 
+        // ----------------------------------------------------
         // Los cuatro círculos iniciales
-        // deben estar tocados.
+        // ----------------------------------------------------
 
         const todosIniciales =
             iniciales.length === 4 &&
@@ -692,12 +965,20 @@ function actualizarColaboracion() {
             );
 
 
-        if (todosIniciales) {
+        // ----------------------------------------------------
+        // SOLO CUANDO ESTÁN LOS 4
+        // aparece el círculo #5.
+        // ----------------------------------------------------
+
+        if (
+            todosIniciales
+        ) {
 
             crearConexionInicial(
                 iniciales
             );
         }
+
 
         return;
     }
@@ -716,8 +997,9 @@ function actualizarColaboracion() {
     }
 
 
+    // --------------------------------------------------------
     // El círculo más nuevo debe participar
-    // en la siguiente colaboración.
+    // --------------------------------------------------------
 
     if (
         masNuevo.punteros.size === 0
@@ -727,7 +1009,9 @@ function actualizarColaboracion() {
     }
 
 
-    // Buscar solamente UN círculo adicional.
+    // --------------------------------------------------------
+    // Buscar UN círculo adicional
+    // --------------------------------------------------------
 
     const otro =
         seleccionados.find(
@@ -742,8 +1026,9 @@ function actualizarColaboracion() {
     }
 
 
-    // Si esa pareja ya está conectada,
-    // no crear otra.
+    // --------------------------------------------------------
+    // No duplicar
+    // --------------------------------------------------------
 
     if (
         buscarConexionEntre(
@@ -756,7 +1041,9 @@ function actualizarColaboracion() {
     }
 
 
-    // Crear solamente un nuevo círculo.
+    // --------------------------------------------------------
+    // Crear solamente UN círculo
+    // --------------------------------------------------------
 
     crearConexionPar(
         masNuevo,
@@ -772,7 +1059,8 @@ function actualizarColaboracion() {
 function limpiarConexionesInactivas() {
 
     for (
-        let i = conexiones.length - 1;
+        let i =
+            conexiones.length - 1;
         i >= 0;
         i--
     ) {
@@ -781,9 +1069,9 @@ function limpiarConexionesInactivas() {
             conexiones[i];
 
 
-        // ----------------------------------------------------
+        // ====================================================
         // CONEXIÓN INICIAL
-        // ----------------------------------------------------
+        // ====================================================
 
         if (
             conexion.tipo ===
@@ -797,12 +1085,15 @@ function limpiarConexionesInactivas() {
                         const circulo =
                             circulos.find(
                                 c =>
-                                    c.id === id
+                                    c.id ===
+                                    id
                             );
+
 
                         return (
                             circulo &&
-                            circulo.punteros.size > 0
+                            circulo.punteros.size >
+                            0
                         );
                     }
                 );
@@ -815,13 +1106,14 @@ function limpiarConexionesInactivas() {
                 );
             }
 
+
             continue;
         }
 
 
-        // ----------------------------------------------------
+        // ====================================================
         // CONEXIÓN DE DOS
-        // ----------------------------------------------------
+        // ====================================================
 
         if (
             conexion.tipo === "par"
@@ -834,12 +1126,15 @@ function limpiarConexionesInactivas() {
                         const circulo =
                             circulos.find(
                                 c =>
-                                    c.id === id
+                                    c.id ===
+                                    id
                             );
+
 
                         return (
                             circulo &&
-                            circulo.punteros.size > 0
+                            circulo.punteros.size >
+                            0
                         );
                     }
                 );
@@ -860,19 +1155,27 @@ function limpiarConexionesInactivas() {
 // ELIMINAR CONEXIÓN
 // ============================================================
 
-function eliminarConexion(conexion) {
+function eliminarConexion(
+    conexion
+) {
 
     const indice =
         conexiones.indexOf(
             conexion
         );
 
-    if (indice === -1) {
+
+    if (
+        indice === -1
+    ) {
+
         return;
     }
 
 
+    // --------------------------------------------------------
     // Sacar conexión de la lista
+    // --------------------------------------------------------
 
     conexiones.splice(
         indice,
@@ -880,7 +1183,9 @@ function eliminarConexion(conexion) {
     );
 
 
-    // Sacar referencia de los círculos
+    // --------------------------------------------------------
+    // Sacar referencias de los círculos
+    // --------------------------------------------------------
 
     conexion.circulos.forEach(
         id => {
@@ -890,6 +1195,7 @@ function eliminarConexion(conexion) {
                     c =>
                         c.id === id
                 );
+
 
             if (circulo) {
 
@@ -901,7 +1207,9 @@ function eliminarConexion(conexion) {
     );
 
 
-    // Buscar el hijo
+    // --------------------------------------------------------
+    // Buscar hijo
+    // --------------------------------------------------------
 
     const hijo =
         circulos.find(
@@ -920,11 +1228,12 @@ function eliminarConexion(conexion) {
 
 
     // ========================================================
-    // SI EL HIJO ES UNO DE LOS 4 INICIALES
-    // NUNCA SE BORRA.
+    // LOS 4 INICIALES NUNCA SE BORRAN
     // ========================================================
 
-    if (hijo.esInicial) {
+    if (
+        hijo.esInicial
+    ) {
 
         comprobarReinicioInicial();
 
@@ -934,9 +1243,7 @@ function eliminarConexion(conexion) {
 
     // --------------------------------------------------------
     // El hijo desaparece directamente.
-    //
-    // IMPORTANTE:
-    // NO se borran sus descendientes.
+    // Sus descendientes permanecen.
     // --------------------------------------------------------
 
     eliminarCirculoDirecto(
@@ -952,27 +1259,29 @@ function eliminarConexion(conexion) {
 // ELIMINAR CÍRCULO DIRECTAMENTE
 // ============================================================
 //
-// Esta función NO elimina descendientes.
-//
-// Si el círculo eliminado tenía conexiones hacia otros
-// círculos, esas conexiones se quitan solamente como
-// referencias, pero sus hijos permanecen.
-//
+// NO elimina descendientes.
 // ============================================================
 
-function eliminarCirculoDirecto(circulo) {
+function eliminarCirculoDirecto(
+    circulo
+) {
 
     if (!circulo) {
         return;
     }
 
 
-    if (circulo.esInicial) {
+    if (
+        circulo.esInicial
+    ) {
+
         return;
     }
 
 
-    // Quitar punteros asociados
+    // --------------------------------------------------------
+    // Quitar punteros
+    // --------------------------------------------------------
 
     circulo.punteros.forEach(
         pointerId => {
@@ -986,11 +1295,14 @@ function eliminarCirculoDirecto(circulo) {
 
     circulo.punteros.clear();
 
+
     circulo.punteroMovimiento =
         null;
 
+
     circulo.siendoMovido =
         false;
+
 
     circulo.seleccionado =
         false;
@@ -1019,7 +1331,10 @@ function eliminarCirculoDirecto(circulo) {
                     conexion
                 );
 
-            if (indice !== -1) {
+
+            if (
+                indice !== -1
+            ) {
 
                 conexiones.splice(
                     indice,
@@ -1037,6 +1352,7 @@ function eliminarCirculoDirecto(circulo) {
                                 c.id === id
                         );
 
+
                     if (otro) {
 
                         otro.conexiones.delete(
@@ -1046,14 +1362,15 @@ function eliminarCirculoDirecto(circulo) {
                 }
             );
 
+
             // NO tocamos conexion.hijoId.
-            // Por eso sus descendientes quedan vivos.
+            // Los descendientes permanecen.
         }
     );
 
 
     // ========================================================
-    // QUITAR EL CÍRCULO
+    // QUITAR CÍRCULO
     // ========================================================
 
     const indiceCirculo =
@@ -1061,7 +1378,10 @@ function eliminarCirculoDirecto(circulo) {
             circulo
         );
 
-    if (indiceCirculo !== -1) {
+
+    if (
+        indiceCirculo !== -1
+    ) {
 
         circulos.splice(
             indiceCirculo,
@@ -1084,11 +1404,14 @@ function comprobarReinicioInicial() {
         );
 
 
-    // Si desapareció el único círculo
-    // generado después de los cuatro iniciales,
-    // volvemos al estado inicial.
+    // --------------------------------------------------------
+    // Si no queda ningún círculo generado,
+    // vuelve al estado inicial.
+    // --------------------------------------------------------
 
-    if (!quedanGenerados) {
+    if (
+        !quedanGenerados
+    ) {
 
         primeraColaboracionRealizada =
             false;
@@ -1100,7 +1423,9 @@ function comprobarReinicioInicial() {
 // CONTROLAR BORDES
 // ============================================================
 
-function controlarBordes(circulo) {
+function controlarBordes(
+    circulo
+) {
 
     const radio =
         circulo.radio +
@@ -1111,11 +1436,14 @@ function controlarBordes(circulo) {
         circulo.x - radio < 0
     ) {
 
-        circulo.x = radio;
+        circulo.x =
+            radio;
+
 
         circulo.vx =
-            Math.abs(circulo.vx) *
-            0.8;
+            Math.abs(
+                circulo.vx
+            ) * 0.8;
     }
 
 
@@ -1125,11 +1453,14 @@ function controlarBordes(circulo) {
     ) {
 
         circulo.x =
-            canvas.width - radio;
+            canvas.width -
+            radio;
+
 
         circulo.vx =
-            -Math.abs(circulo.vx) *
-            0.8;
+            -Math.abs(
+                circulo.vx
+            ) * 0.8;
     }
 
 
@@ -1137,11 +1468,14 @@ function controlarBordes(circulo) {
         circulo.y - radio < 0
     ) {
 
-        circulo.y = radio;
+        circulo.y =
+            radio;
+
 
         circulo.vy =
-            Math.abs(circulo.vy) *
-            0.8;
+            Math.abs(
+                circulo.vy
+            ) * 0.8;
     }
 
 
@@ -1151,11 +1485,14 @@ function controlarBordes(circulo) {
     ) {
 
         circulo.y =
-            canvas.height - radio;
+            canvas.height -
+            radio;
+
 
         circulo.vy =
-            -Math.abs(circulo.vy) *
-            0.8;
+            -Math.abs(
+                circulo.vy
+            ) * 0.8;
     }
 }
 
@@ -1164,8 +1501,9 @@ function controlarBordes(circulo) {
 // ACTUALIZAR MOVIMIENTO
 // ============================================================
 
-function actualizarCirculo(circulo) {
-
+function actualizarCirculo(
+    circulo
+) {
 
     // ========================================================
     // RESPIRACIÓN
@@ -1190,7 +1528,9 @@ function actualizarCirculo(circulo) {
     // MOVIMIENTO ORGÁNICO
     // ========================================================
 
-    if (!circulo.siendoMovido) {
+    if (
+        !circulo.siendoMovido
+    ) {
 
         circulo.faseMovimiento +=
             circulo.velocidadMovimiento;
@@ -1199,16 +1539,14 @@ function actualizarCirculo(circulo) {
         const movimientoX =
             Math.sin(
                 circulo.faseMovimiento
-            ) *
-            0.018;
+            ) * 0.018;
 
 
         const movimientoY =
             Math.cos(
                 circulo.faseMovimiento *
                 0.83
-            ) *
-            0.018;
+            ) * 0.018;
 
 
         circulo.vx +=
@@ -1293,6 +1631,7 @@ function resolverColisiones() {
             const dx =
                 b.x - a.x;
 
+
             const dy =
                 b.y - a.y;
 
@@ -1307,6 +1646,7 @@ function resolverColisiones() {
             const radioA =
                 a.radio +
                 a.respiracion;
+
 
             const radioB =
                 b.radio +
@@ -1327,7 +1667,9 @@ function resolverColisiones() {
                 let ny;
 
 
-                if (distancia === 0) {
+                if (
+                    distancia === 0
+                ) {
 
                     nx = 1;
                     ny = 0;
@@ -1354,7 +1696,9 @@ function resolverColisiones() {
                     0.5;
 
 
-                if (!a.siendoMovido) {
+                if (
+                    !a.siendoMovido
+                ) {
 
                     a.x -=
                         nx *
@@ -1366,7 +1710,9 @@ function resolverColisiones() {
                 }
 
 
-                if (!b.siendoMovido) {
+                if (
+                    !b.siendoMovido
+                ) {
 
                     b.x +=
                         nx *
@@ -1398,7 +1744,9 @@ function resolverColisiones() {
                         FUERZA_COLISION;
 
 
-                    if (!a.siendoMovido) {
+                    if (
+                        !a.siendoMovido
+                    ) {
 
                         a.vx -=
                             nx *
@@ -1412,7 +1760,9 @@ function resolverColisiones() {
                     }
 
 
-                    if (!b.siendoMovido) {
+                    if (
+                        !b.siendoMovido
+                    ) {
 
                         b.vx +=
                             nx *
@@ -1435,7 +1785,10 @@ function resolverColisiones() {
 // OBTENER GRADIENTE
 // ============================================================
 
-function obtenerGradiente(circulo, radio) {
+function obtenerGradiente(
+    circulo,
+    radio
+) {
 
     const gradient =
         ctx.createRadialGradient(
@@ -1449,7 +1802,9 @@ function obtenerGradiente(circulo, radio) {
             radio * 0.08,
 
             circulo.x,
+
             circulo.y,
+
             radio * 1.1
         );
 
@@ -1464,10 +1819,12 @@ function obtenerGradiente(circulo, radio) {
             "#FFFFFF"
         );
 
+
         gradient.addColorStop(
             0.45,
             "#D9D9D9"
         );
+
 
         gradient.addColorStop(
             1,
@@ -1484,10 +1841,12 @@ function obtenerGradiente(circulo, radio) {
             "#DCECF9"
         );
 
+
         gradient.addColorStop(
             0.48,
             "#8BB2D3"
         );
+
 
         gradient.addColorStop(
             1,
@@ -1504,10 +1863,12 @@ function obtenerGradiente(circulo, radio) {
             "#6674A5"
         );
 
+
         gradient.addColorStop(
             0.50,
             "#202D64"
         );
+
 
         gradient.addColorStop(
             1,
@@ -1521,10 +1882,12 @@ function obtenerGradiente(circulo, radio) {
             "#7EA7D0"
         );
 
+
         gradient.addColorStop(
             0.50,
             "#2B538E"
         );
+
 
         gradient.addColorStop(
             1,
@@ -1539,6 +1902,12 @@ function obtenerGradiente(circulo, radio) {
 
 // ============================================================
 // DIBUJAR CONEXIÓN DE PUNTITOS
+// ============================================================
+//
+// IMPORTANTE:
+//
+// Ahora los puntitos forman una línea COMPLETAMENTE RECTA
+// entre los dos círculos.
 // ============================================================
 
 function dibujarConexionPunteada(
@@ -1559,6 +1928,7 @@ function dibujarConexionPunteada(
         circuloB.x -
         circuloA.x;
 
+
     const dy =
         circuloB.y -
         circuloA.y;
@@ -1571,30 +1941,110 @@ function dibujarConexionPunteada(
         );
 
 
-    if (distancia < 1) {
+    if (
+        distancia < 1
+    ) {
+
         return;
     }
 
 
-    const cantidad =
-        Math.max(
-            10,
-            Math.min(
-                30,
-                Math.floor(
-                    distancia / 12
-                )
+    // --------------------------------------------------------
+    // Dirección de la línea
+    // --------------------------------------------------------
+
+    const ux =
+        dx /
+        distancia;
+
+
+    const uy =
+        dy /
+        distancia;
+
+
+    // --------------------------------------------------------
+    // No poner puntos dentro de los círculos.
+    // La conexión comienza en el borde de uno
+    // y termina en el borde del otro.
+    // --------------------------------------------------------
+
+    const radioA =
+        circuloA.radio +
+        circuloA.respiracion;
+
+
+    const radioB =
+        circuloB.radio +
+        circuloB.respiracion;
+
+
+    const inicioX =
+        circuloA.x +
+        ux * radioA;
+
+
+    const inicioY =
+        circuloA.y +
+        uy * radioA;
+
+
+    const finalX =
+        circuloB.x -
+        ux * radioB;
+
+
+    const finalY =
+        circuloB.y -
+        uy * radioB;
+
+
+    const distanciaInterior =
+        Math.sqrt(
+            (
+                finalX -
+                inicioX
+            ) *
+            (
+                finalX -
+                inicioX
+            ) +
+
+            (
+                finalY -
+                inicioY
+            ) *
+            (
+                finalY -
+                inicioY
             )
         );
 
 
-    const nx =
-        -dy /
-        distancia;
+    if (
+        distanciaInterior <= 0
+    ) {
 
-    const ny =
-        dx /
-        distancia;
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // Cantidad de pequeños círculos
+    // --------------------------------------------------------
+
+    const separacion =
+        10;
+
+
+    const cantidad =
+        Math.max(
+            2,
+            Math.floor(
+                distanciaInterior /
+                separacion
+            )
+        );
 
 
     // ========================================================
@@ -1608,31 +2058,28 @@ function dibujarConexionPunteada(
     ) {
 
         const t =
-            i / cantidad;
-
-
-        const onda =
-            Math.sin(
-                t *
-                Math.PI *
-                4
-            ) *
-            5;
+            i /
+            cantidad;
 
 
         const x =
-            circuloA.x +
-            dx * t +
-            nx * onda;
+            inicioX +
+            (
+                finalX -
+                inicioX
+            ) * t;
 
 
         const y =
-            circuloA.y +
-            dy * t +
-            ny * onda;
+            inicioY +
+            (
+                finalY -
+                inicioY
+            ) * t;
 
 
         ctx.beginPath();
+
 
         ctx.arc(
             x,
@@ -1642,8 +2089,10 @@ function dibujarConexionPunteada(
             Math.PI * 2
         );
 
+
         ctx.fillStyle =
             "rgba(196,206,229,0.60)";
+
 
         ctx.fill();
     }
@@ -1654,37 +2103,34 @@ function dibujarConexionPunteada(
     // ========================================================
 
     for (
-        let i = 0;
-        i <= cantidad;
+        let i = 1;
+        i < cantidad;
         i += 3
     ) {
 
         const t =
-            i / cantidad;
-
-
-        const onda =
-            Math.cos(
-                t *
-                Math.PI *
-                5
-            ) *
-            4;
+            i /
+            cantidad;
 
 
         const x =
-            circuloA.x +
-            dx * t +
-            nx * onda;
+            inicioX +
+            (
+                finalX -
+                inicioX
+            ) * t;
 
 
         const y =
-            circuloA.y +
-            dy * t +
-            ny * onda;
+            inicioY +
+            (
+                finalY -
+                inicioY
+            ) * t;
 
 
         ctx.beginPath();
+
 
         ctx.arc(
             x,
@@ -1694,8 +2140,10 @@ function dibujarConexionPunteada(
             Math.PI * 2
         );
 
+
         ctx.fillStyle =
             "rgba(196,206,229,0.28)";
+
 
         ctx.fill();
     }
@@ -1707,6 +2155,22 @@ function dibujarConexionPunteada(
 // ============================================================
 
 function dibujarConexiones() {
+
+    // ========================================================
+    // PRIMERO:
+    // conexiones visuales mientras todavía estamos
+    // en la primera colaboración.
+    //
+    // Esto hace que con 2 círculos ya se vean los puntitos.
+    // ========================================================
+
+    dibujarConexionesPrevias();
+
+
+    // ========================================================
+    // DESPUÉS:
+    // conexiones reales
+    // ========================================================
 
     conexiones.forEach(
         conexion => {
@@ -1733,8 +2197,10 @@ function dibujarConexiones() {
                         .filter(Boolean);
 
 
-                // Dibujar las conexiones
-                // entre los cuatro círculos.
+                // ------------------------------------------------
+                // Conectar todos los círculos iniciales
+                // mediante puntitos rectos.
+                // ------------------------------------------------
 
                 for (
                     let i = 0;
@@ -1749,11 +2215,14 @@ function dibujarConexiones() {
                     ) {
 
                         dibujarConexionPunteada(
+
                             grupo[i],
+
                             grupo[j]
                         );
                     }
                 }
+
 
                 return;
             }
@@ -1784,7 +2253,10 @@ function dibujarConexiones() {
                     );
 
 
-                if (a && b) {
+                if (
+                    a &&
+                    b
+                ) {
 
                     dibujarConexionPunteada(
                         a,
@@ -1801,7 +2273,9 @@ function dibujarConexiones() {
 // DIBUJAR CÍRCULO
 // ============================================================
 
-function dibujarCirculo(circulo) {
+function dibujarCirculo(
+    circulo
+) {
 
     const radio =
         circulo.radio +
@@ -1812,12 +2286,16 @@ function dibujarCirculo(circulo) {
     // SOMBRA
     // ========================================================
 
-    if (circulo.seleccionado) {
+    if (
+        circulo.seleccionado
+    ) {
 
         ctx.shadowColor =
             "rgba(196,206,229,0.16)";
 
+
         ctx.shadowBlur = 6;
+
 
         ctx.shadowOffsetY = 1;
 
@@ -1826,7 +2304,9 @@ function dibujarCirculo(circulo) {
         ctx.shadowColor =
             "rgba(30,60,100,0.08)";
 
+
         ctx.shadowBlur = 3;
+
 
         ctx.shadowOffsetY = 1;
     }
@@ -1837,6 +2317,7 @@ function dibujarCirculo(circulo) {
     // ========================================================
 
     ctx.beginPath();
+
 
     ctx.arc(
         circulo.x,
@@ -1853,15 +2334,20 @@ function dibujarCirculo(circulo) {
             radio
         );
 
+
     ctx.fill();
 
 
-    // Quitar sombra para bordes
+    // --------------------------------------------------------
+    // Quitar sombra
+    // --------------------------------------------------------
 
     ctx.shadowColor =
         "transparent";
 
+
     ctx.shadowBlur = 0;
+
 
     ctx.shadowOffsetY = 0;
 
@@ -1872,6 +2358,7 @@ function dibujarCirculo(circulo) {
 
     ctx.beginPath();
 
+
     ctx.arc(
         circulo.x,
         circulo.y,
@@ -1881,10 +2368,13 @@ function dibujarCirculo(circulo) {
     );
 
 
-    if (circulo.seleccionado) {
+    if (
+        circulo.seleccionado
+    ) {
 
         ctx.strokeStyle =
             "rgba(196,206,229,0.45)";
+
 
         ctx.lineWidth = 1.2;
 
@@ -1892,6 +2382,7 @@ function dibujarCirculo(circulo) {
 
         ctx.strokeStyle =
             "rgba(190,205,225,0.15)";
+
 
         ctx.lineWidth = 0.7;
     }
@@ -1916,7 +2407,9 @@ function dibujarCirculo(circulo) {
             radio * 0.05,
 
             circulo.x,
+
             circulo.y,
+
             radio
         );
 
@@ -1926,15 +2419,18 @@ function dibujarCirculo(circulo) {
         "rgba(255,255,255,0.22)"
     );
 
+
     interior.addColorStop(
         0.32,
         "rgba(255,255,255,0.06)"
     );
 
+
     interior.addColorStop(
         0.68,
         "rgba(255,255,255,0)"
     );
+
 
     interior.addColorStop(
         1,
@@ -1944,6 +2440,7 @@ function dibujarCirculo(circulo) {
 
     ctx.beginPath();
 
+
     ctx.arc(
         circulo.x,
         circulo.y,
@@ -1952,8 +2449,10 @@ function dibujarCirculo(circulo) {
         Math.PI * 2
     );
 
+
     ctx.fillStyle =
         interior;
+
 
     ctx.fill();
 }
@@ -2030,6 +2529,7 @@ window.addEventListener(
     function() {
 
         ajustarCanvas();
+
 
         circulos.forEach(
             circulo => {
