@@ -4,23 +4,28 @@
 // circulos2.js
 // ============================================================
 //
-// - 4 círculos comienzan juntos en el centro.
-// - Se dispersan suavemente desde el centro.
-// - La alteración inicial es aleatoria.
+// - 4 círculos comienzan en las mismas posiciones que IDENTIDAD.
+// - Algunos comienzan alterados y otros tranquilos al azar.
+// - Todos permanecen en movimiento constante.
 // - Mouse y touch habilitados.
-// - Un círculo seleccionado se puede arrastrar.
-// - Con 1 círculo seleccionado: solo se mueve, NO se calma.
-// - Con 2 o más círculos seleccionados: todos empiezan a calmarse.
+// - Se puede agarrar y mover cada círculo.
+// - 1 círculo seleccionado: se puede mover, pero NO se calma.
+// - 2 o más círculos seleccionados: comienzan a calmarse.
 // - Al soltar: los círculos calmados permanecen calmados.
-// - Los círculos calmados se mueven lento y tienen respiración suave.
+// - Los calmados se mueven lento y respiran suavemente.
+// - Clic fuera de un círculo: no ocurre nada.
+// - Sin brillo ni aro exterior.
 // - Estética basada en IDENTIDAD.
-// - Sin aro fuerte alrededor de los círculos.
 // ============================================================
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
 canvas.style.touchAction = "none";
+
+// ============================================================
+// COLORES
+// ============================================================
 
 const colores = [
     "#D9D9D9",
@@ -29,23 +34,33 @@ const colores = [
     "#2B538E"
 ];
 
-const COLOR_SELECCION = "#C4CEE5";
+// ============================================================
+// CONFIGURACIÓN
+// ============================================================
 
 const CANTIDAD_CIRCULOS = 4;
 const RADIO_BASE = 55;
 
 const VELOCIDAD_MAXIMA = 1.5;
-const TIEMPO_TRANQUILO = 1000;
 
-// ------------------------------------------------------------
-// CÍRCULOS
-// ------------------------------------------------------------
+// ============================================================
+// POSICIONES INICIALES
+// IGUALES A IDENTIDAD
+// ============================================================
+
+const posiciones = [
+    { x: 0.25, y: 0.30 },
+    { x: 0.75, y: 0.30 },
+    { x: 0.25, y: 0.70 },
+    { x: 0.75, y: 0.70 }
+];
+
+// ============================================================
+// VARIABLES
+// ============================================================
 
 let circulos = [];
 let punteros = new Map();
-
-let tiempoInicio = performance.now();
-let iniciado = false;
 
 
 // ============================================================
@@ -73,54 +88,86 @@ function crearCirculos() {
 
     circulos = [];
 
-    const centroX = canvas.width / 2;
-    const centroY = canvas.height / 2;
-
     for (let i = 0; i < CANTIDAD_CIRCULOS; i++) {
 
         // ----------------------------------------------------
-        // Alteración aleatoria
+        // ALTERACIÓN ALEATORIA
         // ----------------------------------------------------
 
         const alterado = Math.random() < 0.5;
 
-        const angulo = Math.random() * Math.PI * 2;
+        const angulo =
+            Math.random() * Math.PI * 2;
 
         const velocidadBase =
-            0.45 + Math.random() * (VELOCIDAD_MAXIMA - 0.45);
+            0.55 +
+            Math.random() *
+            (VELOCIDAD_MAXIMA - 0.55);
 
-        const velocidadAlterada = alterado
-            ? velocidadBase
-            : velocidadBase * 0.45;
-
-        const vx = Math.cos(angulo) * velocidadAlterada;
-        const vy = Math.sin(angulo) * velocidadAlterada;
+        const velocidad =
+            alterado
+                ? velocidadBase
+                : velocidadBase * 0.45;
 
         // ----------------------------------------------------
-        // Todos comienzan en el centro
+        // VELOCIDAD INICIAL
+        // ----------------------------------------------------
+
+        const velocidadObjetivoX =
+            Math.cos(angulo) * velocidad;
+
+        const velocidadObjetivoY =
+            Math.sin(angulo) * velocidad;
+
+        // ----------------------------------------------------
+        // CÍRCULO
         // ----------------------------------------------------
 
         circulos.push({
 
-            x: centroX,
-            y: centroY,
+            // Posición igual a IDENTIDAD
+            x:
+                canvas.width *
+                posiciones[i].x,
 
-            radioBase: RADIO_BASE,
-            radio: RADIO_BASE,
+            y:
+                canvas.height *
+                posiciones[i].y,
 
-            color: colores[i % colores.length],
+            radioBase:
+                RADIO_BASE,
 
-            vx: 0,
-            vy: 0,
+            radio:
+                RADIO_BASE,
 
-            velocidadObjetivoX: vx,
-            velocidadObjetivoY: vy,
+            color:
+                colores[i % colores.length],
 
-            alteracion: alterado,
+            // Movimiento
+            vx:
+                velocidadObjetivoX,
 
-            // Respiración
+            vy:
+                velocidadObjetivoY,
+
+            velocidadObjetivoX:
+                velocidadObjetivoX,
+
+            velocidadObjetivoY:
+                velocidadObjetivoY,
+
+            // Alteración
+            alteracion:
+                alterado,
+
+            // ------------------------------------------------
+            // RESPIRACIÓN
+            // ------------------------------------------------
+
             frecuenciaRespiracion:
-                0.002 + Math.random() * 0.0035,
+                0.002 +
+                Math.random() *
+                0.0035,
 
             amplitudRespiracion:
                 alterado
@@ -128,31 +175,30 @@ function crearCirculos() {
                     : 1.2 + Math.random() * 2,
 
             faseRespiracion:
-                Math.random() * Math.PI * 2,
+                Math.random() *
+                Math.PI * 2,
 
-            // Estado de calma
-            nivelCalma: 0,
+            // ------------------------------------------------
+            // CALMA
+            // ------------------------------------------------
 
-            calmadoPermanentemente: !alterado,
+            nivelCalma:
+                alterado
+                    ? 0
+                    : 1,
 
-            // Selección
-            seleccionado: false,
+            calmadoPermanentemente:
+                !alterado,
 
-            punterosSobre: new Set(),
+            // ------------------------------------------------
+            // SELECCIÓN
+            // ------------------------------------------------
 
-            // Dispersión inicial
-            anguloDispersión: angulo,
+            seleccionado:
+                false,
 
-            distanciaDispersión:
-                80 + Math.random() * 170,
-
-            velocidadDispersión:
-                0.008 + Math.random() * 0.006,
-
-            progresoDispersión: 0,
-
-            destinoX: centroX,
-            destinoY: centroY
+            punterosSobre:
+                new Set()
         });
     }
 }
@@ -164,19 +210,25 @@ function crearCirculos() {
 
 function detectarCirculo(x, y) {
 
-    // Buscar primero desde el último hacia el primero
-    // para facilitar la selección cuando se superponen.
-
-    for (let i = circulos.length - 1; i >= 0; i--) {
+    for (
+        let i = circulos.length - 1;
+        i >= 0;
+        i--
+    ) {
 
         const circulo = circulos[i];
 
-        const distancia = Math.hypot(
-            x - circulo.x,
-            y - circulo.y
-        );
+        const distancia =
+            Math.hypot(
+                x - circulo.x,
+                y - circulo.y
+            );
 
-        if (distancia <= circulo.radio + 15) {
+        if (
+            distancia <=
+            circulo.radio + 15
+        ) {
+
             return circulo;
         }
     }
@@ -186,138 +238,84 @@ function detectarCirculo(x, y) {
 
 
 // ============================================================
-// ACTUALIZAR ESTADO DE CALMA
+// ACTUALIZAR CALMA
 // ============================================================
 
 function actualizarCalma() {
 
     // --------------------------------------------------------
-    // Cantidad de círculos seleccionados
+    // Buscar cuántos círculos están seleccionados
     // --------------------------------------------------------
 
-    const seleccionados = circulos.filter(
-        circulo => circulo.seleccionado
-    );
+    const seleccionados =
+        circulos.filter(
+            circulo =>
+                circulo.seleccionado
+        );
 
-    const cantidadSeleccionados = seleccionados.length;
+    const cantidadSeleccionados =
+        seleccionados.length;
 
     // --------------------------------------------------------
-    // Si hay 2 o más seleccionados,
-    // TODOS los seleccionados comienzan a calmarse.
+    // CON 2 O MÁS CÍRCULOS SELECCIONADOS
+    // SE CALMAN TODOS LOS SELECCIONADOS
     // --------------------------------------------------------
 
-    if (cantidadSeleccionados >= 2) {
+    if (
+        cantidadSeleccionados >= 2
+    ) {
 
-        for (const circulo of seleccionados) {
+        for (
+            const circulo of seleccionados
+        ) {
 
-            if (!circulo.calmadoPermanentemente) {
+            if (
+                !circulo.calmadoPermanentemente
+            ) {
 
-                circulo.nivelCalma += 0.018;
+                circulo.nivelCalma +=
+                    0.018;
 
-                if (circulo.nivelCalma >= 1) {
+                if (
+                    circulo.nivelCalma >= 1
+                ) {
 
                     circulo.nivelCalma = 1;
 
-                    circulo.calmadoPermanentemente = true;
-                    circulo.alteracion = false;
+                    circulo.calmadoPermanentemente =
+                        true;
+
+                    circulo.alteracion =
+                        false;
                 }
             }
         }
     }
 
     // --------------------------------------------------------
-    // Si hay menos de 2 seleccionados NO se aumenta la calma.
-    //
-    // IMPORTANTE:
-    // Si un círculo ya se calmó, no vuelve a alterarse.
+    // LOS CÍRCULOS QUE YA ESTÁN CALMADOS
+    // NO VUELVEN A ALTERARSE
     // --------------------------------------------------------
 
-    for (const circulo of circulos) {
+    for (
+        const circulo of circulos
+    ) {
 
-        if (circulo.calmadoPermanentemente) {
+        if (
+            circulo.calmadoPermanentemente
+        ) {
 
             circulo.nivelCalma +=
-                (1 - circulo.nivelCalma) * 0.04;
+                (1 - circulo.nivelCalma) *
+                0.04;
 
-            if (circulo.nivelCalma > 0.999) {
+            if (
+                circulo.nivelCalma >
+                0.999
+            ) {
+
                 circulo.nivelCalma = 1;
             }
-        }
-    }
-}
-
-
-// ============================================================
-// DISPERSIÓN INICIAL
-// ============================================================
-
-function actualizarDispersión() {
-
-    const tiempo = performance.now() - tiempoInicio;
-
-    if (tiempo < TIEMPO_TRANQUILO) {
-        return;
-    }
-
-    if (!iniciado) {
-        iniciado = true;
-    }
-
-    for (const circulo of circulos) {
-
-        if (circulo.progresoDispersión >= 1) {
-            continue;
-        }
-
-        // Avance lento
-        circulo.progresoDispersión +=
-            circulo.velocidadDispersión;
-
-        if (circulo.progresoDispersión > 1) {
-            circulo.progresoDispersión = 1;
-        }
-
-        const progreso =
-            circulo.progresoDispersión;
-
-        // Suavizado
-        const suave =
-            progreso * progreso * (3 - 2 * progreso);
-
-        const centroX = canvas.width / 2;
-        const centroY = canvas.height / 2;
-
-        const objetivoX =
-            centroX +
-            Math.cos(circulo.anguloDispersión) *
-            circulo.distanciaDispersión;
-
-        const objetivoY =
-            centroY +
-            Math.sin(circulo.anguloDispersión) *
-            circulo.distanciaDispersión;
-
-        circulo.x =
-            centroX +
-            (objetivoX - centroX) * suave;
-
-        circulo.y =
-            centroY +
-            (objetivoY - centroY) * suave;
-
-        // Cuando termina la dispersión,
-        // empieza el movimiento normal.
-
-        if (progreso >= 1) {
-
-            circulo.x = objetivoX;
-            circulo.y = objetivoY;
-
-            circulo.vx =
-                circulo.velocidadObjetivoX;
-
-            circulo.vy =
-                circulo.velocidadObjetivoY;
         }
     }
 }
@@ -329,89 +327,86 @@ function actualizarDispersión() {
 
 function moverCirculos() {
 
-    const tiempo =
-        performance.now() - tiempoInicio;
+    for (
+        const circulo of circulos
+    ) {
 
-    if (tiempo < TIEMPO_TRANQUILO) {
-        return;
-    }
+        // ----------------------------------------------------
+        // SI ESTÁ SELECCIONADO
+        // LO CONTROLA EL MOUSE / DEDO
+        // ----------------------------------------------------
 
-    for (const circulo of circulos) {
-
-        // Mientras se dispersa no usamos el movimiento normal.
-        if (circulo.progresoDispersión < 1) {
+        if (
+            circulo.seleccionado
+        ) {
             continue;
         }
 
         // ----------------------------------------------------
-        // Si está siendo seleccionado,
-        // su posición la controla el puntero.
+        // CÍRCULO CALMADO
         // ----------------------------------------------------
 
-        if (circulo.seleccionado) {
-            continue;
-        }
+        if (
+            circulo.calmadoPermanentemente
+        ) {
 
-        // ----------------------------------------------------
-        // Factor de movimiento según calma
-        // ----------------------------------------------------
-
-        let factorMovimiento;
-
-        if (circulo.calmadoPermanentemente) {
-
-            // Movimiento muy tranquilo
-            factorMovimiento = 0.28;
-
-        } else {
-
-            factorMovimiento =
-                1 - circulo.nivelCalma;
-        }
-
-        // ----------------------------------------------------
-        // Movimiento normal
-        // ----------------------------------------------------
-
-        if (!circulo.calmadoPermanentemente) {
+            // Movimiento lento y constante
 
             circulo.vx +=
-                (circulo.velocidadObjetivoX - circulo.vx)
-                * 0.03;
+                (
+                    circulo.velocidadObjetivoX *
+                    0.28 -
+                    circulo.vx
+                ) *
+                0.01;
 
             circulo.vy +=
-                (circulo.velocidadObjetivoY - circulo.vy)
-                * 0.03;
+                (
+                    circulo.velocidadObjetivoY *
+                    0.28 -
+                    circulo.vy
+                ) *
+                0.01;
+
+            circulo.x +=
+                circulo.vx;
+
+            circulo.y +=
+                circulo.vy;
         }
+
+        // ----------------------------------------------------
+        // CÍRCULO ALTERADO
+        // ----------------------------------------------------
 
         else {
 
-            // Una vez calmado, reducimos progresivamente
-            // la velocidad hasta dejarla tranquila.
+            circulo.vx +=
+                (
+                    circulo.velocidadObjetivoX -
+                    circulo.vx
+                ) *
+                0.03;
 
-            circulo.vx *= 0.995;
-            circulo.vy *= 0.995;
+            circulo.vy +=
+                (
+                    circulo.velocidadObjetivoY -
+                    circulo.vy
+                ) *
+                0.03;
 
-            const velocidad =
-                Math.hypot(circulo.vx, circulo.vy);
+            const factorMovimiento =
+                1 -
+                circulo.nivelCalma;
 
-            if (velocidad < 0.12) {
+            circulo.x +=
+                circulo.vx *
+                factorMovimiento;
 
-                circulo.vx +=
-                    (circulo.velocidadObjetivoX * 0.18
-                    - circulo.vx) * 0.01;
-
-                circulo.vy +=
-                    (circulo.velocidadObjetivoY * 0.18
-                    - circulo.vy) * 0.01;
-            }
+            circulo.y +=
+                circulo.vy *
+                factorMovimiento;
         }
-
-        circulo.x +=
-            circulo.vx * factorMovimiento;
-
-        circulo.y +=
-            circulo.vy * factorMovimiento;
 
         controlarBordes(circulo);
     }
@@ -424,89 +419,155 @@ function moverCirculos() {
 
 function controlarBordes(circulo) {
 
-    const margen = circulo.radio;
+    const margen =
+        circulo.radio;
 
-    if (circulo.x - margen < 0) {
+    if (
+        circulo.x - margen < 0
+    ) {
 
-        circulo.x = margen;
+        circulo.x =
+            margen;
 
-        circulo.vx = Math.abs(circulo.vx);
+        circulo.vx =
+            Math.abs(
+                circulo.vx
+            );
     }
 
-    if (circulo.x + margen > canvas.width) {
+    if (
+        circulo.x + margen >
+        canvas.width
+    ) {
 
-        circulo.x = canvas.width - margen;
+        circulo.x =
+            canvas.width -
+            margen;
 
-        circulo.vx = -Math.abs(circulo.vx);
+        circulo.vx =
+            -Math.abs(
+                circulo.vx
+            );
     }
 
-    if (circulo.y - margen < 0) {
+    if (
+        circulo.y - margen < 0
+    ) {
 
-        circulo.y = margen;
+        circulo.y =
+            margen;
 
-        circulo.vy = Math.abs(circulo.vy);
+        circulo.vy =
+            Math.abs(
+                circulo.vy
+            );
     }
 
-    if (circulo.y + margen > canvas.height) {
+    if (
+        circulo.y + margen >
+        canvas.height
+    ) {
 
-        circulo.y = canvas.height - margen;
+        circulo.y =
+            canvas.height -
+            margen;
 
-        circulo.vy = -Math.abs(circulo.vy);
+        circulo.vy =
+            -Math.abs(
+                circulo.vy
+            );
     }
 }
 
 
 // ============================================================
-// COLISIONES ENTRE CÍRCULOS
+// COLISIONES
 // ============================================================
 
 function detectarColisiones() {
 
-    for (let i = 0; i < circulos.length; i++) {
+    for (
+        let i = 0;
+        i < circulos.length;
+        i++
+    ) {
 
-        for (let j = i + 1; j < circulos.length; j++) {
+        for (
+            let j = i + 1;
+            j < circulos.length;
+            j++
+        ) {
 
             const a = circulos[i];
             const b = circulos[j];
 
-            const dx = b.x - a.x;
-            const dy = b.y - a.y;
+            const dx =
+                b.x - a.x;
+
+            const dy =
+                b.y - a.y;
 
             const distancia =
-                Math.hypot(dx, dy);
+                Math.hypot(
+                    dx,
+                    dy
+                );
 
             const distanciaMinima =
-                a.radio + b.radio;
+                a.radio +
+                b.radio;
 
             if (
                 distancia > 0 &&
                 distancia < distanciaMinima
             ) {
 
-                const nx = dx / distancia;
-                const ny = dy / distancia;
+                const nx =
+                    dx / distancia;
+
+                const ny =
+                    dy / distancia;
 
                 const penetracion =
-                    distanciaMinima - distancia;
+                    distanciaMinima -
+                    distancia;
 
-                // Separación
                 const separacion =
-                    penetracion * 0.5;
+                    penetracion *
+                    0.5;
 
-                if (!a.seleccionado) {
+                // ------------------------------------------------
+                // SEPARACIÓN
+                // ------------------------------------------------
 
-                    a.x -= nx * separacion;
-                    a.y -= ny * separacion;
+                if (
+                    !a.seleccionado
+                ) {
+
+                    a.x -=
+                        nx *
+                        separacion;
+
+                    a.y -=
+                        ny *
+                        separacion;
                 }
 
-                if (!b.seleccionado) {
+                if (
+                    !b.seleccionado
+                ) {
 
-                    b.x += nx * separacion;
-                    b.y += ny * separacion;
+                    b.x +=
+                        nx *
+                        separacion;
+
+                    b.y +=
+                        ny *
+                        separacion;
                 }
 
                 // ------------------------------------------------
-                // Rebote
+                // REBOTE
                 // ------------------------------------------------
 
                 const velocidadRelativaX =
@@ -516,34 +577,47 @@ function detectarColisiones() {
                     b.vy - a.vy;
 
                 const velocidadNormal =
-                    velocidadRelativaX * nx +
-                    velocidadRelativaY * ny;
+                    velocidadRelativaX *
+                    nx +
+                    velocidadRelativaY *
+                    ny;
 
-                if (velocidadNormal < 0) {
+                if (
+                    velocidadNormal < 0
+                ) {
 
-                    const rebote = 0.8;
+                    const rebote =
+                        0.8;
 
                     const impulso =
                         -(1 + rebote) *
                         velocidadNormal /
                         2;
 
-                    if (!a.seleccionado) {
+                    if (
+                        !a.seleccionado
+                    ) {
 
                         a.vx -=
-                            impulso * nx;
+                            impulso *
+                            nx;
 
                         a.vy -=
-                            impulso * ny;
+                            impulso *
+                            ny;
                     }
 
-                    if (!b.seleccionado) {
+                    if (
+                        !b.seleccionado
+                    ) {
 
                         b.vx +=
-                            impulso * nx;
+                            impulso *
+                            nx;
 
                         b.vy +=
-                            impulso * ny;
+                            impulso *
+                            ny;
                     }
                 }
             }
@@ -553,23 +627,35 @@ function detectarColisiones() {
 
 
 // ============================================================
-// GRADIENTES
+// GRADIENTE
 // ============================================================
 
-function obtenerGradiente(circulo, radio) {
+function obtenerGradiente(
+    circulo,
+    radio
+) {
 
     const gradiente =
         ctx.createRadialGradient(
-            circulo.x - radio * 0.35,
-            circulo.y - radio * 0.35,
+
+            circulo.x -
+            radio * 0.35,
+
+            circulo.y -
+            radio * 0.35,
+
             radio * 0.1,
 
             circulo.x,
             circulo.y,
+
             radio * 1.35
         );
 
-    if (circulo.color === "#D9D9D9") {
+    if (
+        circulo.color ===
+        "#D9D9D9"
+    ) {
 
         gradiente.addColorStop(
             0,
@@ -587,7 +673,10 @@ function obtenerGradiente(circulo, radio) {
         );
     }
 
-    else if (circulo.color === "#8BB2D3") {
+    else if (
+        circulo.color ===
+        "#8BB2D3"
+    ) {
 
         gradiente.addColorStop(
             0,
@@ -605,7 +694,10 @@ function obtenerGradiente(circulo, radio) {
         );
     }
 
-    else if (circulo.color === "#202D64") {
+    else if (
+        circulo.color ===
+        "#202D64"
+    ) {
 
         gradiente.addColorStop(
             0,
@@ -623,7 +715,10 @@ function obtenerGradiente(circulo, radio) {
         );
     }
 
-    else if (circulo.color === "#2B538E") {
+    else if (
+        circulo.color ===
+        "#2B538E"
+    ) {
 
         gradiente.addColorStop(
             0,
@@ -649,57 +744,51 @@ function obtenerGradiente(circulo, radio) {
 // DIBUJAR CÍRCULO
 // ============================================================
 
-function dibujarCirculo(circulo, tiempo) {
+function dibujarCirculo(
+    circulo,
+    tiempo
+) {
 
     // --------------------------------------------------------
-    // Respiración
+    // RESPIRACIÓN
     // --------------------------------------------------------
 
     const factorCalma =
         circulo.calmadoPermanentemente
             ? 0.18
-            : 1 - circulo.nivelCalma;
+            : 1 -
+              circulo.nivelCalma;
 
     const respiracion =
         Math.sin(
             tiempo *
             circulo.frecuenciaRespiracion +
             circulo.faseRespiracion
-        )
-        *
-        circulo.amplitudRespiracion
-        *
+        ) *
+        circulo.amplitudRespiracion *
         factorCalma;
 
     const radioVisual =
         circulo.radioBase +
         respiracion;
 
-    circulo.radio = radioVisual;
+    circulo.radio =
+        radioVisual;
 
     // --------------------------------------------------------
-    // Sombra / brillo mínimo
+    // SIN SOMBRA EXTERIOR
     // --------------------------------------------------------
 
-    if (circulo.seleccionado) {
+    ctx.shadowColor =
+        "transparent";
 
-        ctx.shadowColor =
-            "rgba(196,206,229,0.16)";
+    ctx.shadowBlur = 0;
 
-        ctx.shadowBlur = 6;
-        ctx.shadowOffsetY = 1;
-
-    } else {
-
-        ctx.shadowColor =
-            "rgba(30,60,100,0.08)";
-
-        ctx.shadowBlur = 3;
-        ctx.shadowOffsetY = 1;
-    }
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
 
     // --------------------------------------------------------
-    // Forma
+    // CÍRCULO
     // --------------------------------------------------------
 
     ctx.beginPath();
@@ -723,41 +812,38 @@ function dibujarCirculo(circulo, tiempo) {
     ctx.fill();
 
     // --------------------------------------------------------
-    // Borde muy sutil
+    // BORDE MUY SUTIL
     // --------------------------------------------------------
 
-    if (circulo.seleccionado) {
+    ctx.strokeStyle =
+        "rgba(190,205,225,0.15)";
 
-        ctx.strokeStyle =
-            "rgba(196,206,229,0.45)";
-
-        ctx.lineWidth = 1.2;
-
-    } else {
-
-        ctx.strokeStyle =
-            "rgba(190,205,225,0.15)";
-
-        ctx.lineWidth = 0.7;
-    }
+    ctx.lineWidth =
+        0.7;
 
     ctx.stroke();
 
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetY = 0;
-
     // --------------------------------------------------------
-    // Luz interna
+    // LUZ INTERNA
     // --------------------------------------------------------
 
     const luz =
         ctx.createRadialGradient(
-            circulo.x - radioVisual * 0.35,
-            circulo.y - radioVisual * 0.40,
-            radioVisual * 0.05,
+
+            circulo.x -
+            radioVisual *
+            0.35,
+
+            circulo.y -
+            radioVisual *
+            0.40,
+
+            radioVisual *
+            0.05,
 
             circulo.x,
             circulo.y,
+
             radioVisual
         );
 
@@ -791,7 +877,8 @@ function dibujarCirculo(circulo, tiempo) {
         Math.PI * 2
     );
 
-    ctx.fillStyle = luz;
+    ctx.fillStyle =
+        luz;
 
     ctx.fill();
 }
@@ -809,12 +896,24 @@ function obtenerPosicion(e) {
     return {
 
         x:
-            (e.clientX - rect.left)
-            * (canvas.width / rect.width),
+            (
+                e.clientX -
+                rect.left
+            ) *
+            (
+                canvas.width /
+                rect.width
+            ),
 
         y:
-            (e.clientY - rect.top)
-            * (canvas.height / rect.height)
+            (
+                e.clientY -
+                rect.top
+            ) *
+            (
+                canvas.height /
+                rect.height
+            )
     };
 }
 
@@ -838,24 +937,46 @@ canvas.addEventListener(
                 posicion.y
             );
 
+        // ----------------------------------------------------
+        // SI TOCA FUERA NO PASA NADA
+        // ----------------------------------------------------
+
         if (!circulo) {
             return;
         }
 
         try {
-            canvas.setPointerCapture(e.pointerId);
+
+            canvas.setPointerCapture(
+                e.pointerId
+            );
+
         } catch (_) {}
 
         // ----------------------------------------------------
-        // Guardar puntero
+        // GUARDAR PUNTERO
         // ----------------------------------------------------
 
         punteros.set(
             e.pointerId,
             {
-                x: posicion.x,
-                y: posicion.y,
-                circulo: circulo
+
+                x:
+                    posicion.x,
+
+                y:
+                    posicion.y,
+
+                circulo:
+                    circulo,
+
+                offsetX:
+                    circulo.x -
+                    posicion.x,
+
+                offsetY:
+                    circulo.y -
+                    posicion.y
             }
         );
 
@@ -863,23 +984,12 @@ canvas.addEventListener(
             e.pointerId
         );
 
-        circulo.seleccionado = true;
-
-        // ----------------------------------------------------
-        // Guardamos la posición relativa
-        // para poder arrastrar sin que el círculo salte.
-        // ----------------------------------------------------
-
-        const puntero =
-            punteros.get(e.pointerId);
-
-        puntero.offsetX =
-            circulo.x - posicion.x;
-
-        puntero.offsetY =
-            circulo.y - posicion.y;
+        circulo.seleccionado =
+            true;
     },
-    { passive: false }
+    {
+        passive: false
+    }
 );
 
 
@@ -894,7 +1004,9 @@ canvas.addEventListener(
         e.preventDefault();
 
         const puntero =
-            punteros.get(e.pointerId);
+            punteros.get(
+                e.pointerId
+            );
 
         if (!puntero) {
             return;
@@ -903,14 +1015,17 @@ canvas.addEventListener(
         const posicion =
             obtenerPosicion(e);
 
-        puntero.x = posicion.x;
-        puntero.y = posicion.y;
+        puntero.x =
+            posicion.x;
+
+        puntero.y =
+            posicion.y;
 
         const circulo =
             puntero.circulo;
 
         // ----------------------------------------------------
-        // El círculo sigue al mouse / dedo
+        // ARRASTRAR CÍRCULO
         // ----------------------------------------------------
 
         circulo.x =
@@ -921,7 +1036,9 @@ canvas.addEventListener(
             posicion.y +
             puntero.offsetY;
     },
-    { passive: false }
+    {
+        passive: false
+    }
 );
 
 
@@ -932,7 +1049,9 @@ canvas.addEventListener(
 function terminarPuntero(e) {
 
     const puntero =
-        punteros.get(e.pointerId);
+        punteros.get(
+            e.pointerId
+        );
 
     if (!puntero) {
         return;
@@ -950,19 +1069,21 @@ function terminarPuntero(e) {
     );
 
     // --------------------------------------------------------
-    // El círculo deja de estar seleccionado.
+    // DEJA DE ESTAR SELECCIONADO
     //
-    // IMPORTANTE:
-    // si ya se calmó, permanece calmado.
+    // Si se calmó, queda calmado.
     // --------------------------------------------------------
 
     circulo.seleccionado =
-        circulo.punterosSobre.size > 0;
+        circulo.punterosSobre.size >
+        0;
 
     try {
+
         canvas.releasePointerCapture(
             e.pointerId
         );
+
     } catch (_) {}
 }
 
@@ -979,7 +1100,9 @@ canvas.addEventListener(
 
         terminarPuntero(e);
     },
-    { passive: false }
+    {
+        passive: false
+    }
 );
 
 
@@ -995,21 +1118,8 @@ canvas.addEventListener(
 
         terminarPuntero(e);
     },
-    { passive: false }
-);
-
-
-// ============================================================
-// POINTER LEAVE
-// ============================================================
-
-canvas.addEventListener(
-    "pointerleave",
-    function(e) {
-
-        // No hacemos nada.
-        // El círculo continúa seleccionado mientras
-        // el pointer siga capturado.
+    {
+        passive: false
     }
 );
 
@@ -1027,35 +1137,19 @@ function animar(tiempo) {
         canvas.height
     );
 
-    // --------------------------------------------------------
-    // Primero dispersión
-    // --------------------------------------------------------
-
-    actualizarDispersión();
-
-    // --------------------------------------------------------
     // Actualizar calma
-    // --------------------------------------------------------
-
     actualizarCalma();
 
-    // --------------------------------------------------------
     // Movimiento
-    // --------------------------------------------------------
-
     moverCirculos();
 
-    // --------------------------------------------------------
     // Colisiones
-    // --------------------------------------------------------
-
     detectarColisiones();
 
-    // --------------------------------------------------------
     // Dibujar
-    // --------------------------------------------------------
-
-    for (const circulo of circulos) {
+    for (
+        const circulo of circulos
+    ) {
 
         dibujarCirculo(
             circulo,
