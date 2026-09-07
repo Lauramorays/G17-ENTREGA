@@ -1,196 +1,371 @@
+// ============================================================
+// EXPECTATIVA
+// triangulos3.js
+// ============================================================
+//
+// - 4 triángulos equiláteros.
+// - Al comenzar forman PERFECTAMENTE un triángulo grande.
+// - Todos respiran suavemente.
+// - Al tocar la figura se desarma.
+// - 1 dedo = mover.
+// - 2 dedos = rotar.
+// - Al acercarse a su lugar, la pieza encaja.
+// - Cuando quedan 3 piezas colocadas:
+//      resultado 1 o 2 = falla y se desarma
+//      resultado 3 = permite completar
+//
+// ============================================================
+
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-// Colores de los cuatro triángulos.
-const colores = [
+canvas.style.touchAction = "none";
+
+
+// ============================================================
+// COLORES
+// ============================================================
+
+const COLORES = [
     "#202D64",
     "#2B538E",
     "#8BB2D3",
     "#D9D9D9"
 ];
 
-// Configuración general del juego.
-const LADO = 120;
-const VELOCIDAD_MIN = 0.35;
-const VELOCIDAD_MAX = 0.8;
-const DISTANCIA_COLOCACION = 45;
 
-// Calcula la altura de un triángulo equilátero.
-const ALTURA =
-    LADO * Math.sqrt(3) / 2;
+// ============================================================
+// TAMAÑO
+// ============================================================
 
-// Guarda las cuatro piezas.
+const LADO = 135;
+
+const ALTURA = LADO * Math.sqrt(3) / 2;
+
+
+// ============================================================
+// VARIABLES
+// ============================================================
+
 let piezas = [];
 
-// Guarda la pieza que se está arrastrando.
+let centroX = 0;
+let centroY = 0;
+
+let figuraArmada = true;
+
+let primeraCarga = true;
+
+
+// ============================================================
+// INTERACCIÓN
+// ============================================================
+
+const punteros = new Map();
+
 let piezaSeleccionada = null;
+
+let modoRotacion = false;
 
 let offsetX = 0;
 let offsetY = 0;
 
-// Indica si el juego ya fue iniciado.
-let juegoIniciado = false;
-
-// Evita que el desarme se ejecute varias veces.
-let desarmando = false;
+let anguloInicialDedos = 0;
+let anguloInicialPieza = 0;
 
 
-// =====================================
-// CANVAS RESPONSIVE
-// =====================================
+// ============================================================
+// AZAR
+// ============================================================
+
+let resultadoAzar = 3;
+
+
+// ============================================================
+// CONFIGURACIÓN
+// ============================================================
+
+const DISTANCIA_ENCAJE = 60;
+
+const AMPLITUD_RESPIRACION = 0.035;
+
+const VELOCIDAD_RESPIRACION = 0.0025;
+
+const FUERZA_COLISION = 0.45;
+
+
+// ============================================================
+// ESTILOS
+// ============================================================
+
+const ESTILOS = {
+
+    "#202D64": {
+        claro: "#6674A5",
+        medio: "#202D64",
+        oscuro: "#10183B",
+        sombra: "rgba(32,45,100,0.35)"
+    },
+
+    "#2B538E": {
+        claro: "#7EA7D0",
+        medio: "#2B538E",
+        oscuro: "#18355F",
+        sombra: "rgba(43,83,142,0.35)"
+    },
+
+    "#8BB2D3": {
+        claro: "#DCECF9",
+        medio: "#8BB2D3",
+        oscuro: "#527A9C",
+        sombra: "rgba(139,178,211,0.25)"
+    },
+
+    "#D9D9D9": {
+        claro: "#FFFFFF",
+        medio: "#D9D9D9",
+        oscuro: "#AEB4BA",
+        sombra: "rgba(217,217,217,0.25)"
+    }
+};
+
+
+// ============================================================
+// AJUSTAR CANVAS
+// ============================================================
 
 function ajustarCanvas() {
 
-    const rect =
-        canvas.getBoundingClientRect();
+    const rect = canvas.getBoundingClientRect();
 
-    canvas.width = rect.width;
-    canvas.height = rect.height;
+    canvas.width = rect.width || window.innerWidth * 0.95;
+    canvas.height = rect.height || window.innerHeight * 0.95;
 
-    // Al comenzar se crean las piezas.
-    if (!juegoIniciado) {
-        crearPiezas();
+    centroX = canvas.width / 2;
+    centroY = canvas.height / 2;
+
+    if (primeraCarga) {
+
+        crearFigura();
+
+        primeraCarga = false;
     }
 }
 
-window.addEventListener(
-    "resize",
-    ajustarCanvas
-);
 
+// ============================================================
+// CREAR FIGURA
+// ============================================================
+//
+// ESTA ES LA PARTE CORREGIDA.
+//
+// Los cuatro triángulos comparten exactamente los mismos
+// vértices.
+//
+//                 A
+//                / \
+//               /   \
+//              /_____\
+//             B\     /C
+//               \   /
+//              / \ / \
+//             /___E___\
+//            D         F
+//
+// ============================================================
 
-// =====================================
-// CREAR LOS 4 TRIÁNGULOS
-// =====================================
-
-function crearPiezas() {
+function crearFigura() {
 
     piezas = [];
 
-    const cx =
-        canvas.width / 2;
 
-    const cy =
-        canvas.height / 2;
-
-
-    // Vértices del triángulo grande.
+    // --------------------------------------------------------
+    // VÉRTICES EXACTOS DEL TRIÁNGULO GRANDE
+    // --------------------------------------------------------
+    //
+    // El triángulo grande tiene lado 2 * LADO.
+    //
+    // Su altura es 2 * ALTURA.
+    //
+    // --------------------------------------------------------
 
     const A = {
-        x: cx,
-        y: cy - ALTURA
+        x: centroX,
+        y: centroY - ALTURA * 2 / 3
     };
+
 
     const B = {
-        x: cx - LADO,
-        y: cy + ALTURA
+        x: centroX - LADO / 2,
+        y: centroY + ALTURA / 3
     };
+
 
     const C = {
-        x: cx + LADO,
-        y: cy + ALTURA
+        x: centroX + LADO / 2,
+        y: centroY + ALTURA / 3
     };
 
 
-    // Puntos medios.
-
-    const AB = {
-        x: (A.x + B.x) / 2,
-        y: (A.y + B.y) / 2
-    };
-
-    const AC = {
-        x: (A.x + C.x) / 2,
-        y: (A.y + C.y) / 2
-    };
-
-    const BC = {
-        x: (B.x + C.x) / 2,
-        y: (B.y + C.y) / 2
+    const D = {
+        x: centroX - LADO,
+        y: centroY + ALTURA * 4 / 3
     };
 
 
-    // Centro de cada uno de los cuatro triángulos.
+    const E = {
+        x: centroX,
+        y: centroY + ALTURA * 4 / 3
+    };
 
-    const centro0 = centroTriangulo(
-        A,
-        AB,
-        AC
+
+    const F = {
+        x: centroX + LADO,
+        y: centroY + ALTURA * 4 / 3
+    };
+
+
+    // ========================================================
+    // TRIÁNGULO SUPERIOR
+    // ========================================================
+
+    const superior = {
+
+        a: A,
+        b: B,
+        c: C
+    };
+
+
+    // ========================================================
+    // TRIÁNGULO INFERIOR IZQUIERDO
+    // ========================================================
+
+    const izquierdo = {
+
+        a: B,
+        b: D,
+        c: E
+    };
+
+
+    // ========================================================
+    // TRIÁNGULO INFERIOR DERECHO
+    // ========================================================
+
+    const derecho = {
+
+        a: C,
+        b: E,
+        c: F
+    };
+
+
+    // ========================================================
+    // TRIÁNGULO CENTRAL INVERTIDO
+    // ========================================================
+
+    const central = {
+
+        a: B,
+        b: C,
+        c: E
+    };
+
+
+    // ========================================================
+    // CREAR PIEZAS
+    // ========================================================
+
+    agregarPieza(
+        0,
+        superior,
+        false
     );
 
-    const centro1 = centroTriangulo(
-        AB,
-        B,
-        BC
-    );
 
-    const centro2 = centroTriangulo(
-        AC,
-        BC,
-        C
-    );
-
-    const centro3 = centroTriangulo(
-        AB,
-        AC,
-        BC
+    agregarPieza(
+        1,
+        izquierdo,
+        false
     );
 
 
-    const centros = [
-        centro0,
-        centro1,
-        centro2,
-        centro3
-    ];
-
-
-    // Crea las cuatro piezas.
-
-    centros.forEach(
-        (centro, indice) => {
-
-            piezas.push({
-
-                id: indice,
-
-                x: centro.x,
-                y: centro.y,
-
-                objetivoX: centro.x,
-                objetivoY: centro.y,
-
-                vx: 0,
-                vy: 0,
-
-                lado: LADO,
-
-                color:
-                    colores[indice],
-
-                colocada: true,
-
-                libre: false,
-
-                respiracion:
-                    Math.random() *
-                    Math.PI *
-                    2,
-
-                velocidadRespiracion:
-                    0.025 +
-                    Math.random() * 0.01
-
-            });
-
-        }
+    agregarPieza(
+        2,
+        derecho,
+        false
     );
+
+
+    agregarPieza(
+        3,
+        central,
+        true
+    );
+
+
+    figuraArmada = true;
 }
 
 
-// =====================================
-// CENTRO DE TRIÁNGULO
-// =====================================
+// ============================================================
+// AGREGAR PIEZA
+// ============================================================
+
+function agregarPieza(
+    id,
+    vertices,
+    invertido
+) {
+
+    const centro =
+        centroTriangulo(
+            vertices.a,
+            vertices.b,
+            vertices.c
+        );
+
+
+    piezas.push({
+
+        id: id,
+
+        x: centro.x,
+        y: centro.y,
+
+        objetivoX: centro.x,
+        objetivoY: centro.y,
+
+        vx: 0,
+        vy: 0,
+
+        angulo: 0,
+        anguloObjetivo: 0,
+
+        invertido: invertido,
+
+        color: COLORES[id],
+
+        fase:
+            Math.random() *
+            Math.PI *
+            2,
+
+        escala: 1,
+
+        colocada: true,
+
+        libre: false,
+
+        seleccionada: false
+    });
+}
+
+
+// ============================================================
+// CENTRO DEL TRIÁNGULO
+// ============================================================
 
 function centroTriangulo(a, b, c) {
 
@@ -201,189 +376,349 @@ function centroTriangulo(a, b, c) {
 
         y:
             (a.y + b.y + c.y) / 3
-
     };
 }
 
 
-// =====================================
-// INICIAR DESARME
-// =====================================
+// ============================================================
+// GENERAR RESULTADO ALEATORIO
+// ============================================================
+
+function generarAzar() {
+
+    resultadoAzar =
+        Math.floor(
+            Math.random() * 3
+        ) + 1;
+}
+
+
+// ============================================================
+// DESARMAR
+// ============================================================
 
 function desarmar() {
 
-    if (juegoIniciado)
+    if (!figuraArmada) {
         return;
+    }
 
-    juegoIniciado = true;
+    figuraArmada = false;
 
-
-    piezas.forEach(
-        (pieza, indice) => {
-
-            pieza.colocada = false;
-            pieza.libre = true;
+    generarAzar();
 
 
-            // Cada pieza sale en una dirección diferente.
-
-            const angulo =
-                (
-                    indice *
-                    Math.PI / 2
-                ) +
-                Math.random() * 0.5;
+    const posiciones = [];
 
 
-            const distancia =
-                100 +
-                Math.random() * 100;
+    // --------------------------------------------------------
+    // BUSCAR POSICIONES SEPARADAS
+    // --------------------------------------------------------
+
+    piezas.forEach(() => {
+
+        let x;
+        let y;
+
+        let valido = false;
+
+        let intentos = 0;
 
 
-            pieza.x =
-                canvas.width / 2 +
-                Math.cos(angulo) *
-                distancia;
+        while (
+            !valido &&
+            intentos < 100
+        ) {
 
-
-            pieza.y =
-                canvas.height / 2 +
-                Math.sin(angulo) *
-                distancia;
-
-
-            // Cada pieza recibe una velocidad aleatoria.
-
-            const velocidad =
-                VELOCIDAD_MIN +
+            x =
+                LADO +
                 Math.random() *
                 (
-                    VELOCIDAD_MAX -
-                    VELOCIDAD_MIN
+                    canvas.width -
+                    LADO * 2
                 );
 
 
+            y =
+                LADO +
+                Math.random() *
+                (
+                    canvas.height -
+                    LADO * 2
+                );
+
+
+            valido = true;
+
+
+            posiciones.forEach(
+                posicion => {
+
+                    const dx =
+                        x - posicion.x;
+
+                    const dy =
+                        y - posicion.y;
+
+                    const distancia =
+                        Math.sqrt(
+                            dx * dx +
+                            dy * dy
+                        );
+
+
+                    if (
+                        distancia <
+                        LADO * 1.2
+                    ) {
+
+                        valido = false;
+                    }
+                }
+            );
+
+
+            intentos++;
+        }
+
+
+        posiciones.push({
+            x: x,
+            y: y
+        });
+    });
+
+
+    // --------------------------------------------------------
+    // APLICAR POSICIONES
+    // --------------------------------------------------------
+
+    piezas.forEach(
+        (pieza, i) => {
+
+            pieza.x =
+                posiciones[i].x;
+
+            pieza.y =
+                posiciones[i].y;
+
+
+            pieza.colocada =
+                false;
+
+            pieza.libre =
+                true;
+
+            pieza.seleccionada =
+                false;
+
+
+            const direccion =
+                Math.random() *
+                Math.PI *
+                2;
+
+
+            const velocidad =
+                0.6 +
+                Math.random() *
+                1.2;
+
+
             pieza.vx =
-                Math.cos(angulo) *
-                velocidad;
+                Math.cos(
+                    direccion
+                ) * velocidad;
 
 
             pieza.vy =
-                Math.sin(angulo) *
-                velocidad;
+                Math.sin(
+                    direccion
+                ) * velocidad;
 
+
+            pieza.angulo =
+                (
+                    Math.random() -
+                    0.5
+                ) *
+                Math.PI *
+                1.8;
         }
-    );
-
-
-    mostrarMensaje(
-        "SE DESARMÓ"
     );
 }
 
 
-// =====================================
-// MOVIMIENTO
-// =====================================
+// ============================================================
+// ACTUALIZAR
+// ============================================================
 
-function moverPiezas() {
+function actualizar() {
+
+    const tiempo =
+        performance.now();
+
 
     piezas.forEach(
         pieza => {
 
-            // Genera el movimiento orgánico de respiración.
-
-            pieza.respiracion +=
-                pieza.velocidadRespiracion;
-
-
-            const pulso =
-                Math.sin(
-                    pieza.respiracion
-                );
-
+            // ------------------------------------------------
+            // RESPIRACIÓN
+            // ------------------------------------------------
 
             pieza.escala =
                 1 +
-                pulso * 0.045;
+                Math.sin(
+                    tiempo *
+                    VELOCIDAD_RESPIRACION +
+                    pieza.fase
+                ) *
+                AMPLITUD_RESPIRACION;
 
 
-            // Las piezas libres se mueven.
+            // ------------------------------------------------
+            // MOVIMIENTO
+            // ------------------------------------------------
 
             if (
                 pieza.libre &&
-                pieza !== piezaSeleccionada
+                !pieza.seleccionada
             ) {
 
                 pieza.x += pieza.vx;
                 pieza.y += pieza.vy;
 
 
-                // Rebote contra los bordes.
-
-                const margen =
-                    pieza.lado * 0.45;
+                pieza.vx *= 0.998;
+                pieza.vy *= 0.998;
 
 
                 if (
-                    pieza.x - margen < 0
+                    Math.abs(pieza.vx) < 0.03 &&
+                    Math.abs(pieza.vy) < 0.03
                 ) {
 
-                    pieza.x = margen;
+                    const direccion =
+                        Math.random() *
+                        Math.PI *
+                        2;
 
-                    pieza.vx *= -1;
+
+                    pieza.vx +=
+                        Math.cos(
+                            direccion
+                        ) * 0.02;
+
+
+                    pieza.vy +=
+                        Math.sin(
+                            direccion
+                        ) * 0.02;
                 }
 
 
-                if (
-                    pieza.x + margen >
-                    canvas.width
-                ) {
-
-                    pieza.x =
-                        canvas.width -
-                        margen;
-
-                    pieza.vx *= -1;
-                }
+                controlarBordes(pieza);
+            }
+        }
+    );
 
 
-                if (
-                    pieza.y - margen < 0
-                ) {
-
-                    pieza.y = margen;
-
-                    pieza.vy *= -1;
-                }
+    resolverColisiones();
 
 
-                if (
-                    pieza.y + margen >
-                    canvas.height
-                ) {
+    // --------------------------------------------------------
+    // PIEZAS ENCAJADAS
+    // --------------------------------------------------------
 
-                    pieza.y =
-                        canvas.height -
-                        margen;
+    piezas.forEach(
+        pieza => {
 
-                    pieza.vy *= -1;
-                }
+            if (
+                pieza.colocada &&
+                !pieza.libre
+            ) {
+
+                pieza.x =
+                    pieza.objetivoX;
+
+                pieza.y =
+                    pieza.objetivoY;
+
+                pieza.angulo =
+                    pieza.anguloObjetivo;
+
+                pieza.vx = 0;
+                pieza.vy = 0;
             }
         }
     );
 }
 
 
-// =====================================
+// ============================================================
+// BORDES
+// ============================================================
+
+function controlarBordes(pieza) {
+
+    const margen =
+        LADO * 0.55;
+
+
+    if (
+        pieza.x < margen
+    ) {
+
+        pieza.x = margen;
+
+        pieza.vx =
+            Math.abs(pieza.vx);
+    }
+
+
+    if (
+        pieza.x >
+        canvas.width - margen
+    ) {
+
+        pieza.x =
+            canvas.width - margen;
+
+        pieza.vx =
+            -Math.abs(pieza.vx);
+    }
+
+
+    if (
+        pieza.y < margen
+    ) {
+
+        pieza.y = margen;
+
+        pieza.vy =
+            Math.abs(pieza.vy);
+    }
+
+
+    if (
+        pieza.y >
+        canvas.height - margen
+    ) {
+
+        pieza.y =
+            canvas.height - margen;
+
+        pieza.vy =
+            -Math.abs(pieza.vy);
+    }
+}
+
+
+// ============================================================
 // COLISIONES
-// =====================================
+// ============================================================
 
-function colisiones() {
-
-    if (!juegoIniciado)
-        return;
-
+function resolverColisiones() {
 
     for (
         let i = 0;
@@ -401,7 +736,14 @@ function colisiones() {
             const b = piezas[j];
 
 
-            // Calcula la distancia entre las piezas.
+            if (
+                !a.libre &&
+                !b.libre
+            ) {
+
+                continue;
+            }
+
 
             const dx =
                 b.x - a.x;
@@ -417,319 +759,99 @@ function colisiones() {
                 );
 
 
-            if (distancia === 0)
-                continue;
-
-
-            // Distancia a partir de la cual
-            // las piezas se consideran en contacto.
-
             const distanciaMinima =
-                a.lado * 0.82;
+                LADO * 0.72;
 
 
             if (
-                distancia >=
+                distancia > 0 &&
+                distancia <
                 distanciaMinima
-            )
-                continue;
-
-
-            // Dirección del empuje.
-
-            const nx =
-                dx / distancia;
-
-            const ny =
-                dy / distancia;
-
-
-            const penetracion =
-                distanciaMinima -
-                distancia;
-
-
-            // Las dos piezas están libres.
-
-            if (
-                a.libre &&
-                b.libre
             ) {
 
-                // Evita que se atraviesen.
+                const nx =
+                    dx / distancia;
 
-                a.x -=
-                    nx *
-                    penetracion *
-                    0.5;
-
-                a.y -=
-                    ny *
-                    penetracion *
-                    0.5;
+                const ny =
+                    dy / distancia;
 
 
-                b.x +=
-                    nx *
-                    penetracion *
-                    0.5;
-
-                b.y +=
-                    ny *
-                    penetracion *
-                    0.5;
+                const diferencia =
+                    distanciaMinima -
+                    distancia;
 
 
-                // Empuja suavemente las piezas.
+                if (
+                    a.libre &&
+                    !a.seleccionada
+                ) {
 
-                const fuerza = 0.12;
+                    a.x -=
+                        nx *
+                        diferencia *
+                        0.5;
 
-
-                a.vx -=
-                    nx *
-                    fuerza;
-
-                a.vy -=
-                    ny *
-                    fuerza;
-
-
-                b.vx +=
-                    nx *
-                    fuerza;
-
-                b.vy +=
-                    ny *
-                    fuerza;
-            }
+                    a.y -=
+                        ny *
+                        diferencia *
+                        0.5;
+                }
 
 
-            // A está siendo arrastrada.
+                if (
+                    b.libre &&
+                    !b.seleccionada
+                ) {
 
-            else if (
-                a === piezaSeleccionada &&
-                b.libre
-            ) {
+                    b.x +=
+                        nx *
+                        diferencia *
+                        0.5;
 
-                b.x +=
-                    nx *
-                    penetracion;
-
-                b.y +=
-                    ny *
-                    penetracion;
-
-
-                b.vx +=
-                    nx *
-                    0.18;
-
-                b.vy +=
-                    ny *
-                    0.18;
-            }
+                    b.y +=
+                        ny *
+                        diferencia *
+                        0.5;
+                }
 
 
-            // B está siendo arrastrada.
+                if (
+                    a.libre &&
+                    !a.seleccionada
+                ) {
 
-            else if (
-                b === piezaSeleccionada &&
-                a.libre
-            ) {
+                    a.vx -=
+                        nx *
+                        FUERZA_COLISION;
 
-                a.x -=
-                    nx *
-                    penetracion;
-
-                a.y -=
-                    ny *
-                    penetracion;
-
-
-                a.vx -=
-                    nx *
-                    0.18;
-
-                a.vy -=
-                    ny *
-                    0.18;
-            }
+                    a.vy -=
+                        ny *
+                        FUERZA_COLISION;
+                }
 
 
-            // A libre y B colocada.
+                if (
+                    b.libre &&
+                    !b.seleccionada
+                ) {
 
-            else if (
-                a.libre &&
-                b.colocada &&
-                b !== piezaSeleccionada
-            ) {
+                    b.vx +=
+                        nx *
+                        FUERZA_COLISION;
 
-                a.x -=
-                    nx *
-                    penetracion;
-
-                a.y -=
-                    ny *
-                    penetracion;
-
-
-                a.vx -=
-                    nx *
-                    0.12;
-
-                a.vy -=
-                    ny *
-                    0.12;
-            }
-
-
-            // B libre y A colocada.
-
-            else if (
-                b.libre &&
-                a.colocada &&
-                a !== piezaSeleccionada
-            ) {
-
-                b.x +=
-                    nx *
-                    penetracion;
-
-                b.y +=
-                    ny *
-                    penetracion;
-
-
-                b.vx +=
-                    nx *
-                    0.12;
-
-                b.vy +=
-                    ny *
-                    0.12;
+                    b.vy +=
+                        ny *
+                        FUERZA_COLISION;
+                }
             }
         }
     }
 }
 
 
-// =====================================
-// DIBUJAR TRIÁNGULO EQUILÁTERO
-// =====================================
-
-function dibujarPieza(pieza) {
-
-    const escala =
-        pieza.escala || 1;
-
-
-    const lado =
-        pieza.lado *
-        escala;
-
-
-    const altura =
-        lado *
-        Math.sqrt(3) /
-        2;
-
-
-    ctx.save();
-
-
-    ctx.translate(
-        pieza.x,
-        pieza.y
-    );
-
-
-    ctx.beginPath();
-
-
-    // El triángulo central está invertido.
-
-    if (pieza.id === 3) {
-
-        ctx.moveTo(
-            -lado / 2,
-            -altura / 3
-        );
-
-        ctx.lineTo(
-            lado / 2,
-            -altura / 3
-        );
-
-        ctx.lineTo(
-            0,
-            altura * 2 / 3
-        );
-
-    } else {
-
-        // Los otros tres triángulos
-        // apuntan hacia arriba.
-
-        ctx.moveTo(
-            0,
-            -altura * 2 / 3
-        );
-
-        ctx.lineTo(
-            -lado / 2,
-            altura / 3
-        );
-
-        ctx.lineTo(
-            lado / 2,
-            altura / 3
-        );
-    }
-
-
-    ctx.closePath();
-
-
-    ctx.fillStyle =
-        pieza.color;
-
-
-    ctx.fill();
-
-
-    ctx.restore();
-}
-
-
-// =====================================
-// DIBUJAR TODO
-// =====================================
-
-function dibujar() {
-
-    ctx.clearRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
-
-
-    piezas.forEach(
-        pieza => {
-
-            dibujarPieza(
-                pieza
-            );
-
-        }
-    );
-}
-
-
-// =====================================
+// ============================================================
 // BUSCAR PIEZA
-// =====================================
+// ============================================================
 
 function buscarPieza(x, y) {
 
@@ -741,6 +863,11 @@ function buscarPieza(x, y) {
 
         const pieza =
             piezas[i];
+
+
+        if (!pieza.libre) {
+            continue;
+        }
 
 
         const dx =
@@ -757,11 +884,9 @@ function buscarPieza(x, y) {
             );
 
 
-        // Detecta si el toque está sobre la pieza.
-
         if (
             distancia <
-            pieza.lado * 0.65
+            LADO * 0.75
         ) {
 
             return pieza;
@@ -773,38 +898,491 @@ function buscarPieza(x, y) {
 }
 
 
-// =====================================
-// COLOCAR PIEZA
-// =====================================
+// ============================================================
+// ÁNGULO ENTRE LOS DOS DEDOS
+// ============================================================
 
-function intentarColocar(pieza) {
+function obtenerAnguloDedos() {
 
-    const distancia =
-        Math.sqrt(
-
-            Math.pow(
-                pieza.x -
-                pieza.objetivoX,
-                2
-            )
-
-            +
-
-            Math.pow(
-                pieza.y -
-                pieza.objetivoY,
-                2
-            )
+    const valores =
+        Array.from(
+            punteros.values()
         );
 
 
-    // Si está suficientemente cerca
-    // de su posición original, se acomoda.
+    if (
+        valores.length < 2
+    ) {
+
+        return 0;
+    }
+
+
+    const p1 = valores[0];
+    const p2 = valores[1];
+
+
+    return Math.atan2(
+        p2.y - p1.y,
+        p2.x - p1.x
+    );
+}
+
+
+// ============================================================
+// POINTER DOWN
+// ============================================================
+
+canvas.addEventListener(
+    "pointerdown",
+    function(e) {
+
+        e.preventDefault();
+
+
+        const rect =
+            canvas.getBoundingClientRect();
+
+
+        const x =
+            e.clientX - rect.left;
+
+        const y =
+            e.clientY - rect.top;
+
+
+        // ====================================================
+        // FIGURA ARMADA
+        // ====================================================
+
+        if (figuraArmada) {
+
+            const dx =
+                x - centroX;
+
+            const dy =
+                y - centroY;
+
+
+            const distancia =
+                Math.sqrt(
+                    dx * dx +
+                    dy * dy
+                );
+
+
+            if (
+                distancia >
+                LADO * 1.5
+            ) {
+
+                return;
+            }
+
+
+            desarmar();
+
+            return;
+        }
+
+
+        // ====================================================
+        // FIGURA DESARMADA
+        // ====================================================
+
+        punteros.set(
+            e.pointerId,
+            {
+                x: x,
+                y: y
+            }
+        );
+
+
+        try {
+
+            canvas.setPointerCapture(
+                e.pointerId
+            );
+
+        } catch (error) {}
+
+
+        // ====================================================
+        // PRIMER DEDO
+        // ====================================================
+
+        if (
+            punteros.size === 1
+        ) {
+
+            const pieza =
+                buscarPieza(
+                    x,
+                    y
+                );
+
+
+            if (!pieza) {
+
+                punteros.delete(
+                    e.pointerId
+                );
+
+                return;
+            }
+
+
+            piezaSeleccionada =
+                pieza;
+
+
+            pieza.seleccionada =
+                true;
+
+
+            offsetX =
+                x - pieza.x;
+
+            offsetY =
+                y - pieza.y;
+
+
+            modoRotacion =
+                false;
+        }
+
+
+        // ====================================================
+        // SEGUNDO DEDO
+        // ====================================================
+
+        else if (
+            punteros.size === 2 &&
+            piezaSeleccionada
+        ) {
+
+            const dx =
+                x -
+                piezaSeleccionada.x;
+
+            const dy =
+                y -
+                piezaSeleccionada.y;
+
+
+            const distancia =
+                Math.sqrt(
+                    dx * dx +
+                    dy * dy
+                );
+
+
+            if (
+                distancia <
+                LADO * 1.2
+            ) {
+
+                modoRotacion =
+                    true;
+
+
+                anguloInicialDedos =
+                    obtenerAnguloDedos();
+
+
+                anguloInicialPieza =
+                    piezaSeleccionada.angulo;
+            }
+        }
+    }
+);
+
+
+// ============================================================
+// POINTER MOVE
+// ============================================================
+
+canvas.addEventListener(
+    "pointermove",
+    function(e) {
+
+        e.preventDefault();
+
+
+        if (
+            !punteros.has(
+                e.pointerId
+            )
+        ) {
+
+            return;
+        }
+
+
+        const rect =
+            canvas.getBoundingClientRect();
+
+
+        const x =
+            e.clientX - rect.left;
+
+        const y =
+            e.clientY - rect.top;
+
+
+        punteros.set(
+            e.pointerId,
+            {
+                x: x,
+                y: y
+            }
+        );
+
+
+        if (
+            !piezaSeleccionada
+        ) {
+
+            return;
+        }
+
+
+        // ====================================================
+        // ROTACIÓN
+        // ====================================================
+
+        if (
+            punteros.size >= 2 &&
+            modoRotacion
+        ) {
+
+            const anguloActual =
+                obtenerAnguloDedos();
+
+
+            const diferencia =
+                anguloActual -
+                anguloInicialDedos;
+
+
+            piezaSeleccionada.angulo =
+                anguloInicialPieza +
+                diferencia;
+
+
+            return;
+        }
+
+
+        // ====================================================
+        // MOVIMIENTO
+        // ====================================================
+
+        if (
+            punteros.size === 1
+        ) {
+
+            piezaSeleccionada.x =
+                x - offsetX;
+
+            piezaSeleccionada.y =
+                y - offsetY;
+
+
+            piezaSeleccionada.vx = 0;
+            piezaSeleccionada.vy = 0;
+        }
+    }
+);
+
+
+// ============================================================
+// TERMINAR POINTER
+// ============================================================
+
+function terminarPointer(e) {
+
+    punteros.delete(
+        e.pointerId
+    );
+
+
+    try {
+
+        canvas.releasePointerCapture(
+            e.pointerId
+        );
+
+    } catch (error) {}
+
+
+    // --------------------------------------------------------
+    // TODAVÍA QUEDA UN DEDO
+    // --------------------------------------------------------
+
+    if (
+        punteros.size > 0
+    ) {
+
+        if (
+            punteros.size === 1 &&
+            piezaSeleccionada
+        ) {
+
+            modoRotacion = false;
+
+
+            const restante =
+                Array.from(
+                    punteros.values()
+                )[0];
+
+
+            offsetX =
+                restante.x -
+                piezaSeleccionada.x;
+
+
+            offsetY =
+                restante.y -
+                piezaSeleccionada.y;
+        }
+
+
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // NO QUEDAN DEDOS
+    // --------------------------------------------------------
+
+    if (
+        !piezaSeleccionada
+    ) {
+
+        return;
+    }
+
+
+    const pieza =
+        piezaSeleccionada;
+
+
+    pieza.seleccionada =
+        false;
+
+
+    piezaSeleccionada =
+        null;
+
+
+    modoRotacion =
+        false;
+
+
+    intentarEncajar(
+        pieza
+    );
+}
+
+
+// ============================================================
+// POINTER UP
+// ============================================================
+
+canvas.addEventListener(
+    "pointerup",
+    terminarPointer
+);
+
+
+// ============================================================
+// POINTER CANCEL
+// ============================================================
+
+canvas.addEventListener(
+    "pointercancel",
+    terminarPointer
+);
+
+
+// ============================================================
+// INTENTAR ENCAJAR
+// ============================================================
+
+function intentarEncajar(pieza) {
+
+    if (
+        !pieza ||
+        !pieza.libre
+    ) {
+
+        return;
+    }
+
+
+    const dx =
+        pieza.objetivoX -
+        pieza.x;
+
+    const dy =
+        pieza.objetivoY -
+        pieza.y;
+
+
+    const distancia =
+        Math.sqrt(
+            dx * dx +
+            dy * dy
+        );
+
+
+    // ========================================================
+    // ESTÁ CERCA
+    // ========================================================
 
     if (
         distancia <
-        DISTANCIA_COLOCACION
+        DISTANCIA_ENCAJE
     ) {
+
+        const colocadas =
+            piezas.filter(
+                p =>
+                    p.colocada
+            ).length;
+
+
+        // ----------------------------------------------------
+        // SI YA HAY 3 COLOCADAS
+        // ----------------------------------------------------
+        //
+        // AQUÍ SE DECIDE EL AZAR.
+        //
+        // ----------------------------------------------------
+
+        if (
+            colocadas === 3
+        ) {
+
+            if (
+                resultadoAzar !== 3
+            ) {
+
+                rechazarUltima(
+                    pieza
+                );
+
+                return;
+            }
+        }
+
+
+        // ----------------------------------------------------
+        // ENCAJAR
+        // ----------------------------------------------------
 
         pieza.x =
             pieza.objetivoX;
@@ -812,10 +1390,11 @@ function intentarColocar(pieza) {
         pieza.y =
             pieza.objetivoY;
 
+        pieza.angulo =
+            pieza.anguloObjetivo;
 
         pieza.vx = 0;
         pieza.vy = 0;
-
 
         pieza.colocada =
             true;
@@ -824,16 +1403,42 @@ function intentarColocar(pieza) {
             false;
 
 
-        verificarPiezas();
+        verificarArmado();
+
+
+        return;
     }
+
+
+    // ========================================================
+    // NO ESTÁ CERCA
+    // ========================================================
+
+    const direccion =
+        Math.atan2(
+            dy,
+            dx
+        );
+
+
+    pieza.vx =
+        Math.cos(
+            direccion
+        ) * 0.4;
+
+
+    pieza.vy =
+        Math.sin(
+            direccion
+        ) * 0.4;
 }
 
 
-// =====================================
-// VERIFICAR CUÁNTAS ESTÁN COLOCADAS
-// =====================================
+// ============================================================
+// VERIFICAR ARMADO
+// ============================================================
 
-function verificarPiezas() {
+function verificarArmado() {
 
     const cantidad =
         piezas.filter(
@@ -842,134 +1447,78 @@ function verificarPiezas() {
         ).length;
 
 
-    if (cantidad === 1) {
+    if (
+        cantidad < 4
+    ) {
 
-        mostrarMensaje(
-            "1 DE 4"
-        );
+        return;
     }
 
 
-    if (cantidad === 2) {
-
-        mostrarMensaje(
-            "2 DE 4"
-        );
-    }
-
-
-    if (cantidad === 3) {
-
-        mostrarMensaje(
-            "CASI..."
-        );
-    }
-
-
-    // Cuando las cuatro piezas están colocadas,
-    // el triángulo vuelve a desarmarse.
-
-    if (cantidad === 4) {
-
-        mostrarMensaje(
-            "CASI COMPLETO..."
-        );
-
-
-        setTimeout(
-            romperNuevamente,
-            700
-        );
-    }
+    completarFigura();
 }
 
 
-// =====================================
-// ROMPER OTRA VEZ
-// =====================================
+// ============================================================
+// RECHAZAR ÚLTIMA PIEZA
+// ============================================================
 
-function romperNuevamente() {
+function rechazarUltima(pieza) {
 
-    if (desarmando)
+    if (!pieza) {
         return;
+    }
 
 
-    desarmando = true;
+    pieza.colocada =
+        false;
+
+    pieza.libre =
+        true;
 
 
-    mostrarMensaje(
-        "SE VOLVIÓ A DESARMAR"
-    );
+    // --------------------------------------------------------
+    // REBOTE
+    // --------------------------------------------------------
 
+    const direccion =
+        Math.random() *
+        Math.PI *
+        2;
+
+
+    const fuerza =
+        4 +
+        Math.random() * 2;
+
+
+    pieza.vx =
+        Math.cos(
+            direccion
+        ) * fuerza;
+
+
+    pieza.vy =
+        Math.sin(
+            direccion
+        ) * fuerza;
+
+
+    pieza.angulo +=
+        (
+            Math.random() -
+            0.5
+        ) * 1.5;
+
+
+    // --------------------------------------------------------
+    // DESARMAR TODO
+    // --------------------------------------------------------
 
     setTimeout(
-        () => {
+        function() {
 
-            piezas.forEach(
-                (pieza, indice) => {
-
-                    pieza.colocada =
-                        false;
-
-                    pieza.libre =
-                        true;
-
-
-                    // Nueva dirección de salida.
-
-                    const angulo =
-                        (
-                            indice *
-                            Math.PI / 2
-                        ) +
-                        Math.random() *
-                        0.7;
-
-
-                    const distancia =
-                        110 +
-                        Math.random() *
-                        90;
-
-
-                    pieza.x =
-                        canvas.width / 2 +
-                        Math.cos(angulo) *
-                        distancia;
-
-
-                    pieza.y =
-                        canvas.height / 2 +
-                        Math.sin(angulo) *
-                        distancia;
-
-
-                    // Nueva velocidad.
-
-                    const velocidad =
-                        0.45 +
-                        Math.random() *
-                        0.45;
-
-
-                    pieza.vx =
-                        Math.cos(angulo) *
-                        velocidad;
-
-
-                    pieza.vy =
-                        Math.sin(angulo) *
-                        velocidad;
-                }
-            );
-
-
-            desarmando = false;
-
-
-            mostrarMensaje(
-                "INTENTÁ ARMARLO DE NUEVO"
-            );
+            romperTodo();
 
         },
         500
@@ -977,239 +1526,502 @@ function romperNuevamente() {
 }
 
 
-// =====================================
-// TOCAR
-// =====================================
+// ============================================================
+// COMPLETAR FIGURA
+// ============================================================
 
-canvas.addEventListener(
-    "pointerdown",
-    function(event) {
+function completarFigura() {
 
-        const rect =
-            canvas.getBoundingClientRect();
+    figuraArmada =
+        true;
 
 
-        const x =
-            event.clientX -
-            rect.left;
+    piezas.forEach(
+        pieza => {
+
+            pieza.x =
+                pieza.objetivoX;
+
+            pieza.y =
+                pieza.objetivoY;
+
+            pieza.angulo =
+                pieza.anguloObjetivo;
+
+            pieza.vx = 0;
+            pieza.vy = 0;
+
+            pieza.colocada =
+                true;
+
+            pieza.libre =
+                false;
+
+            pieza.seleccionada =
+                false;
+        }
+    );
 
 
-        const y =
-            event.clientY -
-            rect.top;
+    // --------------------------------------------------------
+    // NUEVA RONDA
+    // --------------------------------------------------------
+
+    setTimeout(
+        function() {
+
+            nuevaRonda();
+
+        },
+        1600
+    );
+}
 
 
-        const pieza =
-            buscarPieza(x, y);
+// ============================================================
+// ROMPER TODO
+// ============================================================
+
+function romperTodo() {
+
+    figuraArmada =
+        false;
 
 
-        if (!pieza)
-            return;
+    piezas.forEach(
+        pieza => {
+
+            pieza.colocada =
+                false;
+
+            pieza.libre =
+                true;
+
+            pieza.seleccionada =
+                false;
 
 
-        // Primer toque:
-        // desarma el triángulo.
+            // ------------------------------------------------
+            // POSICIÓN ALEATORIA
+            // ------------------------------------------------
 
-        if (!juegoIniciado) {
+            pieza.x =
+                LADO +
+                Math.random() *
+                (
+                    canvas.width -
+                    LADO * 2
+                );
 
-            desarmar();
+
+            pieza.y =
+                LADO +
+                Math.random() *
+                (
+                    canvas.height -
+                    LADO * 2
+                );
 
 
-            piezaSeleccionada =
-                pieza;
+            // ------------------------------------------------
+            // MOVIMIENTO
+            // ------------------------------------------------
+
+            const direccion =
+                Math.random() *
+                Math.PI *
+                2;
 
 
-            pieza.x = x;
-            pieza.y = y;
+            const velocidad =
+                0.6 +
+                Math.random() *
+                1.2;
+
+
+            pieza.vx =
+                Math.cos(
+                    direccion
+                ) * velocidad;
+
+
+            pieza.vy =
+                Math.sin(
+                    direccion
+                ) * velocidad;
+
+
+            // ------------------------------------------------
+            // ROTACIÓN
+            // ------------------------------------------------
+
+            pieza.angulo =
+                (
+                    Math.random() -
+                    0.5
+                ) *
+                Math.PI *
+                1.8;
+        }
+    );
+
+
+    generarAzar();
+}
+
+
+// ============================================================
+// NUEVA RONDA
+// ============================================================
+
+function nuevaRonda() {
+
+    generarAzar();
+
+
+    piezas.forEach(
+        pieza => {
+
+            pieza.x =
+                pieza.objetivoX;
+
+            pieza.y =
+                pieza.objetivoY;
+
+            pieza.angulo =
+                pieza.anguloObjetivo;
+
 
             pieza.vx = 0;
             pieza.vy = 0;
 
 
-            offsetX = 0;
-            offsetY = 0;
-
-
-            canvas.setPointerCapture(
-                event.pointerId
-            );
-
-
-            return;
-        }
-
-
-        // Selecciona una pieza para moverla.
-
-        piezaSeleccionada =
-            pieza;
-
-
-        offsetX =
-            x - pieza.x;
-
-        offsetY =
-            y - pieza.y;
-
-
-        // Una pieza colocada vuelve a estar libre.
-
-        pieza.colocada =
-            false;
-
-        pieza.libre =
-            true;
-
-
-        pieza.vx = 0;
-        pieza.vy = 0;
-
-
-        canvas.setPointerCapture(
-            event.pointerId
-        );
-    }
-);
-
-
-// =====================================
-// MOVER CON EL DEDO / MOUSE
-// =====================================
-
-canvas.addEventListener(
-    "pointermove",
-    function(event) {
-
-        if (!piezaSeleccionada)
-            return;
-
-
-        const rect =
-            canvas.getBoundingClientRect();
-
-
-        const x =
-            event.clientX -
-            rect.left;
-
-
-        const y =
-            event.clientY -
-            rect.top;
-
-
-        piezaSeleccionada.x =
-            x - offsetX;
-
-        piezaSeleccionada.y =
-            y - offsetY;
-    }
-);
-
-
-// =====================================
-// SOLTAR
-// =====================================
-
-canvas.addEventListener(
-    "pointerup",
-    function(event) {
-
-        if (!piezaSeleccionada)
-            return;
-
-
-        intentarColocar(
-            piezaSeleccionada
-        );
-
-
-        // Si no se colocó,
-        // vuelve a moverse.
-
-        if (
-            !piezaSeleccionada.colocada
-        ) {
-
-            piezaSeleccionada.libre =
+            pieza.colocada =
                 true;
 
+            pieza.libre =
+                false;
 
-            piezaSeleccionada.vx =
-                (
-                    Math.random() -
-                    0.5
-                ) * 0.5;
-
-
-            piezaSeleccionada.vy =
-                (
-                    Math.random() -
-                    0.5
-                ) * 0.5;
+            pieza.seleccionada =
+                false;
         }
-
-
-        piezaSeleccionada =
-            null;
-    }
-);
-
-
-// =====================================
-// MENSAJES
-// =====================================
-
-let mensajeTimer;
-
-
-function mostrarMensaje(texto) {
-
-    const mensaje =
-        document.getElementById(
-            "mensaje"
-        );
-
-
-    mensaje.textContent =
-        texto;
-
-
-    clearTimeout(
-        mensajeTimer
     );
 
 
-    mensajeTimer =
-        setTimeout(
-            () => {
-
-                if (!juegoIniciado) {
-
-                    mensaje.textContent =
-                        "TOCÁ UNA PIEZA";
-
-                } else {
-
-                    mensaje.textContent =
-                        "RECONSTRUÍ EL TRIÁNGULO";
-                }
-
-            },
-            1200
-        );
+    figuraArmada =
+        true;
 }
 
 
-// =====================================
+// ============================================================
+// DIBUJAR TRIÁNGULO
+// ============================================================
+
+function dibujarTriangulo(pieza) {
+
+    const estilo =
+        ESTILOS[pieza.color];
+
+
+    ctx.save();
+
+
+    ctx.translate(
+        pieza.x,
+        pieza.y
+    );
+
+
+    ctx.rotate(
+        pieza.angulo
+    );
+
+
+    ctx.scale(
+        pieza.escala,
+        pieza.escala
+    );
+
+
+    // ========================================================
+    // FORMA
+    // ========================================================
+
+    ctx.beginPath();
+
+
+    if (
+        pieza.invertido
+    ) {
+
+        // ----------------------------------------------------
+        // CENTRAL INVERTIDO
+        // ----------------------------------------------------
+
+        ctx.moveTo(
+            0,
+            ALTURA * 2 / 3
+        );
+
+        ctx.lineTo(
+            -LADO / 2,
+            -ALTURA / 3
+        );
+
+        ctx.lineTo(
+            LADO / 2,
+            -ALTURA / 3
+        );
+
+    } else {
+
+        // ----------------------------------------------------
+        // TRIÁNGULO NORMAL
+        // ----------------------------------------------------
+
+        ctx.moveTo(
+            0,
+            -ALTURA * 2 / 3
+        );
+
+        ctx.lineTo(
+            -LADO / 2,
+            ALTURA / 3
+        );
+
+        ctx.lineTo(
+            LADO / 2,
+            ALTURA / 3
+        );
+    }
+
+
+    ctx.closePath();
+
+
+    // ========================================================
+    // SOMBRA
+    // ========================================================
+
+    ctx.shadowColor =
+        estilo.sombra;
+
+    ctx.shadowBlur =
+        12;
+
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 2;
+
+
+    // ========================================================
+    // GRADIENTE
+    // ========================================================
+
+    const gradiente =
+        ctx.createRadialGradient(
+            -LADO * 0.18,
+            -ALTURA * 0.25,
+            5,
+
+            0,
+            0,
+            LADO * 0.8
+        );
+
+
+    gradiente.addColorStop(
+        0,
+        estilo.claro
+    );
+
+
+    gradiente.addColorStop(
+        0.52,
+        estilo.medio
+    );
+
+
+    gradiente.addColorStop(
+        1,
+        estilo.oscuro
+    );
+
+
+    ctx.fillStyle =
+        gradiente;
+
+
+    ctx.fill();
+
+
+    // ========================================================
+    // BRILLO
+    // ========================================================
+
+    ctx.shadowColor =
+        "transparent";
+
+    ctx.shadowBlur = 0;
+
+
+    ctx.save();
+
+    ctx.clip();
+
+
+    const brillo =
+        ctx.createRadialGradient(
+            -LADO * 0.18,
+            -ALTURA * 0.25,
+            2,
+
+            -LADO * 0.18,
+            -ALTURA * 0.25,
+            LADO * 0.65
+        );
+
+
+    brillo.addColorStop(
+        0,
+        "rgba(255,255,255,0.18)"
+    );
+
+
+    brillo.addColorStop(
+        0.5,
+        "rgba(255,255,255,0.05)"
+    );
+
+
+    brillo.addColorStop(
+        1,
+        "rgba(255,255,255,0)"
+    );
+
+
+    ctx.fillStyle =
+        brillo;
+
+
+    ctx.fill();
+
+
+    ctx.restore();
+
+
+    // ========================================================
+    // BORDE SUAVE
+    // ========================================================
+
+    ctx.beginPath();
+
+
+    if (
+        pieza.invertido
+    ) {
+
+        ctx.moveTo(
+            0,
+            ALTURA * 2 / 3
+        );
+
+        ctx.lineTo(
+            -LADO / 2,
+            -ALTURA / 3
+        );
+
+        ctx.lineTo(
+            LADO / 2,
+            -ALTURA / 3
+        );
+
+    } else {
+
+        ctx.moveTo(
+            0,
+            -ALTURA * 2 / 3
+        );
+
+        ctx.lineTo(
+            -LADO / 2,
+            ALTURA / 3
+        );
+
+        ctx.lineTo(
+            LADO / 2,
+            ALTURA / 3
+        );
+    }
+
+
+    ctx.closePath();
+
+
+    ctx.strokeStyle =
+        "rgba(196,206,229,0.12)";
+
+    ctx.lineWidth =
+        0.7;
+
+    ctx.stroke();
+
+
+    ctx.restore();
+}
+
+
+// ============================================================
+// DIBUJAR
+// ============================================================
+
+function dibujar() {
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+
+    piezas.forEach(
+        pieza => {
+
+            if (
+                !pieza.seleccionada
+            ) {
+
+                dibujarTriangulo(
+                    pieza
+                );
+            }
+        }
+    );
+
+
+    piezas.forEach(
+        pieza => {
+
+            if (
+                pieza.seleccionada
+            ) {
+
+                dibujarTriangulo(
+                    pieza
+                );
+            }
+        }
+    );
+}
+
+
+// ============================================================
 // ANIMACIÓN
-// =====================================
+// ============================================================
 
 function animar() {
 
-    moverPiezas();
-
-    colisiones();
+    actualizar();
 
     dibujar();
 
@@ -1219,10 +2031,42 @@ function animar() {
 }
 
 
-// =====================================
-// INICIO
-// =====================================
+// ============================================================
+// EVITAR GESTOS
+// ============================================================
+
+canvas.addEventListener(
+    "gesturestart",
+    e => e.preventDefault()
+);
+
+canvas.addEventListener(
+    "gesturechange",
+    e => e.preventDefault()
+);
+
+canvas.addEventListener(
+    "gestureend",
+    e => e.preventDefault()
+);
+
+
+// ============================================================
+// REDIMENSIONAR
+// ============================================================
+
+window.addEventListener(
+    "resize",
+    ajustarCanvas
+);
+
+
+// ============================================================
+// INICIAR
+// ============================================================
 
 ajustarCanvas();
+
+generarAzar();
 
 animar();
