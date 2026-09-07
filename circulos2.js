@@ -1,4 +1,3 @@
-
 // ============================================================
 // EMPATÍA
 // circulos2.js
@@ -11,13 +10,34 @@
 // - Todos permanecen en movimiento constante.
 // - Mouse y touch habilitados.
 // - Se puede agarrar y mover cada círculo.
-// - 1 círculo seleccionado: se puede mover, pero NO se calma.
-// - 2 o más círculos seleccionados: comienzan a calmarse.
-// - Al soltar: los círculos calmados permanecen calmados.
-// - Los calmados se mueven lento y respiran suavemente.
-// - Clic fuera de un círculo: no ocurre nada.
+//
+// INTERACCIÓN:
+//
+// - 1 círculo seleccionado:
+//      → se puede mover
+//      → NO se calma
+//
+// - 2 o más círculos seleccionados:
+//      → comienzan a calmarse
+//
+// - Un círculo calmado:
+//      → permanece calmado al soltarlo
+//
+// - Si un círculo calmado choca con uno alterado:
+//      → vuelve a alterarse
+//
+// - Calmado + calmado:
+//      → permanecen calmados
+//
+// - Cuando los 4 están calmados:
+//      → permanecen calmados
+//
+// - Clic fuera de un círculo:
+//      → no ocurre nada
+//
 // - Sin brillo ni aro exterior.
 // - Estética basada en IDENTIDAD.
+//
 // ============================================================
 
 
@@ -53,7 +73,6 @@ const VELOCIDAD_MAXIMA = 1.5;
 const TIEMPO_TRANQUILO = 1000;
 
 // Tiempo que tarda en aparecer la alteración
-// después del segundo inicial
 const TIEMPO_TRANSICION = 1800;
 
 
@@ -131,9 +150,6 @@ function crearCirculos() {
 
         // ----------------------------------------------------
         // VELOCIDAD
-        //
-        // Al principio todos se mueven muy lentamente.
-        // Después aumentarán progresivamente.
         // ----------------------------------------------------
 
         const velocidadInicial =
@@ -151,6 +167,7 @@ function crearCirculos() {
             Math.cos(angulo) *
             velocidadFinal;
 
+
         const velocidadObjetivoY =
             Math.sin(angulo) *
             velocidadFinal;
@@ -158,8 +175,6 @@ function crearCirculos() {
 
         // ----------------------------------------------------
         // RESPIRACIÓN
-        //
-        // Cada círculo tiene un ritmo diferente.
         // ----------------------------------------------------
 
         const frecuenciaRespiracion =
@@ -170,8 +185,7 @@ function crearCirculos() {
 
         const amplitudRespiracion =
             5 +
-            Math.random() *
-            8;
+            Math.random() * 8;
 
 
         const faseRespiracion =
@@ -243,8 +257,6 @@ function crearCirculos() {
 
             // ------------------------------------------------
             // ALTERACIÓN
-            //
-            // Todos comienzan tranquilos.
             // ------------------------------------------------
 
             alteracion:
@@ -332,7 +344,8 @@ function detectarCirculo(
 // ============================================================
 //
 // Después de 1 segundo comienza una transición.
-// Cada círculo aumenta su alteración de manera progresiva.
+// Los círculos que hayan sido calmados no vuelven a
+// alterarse por esta función.
 //
 // ============================================================
 
@@ -390,7 +403,9 @@ function actualizarAlteracion(
         );
 
 
-    // Suavizar transición
+    // --------------------------------------------------------
+    // SUAVIZAR TRANSICIÓN
+    // --------------------------------------------------------
 
     const suavizado =
         progreso *
@@ -406,14 +421,25 @@ function actualizarAlteracion(
         true;
 
 
+    // --------------------------------------------------------
+    // ACTUALIZAR CADA CÍRCULO
+    // --------------------------------------------------------
+
     for (
         const circulo
         of circulos
     ) {
 
+        // ----------------------------------------------------
+        // SI ESTÁ CALMADO
+        //
+        // NO SE ALTERA POR EL PASO DEL TIEMPO.
+        // ----------------------------------------------------
+
         if (
             circulo.calmadoPermanentemente
         ) {
+
             continue;
         }
 
@@ -426,18 +452,21 @@ function actualizarAlteracion(
             1 -
             suavizado;
 
+
         circulo.alteracion =
             suavizado > 0.05;
 
 
-        // Cuando termina la transición,
-        // queda completamente alterado.
+        // ----------------------------------------------------
+        // ALTERACIÓN COMPLETA
+        // ----------------------------------------------------
 
         if (
             suavizado >= 0.999
         ) {
 
-            circulo.nivelCalma = 0;
+            circulo.nivelCalma =
+                0;
 
             circulo.alteracion =
                 true;
@@ -449,11 +478,19 @@ function actualizarAlteracion(
 // ============================================================
 // ACTUALIZAR CALMA
 // ============================================================
+//
+// 2 o más círculos seleccionados:
+// comienzan a recuperar la calma.
+//
+// Una vez calmados, quedan así hasta que tengan contacto
+// con un círculo alterado.
+//
+// ============================================================
 
 function actualizarCalma() {
 
     // --------------------------------------------------------
-    // Buscar cuántos círculos están seleccionados
+    // BUSCAR CÍRCULOS SELECCIONADOS
     // --------------------------------------------------------
 
     const seleccionados =
@@ -468,8 +505,8 @@ function actualizarCalma() {
 
 
     // --------------------------------------------------------
-    // CON 2 O MÁS CÍRCULOS SELECCIONADOS
-    // SE CALMAN TODOS LOS SELECCIONADOS
+    // 2 O MÁS CÍRCULOS
+    // COMIENZAN A CALMARSE
     // --------------------------------------------------------
 
     if (
@@ -481,35 +518,46 @@ function actualizarCalma() {
             of seleccionados
         ) {
 
+            // -----------------------------------------------
+            // SI YA ESTÁ CALMADO
+            // NO HAY NADA QUE HACER
+            // -----------------------------------------------
+
             if (
-                !circulo.calmadoPermanentemente
+                circulo.calmadoPermanentemente
             ) {
 
-                circulo.nivelCalma +=
-                    0.018;
+                continue;
+            }
 
 
-                if (
-                    circulo.nivelCalma >= 1
-                ) {
+            // -----------------------------------------------
+            // AUMENTAR CALMA
+            // -----------------------------------------------
 
-                    circulo.nivelCalma =
-                        1;
+            circulo.nivelCalma +=
+                0.018;
 
-                    circulo.calmadoPermanentemente =
-                        true;
 
-                    circulo.alteracion =
-                        false;
-                }
+            if (
+                circulo.nivelCalma >= 1
+            ) {
+
+                circulo.nivelCalma =
+                    1;
+
+                circulo.calmadoPermanentemente =
+                    true;
+
+                circulo.alteracion =
+                    false;
             }
         }
     }
 
 
     // --------------------------------------------------------
-    // LOS CÍRCULOS QUE YA ESTÁN CALMADOS
-    // NO VUELVEN A ALTERARSE
+    // LOS CÍRCULOS CALMADOS CONSERVAN SU CALMA
     // --------------------------------------------------------
 
     for (
@@ -539,6 +587,192 @@ function actualizarCalma() {
             }
         }
     }
+}
+
+
+// ============================================================
+// VERIFICAR SI TODOS ESTÁN CALMADOS
+// ============================================================
+
+function todosCalmados() {
+
+    return circulos.length > 0 &&
+        circulos.every(
+            circulo =>
+                circulo.calmadoPermanentemente
+        );
+}
+
+
+// ============================================================
+// CALMA POR CONTACTO
+// ============================================================
+//
+// Si un círculo calmado toca a uno alterado:
+//
+//     CALMADO + ALTERADO
+//              ↓
+//        el calmado vuelve
+//        progresivamente
+//        a estar alterado.
+//
+// Si ambos están calmados:
+//
+//     CALMADO + CALMADO
+//              ↓
+//        permanecen calmados.
+//
+// Cuando todos están calmados:
+//
+//     CALMADO + CALMADO
+//              ↓
+//        permanecen calmados.
+//
+// ============================================================
+
+function actualizarCalmaPorContacto() {
+
+    // --------------------------------------------------------
+    // Si todos ya están calmados, termina la interacción.
+    // --------------------------------------------------------
+
+    if (
+        todosCalmados()
+    ) {
+
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // RECORRER PARES DE CÍRCULOS
+    // --------------------------------------------------------
+
+    for (
+        let i = 0;
+        i < circulos.length;
+        i++
+    ) {
+
+        for (
+            let j = i + 1;
+            j < circulos.length;
+            j++
+        ) {
+
+            const a =
+                circulos[i];
+
+            const b =
+                circulos[j];
+
+
+            // ------------------------------------------------
+            // DISTANCIA
+            // ------------------------------------------------
+
+            const dx =
+                b.x - a.x;
+
+            const dy =
+                b.y - a.y;
+
+            const distancia =
+                Math.hypot(
+                    dx,
+                    dy
+                );
+
+
+            const distanciaContacto =
+                a.radio +
+                b.radio;
+
+
+            // ------------------------------------------------
+            // NO HAY CONTACTO
+            // ------------------------------------------------
+
+            if (
+                distancia >
+                distanciaContacto
+            ) {
+
+                continue;
+            }
+
+
+            // ------------------------------------------------
+            // CALMADO + ALTERADO
+            // ------------------------------------------------
+
+            if (
+                a.calmadoPermanentemente &&
+                !b.calmadoPermanentemente
+            ) {
+
+                alterarCirculoPorContacto(
+                    a
+                );
+            }
+
+
+            else if (
+                b.calmadoPermanentemente &&
+                !a.calmadoPermanentemente
+            ) {
+
+                alterarCirculoPorContacto(
+                    b
+                );
+            }
+        }
+    }
+}
+
+
+// ============================================================
+// ALTERAR CÍRCULO POR CONTACTO
+// ============================================================
+
+function alterarCirculoPorContacto(
+    circulo
+) {
+
+    // --------------------------------------------------------
+    // Si todos están calmados no se modifica.
+    // --------------------------------------------------------
+
+    if (
+        todosCalmados()
+    ) {
+
+        return;
+    }
+
+
+    // --------------------------------------------------------
+    // PERDER LA CALMA
+    // --------------------------------------------------------
+
+    circulo.calmadoPermanentemente =
+        false;
+
+
+    circulo.alteracion =
+        true;
+
+
+    // --------------------------------------------------------
+    // VUELVE ALTERADO
+    // --------------------------------------------------------
+
+    circulo.nivelCalma =
+        Math.max(
+            0,
+            circulo.nivelCalma -
+            0.12
+        );
 }
 
 
@@ -902,17 +1136,22 @@ function obtenerGradiente(
         ctx.createRadialGradient(
 
             circulo.x -
-            radio * 0.35,
+            radio *
+            0.35,
 
             circulo.y -
-            radio * 0.35,
+            radio *
+            0.35,
 
-            radio * 0.1,
+            radio *
+            0.1,
 
             circulo.x,
+
             circulo.y,
 
-            radio * 1.35
+            radio *
+            1.35
         );
 
 
@@ -1032,7 +1271,6 @@ function dibujarCirculo(
 
         factorRespiracion =
             0.18;
-
     }
 
     else {
@@ -1152,6 +1390,7 @@ function dibujarCirculo(
             0.05,
 
             circulo.x,
+
             circulo.y,
 
             radioVisual
@@ -1163,15 +1402,18 @@ function dibujarCirculo(
         "rgba(255,255,255,0.25)"
     );
 
+
     luz.addColorStop(
         0.35,
         "rgba(255,255,255,0.06)"
     );
 
+
     luz.addColorStop(
         0.70,
         "rgba(255,255,255,0)"
     );
+
 
     luz.addColorStop(
         1,
@@ -1469,31 +1711,51 @@ function animar(tiempo) {
     );
 
 
-    // Primero:
-    // tranquilo → alterado
+    // --------------------------------------------------------
+    // TRANQUILO → ALTERADO
+    // --------------------------------------------------------
 
     actualizarAlteracion(
         tiempo
     );
 
 
-    // Después:
-    // interacción de empatía
+    // --------------------------------------------------------
+    // EMPATÍA
+    //
+    // 2 o más seleccionados → calma
+    // --------------------------------------------------------
 
     actualizarCalma();
 
 
-    // Movimiento
+    // --------------------------------------------------------
+    // MOVIMIENTO
+    // --------------------------------------------------------
 
     moverCirculos();
 
 
-    // Colisiones
+    // --------------------------------------------------------
+    // COLISIONES FÍSICAS
+    // --------------------------------------------------------
 
     detectarColisiones();
 
 
-    // Dibujar
+    // --------------------------------------------------------
+    // CONTACTO ENTRE ESTADOS
+    //
+    // CALMADO + ALTERADO
+    // → el calmado vuelve a alterarse
+    // --------------------------------------------------------
+
+    actualizarCalmaPorContacto();
+
+
+    // --------------------------------------------------------
+    // DIBUJAR
+    // --------------------------------------------------------
 
     for (
         const circulo
@@ -1535,4 +1797,3 @@ ajustarCanvas();
 requestAnimationFrame(
     animar
 );
-
