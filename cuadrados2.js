@@ -8,17 +8,13 @@
 // - Comienzan 4 cuadrados.
 // - Se mueven solos.
 // - Chocan entre ellos y con los bordes.
-// - Tienen movimiento de respiración.
-// - Con un dedo se pueden arrastrar.
-// - Con dos dedos sobre el mismo cuadrado se puede estirar.
-// - SOLO cuando se estira con dos dedos se deforma.
-// - La deformación es blanda y orgánica, como goma o látex.
-// - Al llegar al máximo, genera hijos.
-// - El padre permanece.
-// - Después de generar hijos rebota y recupera su forma.
-// - Si se suelta antes del máximo también rebota y recupera
-//   su forma original.
-//
+// - Con UN dedo: el cuadrado solamente se mueve.
+// - Con DOS dedos sobre EL MISMO cuadrado: se deforma.
+// - Al estirarlo completamente: genera 3 hijos.
+// - El padre NO desaparece.
+// - Después de generar hijos, el padre vuelve rápidamente
+//   pero de forma visible a su forma PERFECTAMENTE CUADRADA.
+// - Los hijos heredan el color y pueden volver a generar hijos.
 // ============================================================
 
 const canvas = document.getElementById("canvas");
@@ -53,39 +49,79 @@ const FUERZA_CHOQUE = 0.8;
 
 
 // ============================================================
-// DEFORMACIÓN ELÁSTICA
+// DEFORMACIÓN
 // ============================================================
 
-const DEFORMACION_MAXIMA = 1.65;
+const DEFORMACION_MAXIMA = 1;
 
-const COMPRESION_MAXIMA = 0.68;
-
-const FUERZA_REBOTE = 0.16;
-
-const AMORTIGUACION_REBOTE = 0.82;
+const ESTIRAMIENTO_MAXIMO = 2.0;
 
 
 // ============================================================
-// AJUSTAR CANVAS
+// RETRACCIÓN
+// ============================================================
+//
+// Antes era demasiado lenta o podía quedarse deformado.
+//
+// Ahora:
+// - empieza inmediatamente después de crear los hijos
+// - dura aproximadamente 300 ms
+// - vuelve a cuadrado
+// - tiene una pequeña elasticidad al final
+//
+
+const DURACION_RETRACCION = 320;
+
+
+// ============================================================
+// CANVAS
 // ============================================================
 
 function ajustarCanvas() {
 
-    canvas.width = canvas.clientWidth;
-    canvas.height = canvas.clientHeight;
+    const rect = canvas.getBoundingClientRect();
 
+    const dpr = window.devicePixelRatio || 1;
+
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+
+    canvas.style.width = rect.width + "px";
+    canvas.style.height = rect.height + "px";
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
-
-ajustarCanvas();
 
 window.addEventListener("resize", ajustarCanvas);
 
+ajustarCanvas();
+
 
 // ============================================================
-// FIGURAS
+// VARIABLES
 // ============================================================
 
-const figuras = [];
+let figuras = [];
+
+let siguienteId = 0;
+
+
+// ============================================================
+// DEDOS ACTIVOS
+// ============================================================
+//
+// Cada dedo queda asociado a un cuadrado concreto.
+//
+// Esto es importante para que:
+// dedo 1 -> cuadrado A
+// dedo 2 -> SOLO pueda unirse al cuadrado A
+//
+// y no ocurra:
+// dedo 1 -> cuadrado A
+// dedo 2 -> cuadrado B
+//
+
+const punteros = new Map();
 
 
 // ============================================================
@@ -96,24 +132,26 @@ function crearFigura(x, y, color, tamano = TAMANO_INICIAL) {
 
     return {
 
+        id: siguienteId++,
+
         x: x,
         y: y,
 
         vx: (Math.random() - 0.5) * VELOCIDAD,
         vy: (Math.random() - 0.5) * VELOCIDAD,
 
-        color: color,
-
         tamano: tamano,
 
-        rotacion: Math.random() * Math.PI * 2,
+        color: color,
 
-        velocidadRotacion:
+        angulo: Math.random() * Math.PI * 2,
+
+        velocidadAngulo:
             (Math.random() - 0.5) * 0.002,
 
-        // ----------------------------------------
+        // ----------------------------------------------------
         // RESPIRACIÓN
-        // ----------------------------------------
+        // ----------------------------------------------------
 
         faseRespiracion:
             Math.random() * Math.PI * 2,
@@ -128,108 +166,180 @@ function crearFigura(x, y, color, tamano = TAMANO_INICIAL) {
             0.045 + Math.random() * 0.015,
 
         respiracionX: 1,
+
         respiracionY: 1,
 
-        // ----------------------------------------
+        // ----------------------------------------------------
         // GESTO
-        // ----------------------------------------
+        // ----------------------------------------------------
 
-        seleccionada: false,
+        dedos: new Map(),
 
-        gesticulando: false,
+        distanciaInicial: 0,
 
-        puntosGesto: [],
+        deformacionActual: 0,
 
-        distanciaInicialGesto: 0,
-
-        distanciaActualGesto: 0,
+        direccionEstiramiento: 0,
 
         escalaGesto: 1,
 
         compresionGesto: 1,
 
-        direccionGestoX: 1,
-
-        direccionGestoY: 0,
-
-        // ----------------------------------------
-        // REBOTE ELÁSTICO
-        // ----------------------------------------
+        // ----------------------------------------------------
+        // RETRACCIÓN
+        // ----------------------------------------------------
 
         rebotando: false,
 
-        velocidadRebote: 0,
+        inicioRetraccion: 0,
 
-        deformacionRebote: 0,
+        deformacionInicioRetraccion: 0,
 
-        direccionReboteX: 1,
+        // ----------------------------------------------------
+        // CONTROL
+        // ----------------------------------------------------
 
-        direccionReboteY: 0,
+        arrastrado: false,
 
-        inclinacionDeformacion: 0,
-
-        // ----------------------------------------
-        // DEFORMACIÓN ACTUAL
-        // ----------------------------------------
-
-        deformacionActual: 0,
-
-        deformacionObjetivo: 0,
-
-        // ----------------------------------------
+        // ----------------------------------------------------
         // HERENCIA
-        // ----------------------------------------
+        // ----------------------------------------------------
 
-        reproducciones: 0
+        generaciones: 0,
 
+        puedeReproducirse: true
     };
-
 }
 
 
 // ============================================================
-// FIGURAS INICIALES
+// CUADRADOS INICIALES
 // ============================================================
 
-function crearFigurasIniciales() {
+function crearIniciales() {
 
-    figuras.length = 0;
+    figuras = [];
 
-    figuras.push(
-        crearFigura(
-            canvas.width * 0.25,
-            canvas.height * 0.30,
-            COLORES[0]
-        )
-    );
+    const rect = canvas.getBoundingClientRect();
 
-    figuras.push(
-        crearFigura(
-            canvas.width * 0.75,
-            canvas.height * 0.30,
-            COLORES[1]
-        )
-    );
+    const posiciones = [
 
-    figuras.push(
-        crearFigura(
-            canvas.width * 0.25,
-            canvas.height * 0.70,
-            COLORES[2]
-        )
-    );
+        {
+            x: rect.width * 0.25,
+            y: rect.height * 0.30
+        },
 
-    figuras.push(
-        crearFigura(
-            canvas.width * 0.75,
-            canvas.height * 0.70,
-            COLORES[3]
-        )
-    );
+        {
+            x: rect.width * 0.75,
+            y: rect.height * 0.30
+        },
 
+        {
+            x: rect.width * 0.25,
+            y: rect.height * 0.70
+        },
+
+        {
+            x: rect.width * 0.75,
+            y: rect.height * 0.70
+        }
+    ];
+
+    posiciones.forEach((pos, i) => {
+
+        figuras.push(
+            crearFigura(
+                pos.x,
+                pos.y,
+                COLORES[i % COLORES.length]
+            )
+        );
+
+    });
 }
 
-crearFigurasIniciales();
+crearIniciales();
+
+
+// ============================================================
+// GRADIENTES
+// ============================================================
+
+function obtenerGradiente(figura) {
+
+    const s = figura.tamano;
+
+    let gradiente;
+
+    if (figura.color === "#D9D9D9") {
+
+        gradiente = ctx.createRadialGradient(
+            -s * 0.25,
+            -s * 0.25,
+            s * 0.05,
+            0,
+            0,
+            s
+        );
+
+        gradiente.addColorStop(0, "#FFFFFF");
+        gradiente.addColorStop(0.45, "#D9D9D9");
+        gradiente.addColorStop(1, "#AEB4BA");
+
+    }
+
+    else if (figura.color === "#8BB2D3") {
+
+        gradiente = ctx.createRadialGradient(
+            -s * 0.25,
+            -s * 0.25,
+            s * 0.05,
+            0,
+            0,
+            s
+        );
+
+        gradiente.addColorStop(0, "#DCECF9");
+        gradiente.addColorStop(0.48, "#8BB2D3");
+        gradiente.addColorStop(1, "#527A9C");
+
+    }
+
+    else if (figura.color === "#202D64") {
+
+        gradiente = ctx.createRadialGradient(
+            -s * 0.25,
+            -s * 0.25,
+            s * 0.05,
+            0,
+            0,
+            s
+        );
+
+        gradiente.addColorStop(0, "#6674A5");
+        gradiente.addColorStop(0.50, "#202D64");
+        gradiente.addColorStop(1, "#10183B");
+
+    }
+
+    else {
+
+        gradiente = ctx.createRadialGradient(
+            -s * 0.25,
+            -s * 0.25,
+            s * 0.05,
+            0,
+            0,
+            s
+        );
+
+        gradiente.addColorStop(0, "#7EA7D0");
+        gradiente.addColorStop(0.50, "#2B538E");
+        gradiente.addColorStop(1, "#18355F");
+    }
+
+    return gradiente;
+}
 
 
 // ============================================================
@@ -238,8 +348,7 @@ crearFigurasIniciales();
 
 function actualizarRespiracion(figura) {
 
-    figura.faseRespiracion +=
-        figura.velocidadRespiracion;
+    figura.faseRespiracion += figura.velocidadRespiracion;
 
     figura.faseSecundaria +=
         figura.velocidadRespiracion * 0.47;
@@ -254,410 +363,163 @@ function actualizarRespiracion(figura) {
         ondaPrincipal * figura.amplitudRespiracion +
         ondaSecundaria * 0.008;
 
-    figura.respiracionX =
-        1 + respiracion;
+    figura.respiracionX = 1 + respiracion;
 
     figura.respiracionY =
         1 + respiracion * 0.82;
-
 }
 
 
 // ============================================================
-// REBOTE ELÁSTICO
+// ACTUALIZAR RETRACCIÓN
 // ============================================================
 
-function iniciarRebote(figura) {
+function actualizarRetraccion(figura) {
 
-    figura.rebotando = true;
+    if (!figura.rebotando) return;
 
-    // La deformación actual se toma como punto de partida.
-    // De esta forma no desaparece de golpe.
-    figura.deformacionRebote =
-        figura.deformacionActual;
+    const ahora = performance.now();
 
-    figura.velocidadRebote =
-        FUERZA_REBOTE;
+    const transcurrido =
+        ahora - figura.inicioRetraccion;
 
-}
+    let progreso =
+        transcurrido / DURACION_RETRACCION;
 
-
-// ============================================================
-// ACTUALIZAR REBOTE
-// ============================================================
-
-function actualizarRebote(figura) {
-
-    if (!figura.rebotando) {
-        return;
-    }
-
-    // ----------------------------------------
-    // Movimiento elástico de regreso
-    // ----------------------------------------
-
-    figura.velocidadRebote *=
-        AMORTIGUACION_REBOTE;
-
-    figura.deformacionRebote -=
-        figura.velocidadRebote;
-
-
-    // ----------------------------------------
-    // Evitar valores negativos
-    // ----------------------------------------
-
-    if (
-        figura.deformacionRebote <= 0
-    ) {
-
-        figura.deformacionRebote = 0;
-
-        figura.velocidadRebote = 0;
+    if (progreso >= 1) {
 
         figura.rebotando = false;
 
         figura.deformacionActual = 0;
 
-    }
-    else {
+        figura.escalaGesto = 1;
 
-        figura.deformacionActual =
-            figura.deformacionRebote;
+        figura.compresionGesto = 1;
 
-    }
+        figura.direccionEstiramiento = 0;
 
-}
-
-
-// ============================================================
-// ACTUALIZAR GESTO
-// ============================================================
-
-function actualizarGesto(figura) {
-
-    if (!figura.gesticulando) {
         return;
     }
 
-    if (figura.puntosGesto.length < 2) {
-        return;
+    // --------------------------------------------------------
+    // Curva rápida al principio y suave al final.
+    // --------------------------------------------------------
+
+    const suavizado =
+        1 - Math.pow(1 - progreso, 3);
+
+    let deformacion =
+        figura.deformacionInicioRetraccion *
+        (1 - suavizado);
+
+    // --------------------------------------------------------
+    // Pequeño rebote visual al final.
+    // --------------------------------------------------------
+
+    if (progreso > 0.78) {
+
+        const rebote =
+            Math.sin(
+                (progreso - 0.78) /
+                0.22 *
+                Math.PI
+            ) * 0.035 *
+            (1 - progreso);
+
+        deformacion += rebote;
     }
-
-    const p1 = figura.puntosGesto[0];
-
-    const p2 = figura.puntosGesto[1];
-
-    const dx = p2.x - p1.x;
-
-    const dy = p2.y - p1.y;
-
-    const distancia =
-        Math.sqrt(dx * dx + dy * dy);
-
-    figura.distanciaActualGesto = distancia;
-
-    if (figura.distanciaInicialGesto <= 0) {
-        return;
-    }
-
-    let progreso =
-        (
-            distancia -
-            figura.distanciaInicialGesto
-        ) /
-        DISTANCIA_SEPARACION;
-
-    progreso =
-        Math.max(
-            0,
-            Math.min(1, progreso)
-        );
-
-
-    // ----------------------------------------
-    // DIRECCIÓN DEL ESTIRAMIENTO
-    // ----------------------------------------
-
-    if (distancia > 0) {
-
-        figura.direccionGestoX =
-            dx / distancia;
-
-        figura.direccionGestoY =
-            dy / distancia;
-
-    }
-
-
-    // ----------------------------------------
-    // DEFORMACIÓN
-    // ----------------------------------------
-
-    // 0 = cuadrado perfecto
-    // 1 = máxima deformación
 
     figura.deformacionActual =
-        progreso;
+        Math.max(0, deformacion);
 
-
-    // ----------------------------------------
-    // ESCALA
-    // ----------------------------------------
+    const d =
+        figura.deformacionActual;
 
     figura.escalaGesto =
-        1 +
-        (DEFORMACION_MAXIMA - 1) *
-        progreso;
-
-
-    // ----------------------------------------
-    // COMPRESIÓN
-    // ----------------------------------------
+        1 + (ESTIRAMIENTO_MAXIMO - 1) * d;
 
     figura.compresionGesto =
-        1 -
-        (1 - COMPRESION_MAXIMA) *
-        progreso;
-
-
-    // ----------------------------------------
-    // INCLINACIÓN
-    // ----------------------------------------
-
-    figura.inclinacionDeformacion =
-        Math.atan2(
-            figura.direccionGestoY,
-            figura.direccionGestoX
-        );
-
-
-    // ----------------------------------------
-    // LLEGÓ AL MÁXIMO
-    // ----------------------------------------
-
-    if (progreso >= 1) {
-
-        if (!figura._yaGeneroHijos) {
-
-            figura._yaGeneroHijos = true;
-
-            crearHijos(figura);
-
-            iniciarRebote(figura);
-
-        }
-
-    }
-
+        1 - 0.35 * d;
 }
 
 
 // ============================================================
-// CREAR HIJOS
+// INICIAR RETRACCIÓN
 // ============================================================
 
-function crearHijos(padre) {
+function iniciarRetraccion(figura) {
 
-    if (padre.reproducciones >= 3) {
-        return;
-    }
+    figura.rebotando = true;
 
-    const cantidadHijos = 2;
+    figura.inicioRetraccion =
+        performance.now();
 
-    const dx = padre.direccionGestoX;
-
-    const dy = padre.direccionGestoY;
-
-    const perpendicularX = -dy;
-
-    const perpendicularY = dx;
-
-    const distancia =
-        padre.tamano * 0.95;
-
-    for (
-        let i = 0;
-        i < cantidadHijos;
-        i++
-    ) {
-
-        const lado =
-            i === 0 ? -1 : 1;
-
-        const hijoX =
-            padre.x +
-            perpendicularX *
-            distancia *
-            lado;
-
-        const hijoY =
-            padre.y +
-            perpendicularY *
-            distancia *
-            lado;
-
-        const hijo =
-            crearFigura(
-                hijoX,
-                hijoY,
-                padre.color,
-                padre.tamano *
-                REDUCCION_HIJO
-            );
-
-
-        // ----------------------------------------
-        // VELOCIDAD DEL HIJO
-        // ----------------------------------------
-
-        hijo.vx =
-            padre.vx +
-            dx *
-            1.1 +
-            perpendicularX *
-            lado *
-            0.45;
-
-        hijo.vy =
-            padre.vy +
-            dy *
-            1.1 +
-            perpendicularY *
-            lado *
-            0.45;
-
-
-        hijo.rotacion =
-            padre.rotacion;
-
-        hijo.reproducciones =
-            padre.reproducciones + 1;
-
-
-        figuras.push(hijo);
-
-    }
-
-    padre.reproducciones++;
-
+    figura.deformacionInicioRetraccion =
+        figura.deformacionActual;
 }
 
 
 // ============================================================
-// FINALIZAR GESTO
-// ============================================================
-
-function finalizarGesto(figura) {
-
-    if (!figura.gesticulando) {
-        return;
-    }
-
-    figura.gesticulando = false;
-
-    figura.puntosGesto = [];
-
-
-    // ----------------------------------------
-    // REBOTA DESDE LA DEFORMACIÓN ACTUAL
-    // ----------------------------------------
-
-    iniciarRebote(figura);
-
-
-    figura._yaGeneroHijos = false;
-
-}
-
-
-// ============================================================
-// MOVIMIENTO
+// ACTUALIZAR MOVIMIENTO
 // ============================================================
 
 function actualizarMovimiento(figura) {
 
-    if (figura.seleccionada) {
-        return;
-    }
+    // --------------------------------------------------------
+    // Mientras se arrastra, el dedo controla la posición.
+    // --------------------------------------------------------
+
+    if (figura.arrastrado) return;
 
     figura.x += figura.vx;
 
     figura.y += figura.vy;
 
-    figura.rotacion +=
-        figura.velocidadRotacion;
+    figura.angulo += figura.velocidadAngulo;
 
+    actualizarRespiracion(figura);
 
-    // ----------------------------------------
-    // TAMAÑO REAL CON RESPIRACIÓN
-    // ----------------------------------------
-
-    const ancho =
-        figura.tamano *
-        figura.respiracionX;
-
-    const alto =
-        figura.tamano *
-        figura.respiracionY;
-
-
-    // ----------------------------------------
+    // --------------------------------------------------------
     // BORDES
-    // ----------------------------------------
+    // --------------------------------------------------------
 
-    const margenX = ancho / 2;
+    const rect = canvas.getBoundingClientRect();
 
-    const margenY = alto / 2;
+    const margen =
+        figura.tamano *
+        0.5 *
+        Math.max(
+            figura.escalaGesto,
+            1
+        );
 
+    if (figura.x - margen < 0) {
 
-    if (figura.x - margenX < 0) {
+        figura.x = margen;
 
-        figura.x = margenX;
-
-        figura.vx =
-            Math.abs(figura.vx);
-
+        figura.vx *= -1;
     }
 
+    if (figura.x + margen > rect.width) {
 
-    if (
-        figura.x + margenX >
-        canvas.width
-    ) {
+        figura.x = rect.width - margen;
 
-        figura.x =
-            canvas.width - margenX;
-
-        figura.vx =
-            -Math.abs(figura.vx);
-
+        figura.vx *= -1;
     }
 
+    if (figura.y - margen < 0) {
 
-    if (figura.y - margenY < 0) {
+        figura.y = margen;
 
-        figura.y = margenY;
-
-        figura.vy =
-            Math.abs(figura.vy);
-
+        figura.vy *= -1;
     }
 
+    if (figura.y + margen > rect.height) {
 
-    if (
-        figura.y + margenY >
-        canvas.height
-    ) {
+        figura.y = rect.height - margen;
 
-        figura.y =
-            canvas.height - margenY;
-
-        figura.vy =
-            -Math.abs(figura.vy);
-
+        figura.vy *= -1;
     }
-
 }
 
 
@@ -665,19 +527,11 @@ function actualizarMovimiento(figura) {
 // COLISIONES
 // ============================================================
 
-function resolverColisiones() {
+function actualizarColisiones() {
 
-    for (
-        let i = 0;
-        i < figuras.length;
-        i++
-    ) {
+    for (let i = 0; i < figuras.length; i++) {
 
-        for (
-            let j = i + 1;
-            j < figuras.length;
-            j++
-        ) {
+        for (let j = i + 1; j < figuras.length; j++) {
 
             const a = figuras[i];
 
@@ -688,1130 +542,452 @@ function resolverColisiones() {
             const dy = b.y - a.y;
 
             const distancia =
-                Math.sqrt(
-                    dx * dx +
-                    dy * dy
-                );
+                Math.sqrt(dx * dx + dy * dy);
+
+            const radioA =
+                a.tamano *
+                0.5 *
+                Math.max(a.escalaGesto, 1);
+
+            const radioB =
+                b.tamano *
+                0.5 *
+                Math.max(b.escalaGesto, 1);
 
             const distanciaMinima =
-                (
-                    a.tamano +
-                    b.tamano
-                ) / 2;
-
+                radioA + radioB;
 
             if (
                 distancia > 0 &&
                 distancia < distanciaMinima
             ) {
 
-                const nx =
-                    dx / distancia;
+                const nx = dx / distancia;
 
-                const ny =
-                    dy / distancia;
+                const ny = dy / distancia;
 
-                const diferencia =
-                    distanciaMinima -
-                    distancia;
+                const penetracion =
+                    distanciaMinima - distancia;
 
+                const separacion =
+                    penetracion * 0.5;
 
-                // --------------------------------
-                // SEPARAR
-                // --------------------------------
+                a.x -= nx * separacion;
+                a.y -= ny * separacion;
 
-                if (!a.seleccionada) {
-
-                    a.x -=
-                        nx *
-                        diferencia *
-                        0.5;
-
-                    a.y -=
-                        ny *
-                        diferencia *
-                        0.5;
-
-                }
-
-
-                if (!b.seleccionada) {
-
-                    b.x +=
-                        nx *
-                        diferencia *
-                        0.5;
-
-                    b.y +=
-                        ny *
-                        diferencia *
-                        0.5;
-
-                }
-
-
-                // --------------------------------
-                // VELOCIDAD RELATIVA
-                // --------------------------------
+                b.x += nx * separacion;
+                b.y += ny * separacion;
 
                 const velocidadRelativa =
                     (b.vx - a.vx) * nx +
                     (b.vy - a.vy) * ny;
 
-
                 if (velocidadRelativa < 0) {
 
                     const impulso =
-                        -velocidadRelativa *
+                        velocidadRelativa *
                         FUERZA_CHOQUE;
 
+                    a.vx += nx * impulso;
+                    a.vy += ny * impulso;
 
-                    if (!a.seleccionada) {
-
-                        a.vx -=
-                            nx * impulso;
-
-                        a.vy -=
-                            ny * impulso;
-
-                    }
-
-
-                    if (!b.seleccionada) {
-
-                        b.vx +=
-                            nx * impulso;
-
-                        b.vy +=
-                            ny * impulso;
-
-                    }
-
+                    b.vx -= nx * impulso;
+                    b.vy -= ny * impulso;
                 }
-
             }
-
         }
-
     }
-
 }
 
 
 // ============================================================
-// DIBUJAR CUADRADO
+// OBTENER FIGURA TOCADA
 // ============================================================
 //
 // IMPORTANTE:
 //
-// Cuando deformacion = 0:
+// Se comprueba primero la figura que está más arriba
+// visualmente.
 //
-//       ┌────────┐
-//       │        │
-//       │        │
-//       └────────┘
+// Además se utiliza el tamaño REAL de la figura deformada.
 //
-// Es un cuadrado REAL.
+// Esto hace mucho más preciso el agarre con los dedos.
 //
-// La deformación solamente aparece mientras se utilizan
-// los dos dedos.
-//
-// ============================================================
 
-function dibujarCuadradoDeformado(figura) {
+function obtenerFiguraEnPunto(x, y) {
 
-    const t =
-        figura.tamano;
+    for (let i = figuras.length - 1; i >= 0; i--) {
 
-    const mitad =
-        t / 2;
+        const figura = figuras[i];
 
+        const dx = x - figura.x;
 
-    // ========================================================
-    // DEFORMACIÓN
-    // ========================================================
+        const dy = y - figura.y;
 
-    let deformacion =
-        figura.deformacionActual;
+        const cos = Math.cos(-figura.angulo);
 
+        const sin = Math.sin(-figura.angulo);
 
-    // ----------------------------------------
-    // Durante el rebote
-    // ----------------------------------------
+        const localX =
+            dx * cos - dy * sin;
 
-    if (figura.rebotando) {
+        const localY =
+            dx * sin + dy * cos;
 
-        deformacion =
-            figura.deformacionRebote;
+        const mitad =
+            figura.tamano * 0.5;
 
+        const escalaX =
+            figura.escalaGesto;
+
+        const escalaY =
+            figura.compresionGesto;
+
+        const radioX =
+            mitad * escalaX + 18;
+
+        const radioY =
+            mitad * escalaY + 18;
+
+        // ----------------------------------------------------
+        // Hitbox ligeramente ampliada para dedos.
+        // ----------------------------------------------------
+
+        if (
+            Math.abs(localX) <= radioX &&
+            Math.abs(localY) <= radioY
+        ) {
+
+            return figura;
+        }
     }
 
-
-    deformacion =
-        Math.max(
-            0,
-            Math.min(
-                1,
-                deformacion
-            )
-        );
-
-
-    // ========================================================
-    // ESCALAS
-    // ========================================================
-
-    let escalaX =
-        figura.respiracionX;
-
-    let escalaY =
-        figura.respiracionY;
-
-
-    // Solo se comprime durante el estiramiento
-    // de dos dedos.
-
-    if (
-        figura.gesticulando ||
-        figura.rebotando
-    ) {
-
-        const estiramiento =
-            1 +
-            (
-                DEFORMACION_MAXIMA - 1
-            ) *
-            deformacion;
-
-        const compresion =
-            1 -
-            (
-                1 - COMPRESION_MAXIMA
-            ) *
-            deformacion;
-
-
-        escalaX *= estiramiento;
-
-        escalaY *= compresion;
-
-    }
-
-
-    // ========================================================
-    // GRADIENTE
-    // ========================================================
-
-    let gradiente;
-
-
-    if (figura.color === "#D9D9D9") {
-
-        gradiente =
-            ctx.createRadialGradient(
-                -mitad * 0.35,
-                -mitad * 0.35,
-                2,
-                0,
-                0,
-                mitad * 1.5
-            );
-
-        gradiente.addColorStop(
-            0,
-            "#FFFFFF"
-        );
-
-        gradiente.addColorStop(
-            0.45,
-            "#D9D9D9"
-        );
-
-        gradiente.addColorStop(
-            1,
-            "#AEB4BA"
-        );
-
-    }
-
-    else if (figura.color === "#8BB2D3") {
-
-        gradiente =
-            ctx.createRadialGradient(
-                -mitad * 0.35,
-                -mitad * 0.35,
-                2,
-                0,
-                0,
-                mitad * 1.5
-            );
-
-        gradiente.addColorStop(
-            0,
-            "#DCECF9"
-        );
-
-        gradiente.addColorStop(
-            0.48,
-            "#8BB2D3"
-        );
-
-        gradiente.addColorStop(
-            1,
-            "#527A9C"
-        );
-
-    }
-
-    else if (figura.color === "#202D64") {
-
-        gradiente =
-            ctx.createRadialGradient(
-                -mitad * 0.35,
-                -mitad * 0.35,
-                2,
-                0,
-                0,
-                mitad * 1.5
-            );
-
-        gradiente.addColorStop(
-            0,
-            "#6674A5"
-        );
-
-        gradiente.addColorStop(
-            0.50,
-            "#202D64"
-        );
-
-        gradiente.addColorStop(
-            1,
-            "#10183B"
-        );
-
-    }
-
-    else {
-
-        gradiente =
-            ctx.createRadialGradient(
-                -mitad * 0.35,
-                -mitad * 0.35,
-                2,
-                0,
-                0,
-                mitad * 1.5
-            );
-
-        gradiente.addColorStop(
-            0,
-            "#7EA7D0"
-        );
-
-        gradiente.addColorStop(
-            0.50,
-            "#2B538E"
-        );
-
-        gradiente.addColorStop(
-            1,
-            "#18355F"
-        );
-
-    }
-
-
-    // ========================================================
-    // CONTEXTO
-    // ========================================================
-
-    ctx.save();
-
-
-    ctx.translate(
-        figura.x,
-        figura.y
-    );
-
-
-    ctx.rotate(
-        figura.rotacion
-    );
-
-
-    // ========================================================
-    // DIRECCIÓN DEL ESTIRAMIENTO
-    // ========================================================
-
-    if (
-        figura.gesticulando ||
-        figura.rebotando
-    ) {
-
-        ctx.rotate(
-            figura.inclinacionDeformacion
-        );
-
-    }
-
-
-    ctx.scale(
-        escalaX,
-        escalaY
-    );
-
-
-    // ========================================================
-    // SOMBRA
-    // ========================================================
-
-    if (
-        figura.color === "#D9D9D9"
-    ) {
-
-        ctx.shadowColor =
-            "rgba(217,217,217,0.25)";
-
-    }
-    else if (
-        figura.color === "#8BB2D3"
-    ) {
-
-        ctx.shadowColor =
-            "rgba(139,178,211,0.25)";
-
-    }
-    else {
-
-        ctx.shadowColor =
-            "rgba(43,83,142,0.35)";
-
-    }
-
-    ctx.shadowBlur = 18;
-
-    ctx.shadowOffsetX = 0;
-
-    ctx.shadowOffsetY = 0;
-
-
-    // ========================================================
-    // CUADRADO NORMAL
-    // ========================================================
-    //
-    // MUY IMPORTANTE:
-    //
-    // Si no estamos haciendo el gesto de dos dedos
-    // y no estamos rebotando, dibujamos un cuadrado
-    // completamente normal.
-    //
-    // ========================================================
-
-    if (
-        deformacion <= 0.001
-    ) {
-
-        ctx.beginPath();
-
-        ctx.rect(
-            -mitad,
-            -mitad,
-            t,
-            t
-        );
-
-        ctx.fillStyle =
-            gradiente;
-
-        ctx.fill();
-
-    }
-
-    // ========================================================
-    // FORMA DEFORMADA
-    // ========================================================
-
-    else {
-
-        // ----------------------------------------
-        // Largo
-        // ----------------------------------------
-
-        const largo =
-            mitad *
-            (
-                1 +
-                deformacion *
-                0.85
-            );
-
-
-        // ----------------------------------------
-        // Ancho reducido
-        // ----------------------------------------
-
-        const ancho =
-            mitad *
-            (
-                1 -
-                deformacion *
-                0.32
-            );
-
-
-        // ----------------------------------------
-        // Curvatura
-        // ----------------------------------------
-
-        const curva =
-            mitad *
-            (
-                0.12 +
-                deformacion *
-                0.38
-            );
-
-
-        // ----------------------------------------
-        // Lado trasero
-        // ----------------------------------------
-
-        const atras =
-            -mitad *
-            (
-                1 -
-                deformacion *
-                0.18
-            );
-
-
-        // ----------------------------------------
-        // FORMA ORGÁNICA
-        // ----------------------------------------
-
-        ctx.beginPath();
-
-
-        // Punta/extremo del estiramiento.
-        // Ya NO es una punta triangular.
-        ctx.moveTo(
-            largo,
-            -ancho * 0.48
-        );
-
-
-        // ----------------------------------------
-        // PARTE SUPERIOR
-        // ----------------------------------------
-
-        ctx.quadraticCurveTo(
-            largo * 0.72,
-            -ancho * 0.72,
-            0,
-            -ancho
-        );
-
-
-        ctx.quadraticCurveTo(
-            atras * 0.55,
-            -ancho * 0.92,
-            atras,
-            -ancho * 0.48
-        );
-
-
-        // ----------------------------------------
-        // PARTE IZQUIERDA
-        // ----------------------------------------
-
-        ctx.quadraticCurveTo(
-            atras - curva,
-            0,
-            atras,
-            ancho * 0.48
-        );
-
-
-        // ----------------------------------------
-        // PARTE INFERIOR
-        // ----------------------------------------
-
-        ctx.quadraticCurveTo(
-            atras * 0.55,
-            ancho * 0.92,
-            0,
-            ancho
-        );
-
-
-        ctx.quadraticCurveTo(
-            largo * 0.72,
-            ancho * 0.72,
-            largo,
-            ancho * 0.48
-        );
-
-
-        // ----------------------------------------
-        // CERRAR
-        // ----------------------------------------
-
-        ctx.quadraticCurveTo(
-            largo + curva * 0.35,
-            0,
-            largo,
-            -ancho * 0.48
-        );
-
-
-        ctx.closePath();
-
-
-        ctx.fillStyle =
-            gradiente;
-
-        ctx.fill();
-
-    }
-
-
-    // ========================================================
-    // SOMBRA INTERNA
-    // ========================================================
-
-    ctx.shadowBlur = 0;
-
-    ctx.shadowColor =
-        "transparent";
-
-
-    const sombra =
-        ctx.createLinearGradient(
-            -mitad,
-            -mitad,
-            mitad,
-            mitad
-        );
-
-
-    sombra.addColorStop(
-        0,
-        "rgba(255,255,255,0.22)"
-    );
-
-    sombra.addColorStop(
-        0.45,
-        "rgba(255,255,255,0)"
-    );
-
-    sombra.addColorStop(
-        1,
-        "rgba(0,0,0,0.20)"
-    );
-
-
-    ctx.fillStyle =
-        sombra;
-
-
-    // Volvemos a utilizar exactamente
-    // la misma forma para la iluminación interna.
-
-    if (
-        deformacion <= 0.001
-    ) {
-
-        ctx.beginPath();
-
-        ctx.rect(
-            -mitad,
-            -mitad,
-            t,
-            t
-        );
-
-        ctx.fill();
-
-    }
-    else {
-
-        const largo =
-            mitad *
-            (
-                1 +
-                deformacion *
-                0.85
-            );
-
-        const ancho =
-            mitad *
-            (
-                1 -
-                deformacion *
-                0.32
-            );
-
-        const curva =
-            mitad *
-            (
-                0.12 +
-                deformacion *
-                0.38
-            );
-
-        const atras =
-            -mitad *
-            (
-                1 -
-                deformacion *
-                0.18
-            );
-
-
-        ctx.beginPath();
-
-        ctx.moveTo(
-            largo,
-            -ancho * 0.48
-        );
-
-        ctx.quadraticCurveTo(
-            largo * 0.72,
-            -ancho * 0.72,
-            0,
-            -ancho
-        );
-
-        ctx.quadraticCurveTo(
-            atras * 0.55,
-            -ancho * 0.92,
-            atras,
-            -ancho * 0.48
-        );
-
-        ctx.quadraticCurveTo(
-            atras - curva,
-            0,
-            atras,
-            ancho * 0.48
-        );
-
-        ctx.quadraticCurveTo(
-            atras * 0.55,
-            ancho * 0.92,
-            0,
-            ancho
-        );
-
-        ctx.quadraticCurveTo(
-            largo * 0.72,
-            ancho * 0.72,
-            largo,
-            ancho * 0.48
-        );
-
-        ctx.quadraticCurveTo(
-            largo + curva * 0.35,
-            0,
-            largo,
-            -ancho * 0.48
-        );
-
-        ctx.closePath();
-
-        ctx.fill();
-
-    }
-
-
-    // ========================================================
-    // RESTAURAR
-    // ========================================================
-
-    ctx.restore();
-
+    return null;
 }
 
 
 // ============================================================
-// DIBUJAR TODAS LAS FIGURAS
+// OBTENER POSICIÓN DEL PUNTERO
 // ============================================================
 
-function dibujar() {
-
-    ctx.clearRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
-
-
-    for (const figura of figuras) {
-
-        dibujarCuadradoDeformado(
-            figura
-        );
-
-    }
-
-}
-
-
-// ============================================================
-// ACTUALIZAR
-// ============================================================
-
-function actualizar() {
-
-    for (const figura of figuras) {
-
-        actualizarRespiracion(figura);
-
-        actualizarRebote(figura);
-
-        actualizarGesto(figura);
-
-        actualizarMovimiento(figura);
-
-    }
-
-
-    resolverColisiones();
-
-    dibujar();
-
-    requestAnimationFrame(
-        actualizar
-    );
-
-}
-
-actualizar();
-
-
-// ============================================================
-// UTILIDADES DE PUNTO
-// ============================================================
-
-function obtenerPunto(evento) {
+function obtenerPosicionPuntero(e) {
 
     const rect =
         canvas.getBoundingClientRect();
 
     return {
 
-        x:
-            evento.clientX -
-            rect.left,
+        x: e.clientX - rect.left,
 
-        y:
-            evento.clientY -
-            rect.top
-
+        y: e.clientY - rect.top
     };
-
 }
 
 
 // ============================================================
-// BUSCAR FIGURA
+// POINTER DOWN
 // ============================================================
-
-function encontrarFigura(x, y) {
-
-    for (
-        let i = figuras.length - 1;
-        i >= 0;
-        i--
-    ) {
-
-        const figura =
-            figuras[i];
-
-        const dx =
-            x - figura.x;
-
-        const dy =
-            y - figura.y;
-
-        const distancia =
-            Math.sqrt(
-                dx * dx +
-                dy * dy
-            );
-
-
-        if (
-            distancia <
-            figura.tamano
-        ) {
-
-            return figura;
-
-        }
-
-    }
-
-    return null;
-
-}
-
-
-// ============================================================
-// MOUSE
-// ============================================================
-
-let figuraMouse = null;
-
-let mouseActivo = false;
-
 
 canvas.addEventListener(
-    "mousedown",
-    function(evento) {
+    "pointerdown",
+    function(e) {
 
-        const punto =
-            obtenerPunto(evento);
+        e.preventDefault();
+
+        const pos =
+            obtenerPosicionPuntero(e);
 
         const figura =
-            encontrarFigura(
-                punto.x,
-                punto.y
+            obtenerFiguraEnPunto(
+                pos.x,
+                pos.y
             );
 
+        if (!figura) return;
 
-        if (!figura) {
+        // ----------------------------------------------------
+        // Capturamos el dedo.
+        // ----------------------------------------------------
+
+        try {
+            canvas.setPointerCapture(e.pointerId);
+        } catch (_) {}
+
+        // ----------------------------------------------------
+        // Guardamos qué figura tomó este dedo.
+        // ----------------------------------------------------
+
+        punteros.set(
+            e.pointerId,
+            {
+                figura: figura,
+                x: pos.x,
+                y: pos.y
+            }
+        );
+
+        // ----------------------------------------------------
+        // Si todavía no hay dedos en la figura:
+        // movimiento normal.
+        // ----------------------------------------------------
+
+        if (figura.dedos.size === 0) {
+
+            figura.dedos.set(
+                e.pointerId,
+                {
+                    x: pos.x,
+                    y: pos.y
+                }
+            );
+
+            figura.arrastrado = true;
+
             return;
         }
 
+        // ----------------------------------------------------
+        // Si ya hay UN dedo:
+        //
+        // El segundo dedo tiene que estar sobre el MISMO
+        // cuadrado.
+        // ----------------------------------------------------
 
-        figuraMouse =
-            figura;
+        if (figura.dedos.size === 1) {
 
-        mouseActivo = true;
+            figura.dedos.set(
+                e.pointerId,
+                {
+                    x: pos.x,
+                    y: pos.y
+                }
+            );
 
-        figura.seleccionada =
-            true;
+            const dedos =
+                Array.from(
+                    figura.dedos.values()
+                );
 
-        figura.x =
-            punto.x;
+            const dx =
+                dedos[1].x -
+                dedos[0].x;
 
-        figura.y =
-            punto.y;
+            const dy =
+                dedos[1].y -
+                dedos[0].y;
 
+            figura.distanciaInicial =
+                Math.sqrt(
+                    dx * dx +
+                    dy * dy
+                );
+
+            // ------------------------------------------------
+            // Evitamos que una distancia inicial demasiado
+            // pequeña produzca una deformación inmediata.
+            // ------------------------------------------------
+
+            if (figura.distanciaInicial < 10) {
+
+                figura.distanciaInicial = 10;
+            }
+
+            figura.arrastrado = false;
+
+            return;
+        }
+    },
+    {
+        passive: false
     }
 );
 
 
-canvas.addEventListener(
-    "mousemove",
-    function(evento) {
+// ============================================================
+// POINTER MOVE
+// ============================================================
 
-        if (
-            !mouseActivo ||
-            !figuraMouse
-        ) {
+canvas.addEventListener(
+    "pointermove",
+    function(e) {
+
+        e.preventDefault();
+
+        const registro =
+            punteros.get(e.pointerId);
+
+        if (!registro) return;
+
+        const figura =
+            registro.figura;
+
+        const pos =
+            obtenerPosicionPuntero(e);
+
+        registro.x = pos.x;
+        registro.y = pos.y;
+
+        // ----------------------------------------------------
+        // Actualizamos la posición del dedo dentro de la
+        // figura.
+        // ----------------------------------------------------
+
+        if (figura.dedos.has(e.pointerId)) {
+
+            figura.dedos.get(
+                e.pointerId
+            ).x = pos.x;
+
+            figura.dedos.get(
+                e.pointerId
+            ).y = pos.y;
+        }
+
+        // ----------------------------------------------------
+        // UN SOLO DEDO
+        //
+        // Solo mueve.
+        // NO deforma.
+        // ----------------------------------------------------
+
+        if (figura.dedos.size === 1) {
+
+            figura.x = pos.x;
+
+            figura.y = pos.y;
+
+            figura.arrastrado = true;
+
             return;
         }
 
-
-        const punto =
-            obtenerPunto(evento);
-
-
-        figuraMouse.x =
-            punto.x;
-
-        figuraMouse.y =
-            punto.y;
-
-    }
-);
-
-
-canvas.addEventListener(
-    "mouseup",
-    function() {
-
-        if (figuraMouse) {
-
-            figuraMouse.seleccionada =
-                false;
-
-        }
-
-        figuraMouse = null;
-
-        mouseActivo = false;
-
-    }
-);
-
-
-canvas.addEventListener(
-    "mouseleave",
-    function() {
-
-        if (figuraMouse) {
-
-            figuraMouse.seleccionada =
-                false;
-
-        }
-
-        figuraMouse = null;
-
-        mouseActivo = false;
-
-    }
-);
-
-
-// ============================================================
-// TOUCH
-// ============================================================
-
-let figuraTouch = null;
-
-
-// ============================================================
-// TOUCH START
-// ============================================================
-
-canvas.addEventListener(
-    "touchstart",
-    function(evento) {
-
-        evento.preventDefault();
-
-        const touches =
-            evento.touches;
-
-
-        // ----------------------------------------
+        // ----------------------------------------------------
         // DOS DEDOS
-        // ----------------------------------------
+        //
+        // Recién acá se puede deformar.
+        // ----------------------------------------------------
 
-        if (touches.length >= 2) {
+        if (figura.dedos.size === 2) {
 
-            const p1 =
-                obtenerPunto(
-                    touches[0]
+            const dedos =
+                Array.from(
+                    figura.dedos.values()
                 );
 
-            const p2 =
-                obtenerPunto(
-                    touches[1]
+            const dx =
+                dedos[1].x -
+                dedos[0].x;
+
+            const dy =
+                dedos[1].y -
+                dedos[0].y;
+
+            const distancia =
+                Math.sqrt(
+                    dx * dx +
+                    dy * dy
                 );
 
+            const distanciaInicial =
+                figura.distanciaInicial;
 
-            const figura1 =
-                encontrarFigura(
-                    p1.x,
-                    p1.y
+            // ------------------------------------------------
+            // Cuánto se separaron respecto al inicio.
+            // ------------------------------------------------
+
+            let progreso =
+                (distancia - distanciaInicial) /
+                (
+                    distanciaInicial *
+                    (ESTIRAMIENTO_MAXIMO - 1)
                 );
 
-            const figura2 =
-                encontrarFigura(
-                    p2.x,
-                    p2.y
+            progreso =
+                Math.max(
+                    0,
+                    Math.min(1, progreso)
                 );
 
+            // ------------------------------------------------
+            // Solo deformamos si REALMENTE se están
+            // separando.
+            // ------------------------------------------------
 
-            // ------------------------------------
-            // LOS DOS DEDOS SOBRE EL MISMO
-            // CUADRADO
-            // ------------------------------------
+            if (distancia > distanciaInicial) {
 
-            if (
-                figura1 &&
-                figura1 === figura2
-            ) {
+                figura.deformacionActual =
+                    progreso;
 
-                figuraTouch =
-                    figura1;
+                figura.escalaGesto =
+                    1 +
+                    (ESTIRAMIENTO_MAXIMO - 1) *
+                    progreso;
 
-                figuraTouch.gesticulando =
-                    true;
+                figura.compresionGesto =
+                    1 -
+                    0.35 *
+                    progreso;
 
-                figuraTouch.seleccionada =
-                    true;
-
-                figuraTouch.puntosGesto = [
-                    p1,
-                    p2
-                ];
-
-
-                const dx =
-                    p2.x - p1.x;
-
-                const dy =
-                    p2.y - p1.y;
-
-
-                figuraTouch.distanciaInicialGesto =
-                    Math.sqrt(
-                        dx * dx +
-                        dy * dy
+                figura.direccionEstiramiento =
+                    Math.atan2(
+                        dy,
+                        dx
                     );
 
+            } else {
 
-                figuraTouch.distanciaActualGesto =
-                    figuraTouch.distanciaInicialGesto;
+                figura.deformacionActual = 0;
 
+                figura.escalaGesto = 1;
 
-                // Empieza completamente cuadrado.
-                figuraTouch.deformacionActual =
-                    0;
-
+                figura.compresionGesto = 1;
             }
 
+            // ------------------------------------------------
+            // El centro sigue a los dos dedos.
+            // ------------------------------------------------
 
-            return;
+            figura.x =
+                (dedos[0].x +
+                 dedos[1].x) / 2;
 
-        }
+            figura.y =
+                (dedos[0].y +
+                 dedos[1].y) / 2;
 
+            // ------------------------------------------------
+            // Llegó al máximo.
+            // Crear hijos.
+            // ------------------------------------------------
 
-        // ----------------------------------------
-        // UN DEDO
-        // ----------------------------------------
+            if (
+                figura.deformacionActual >=
+                DEFORMACION_MAXIMA
+            ) {
 
-        if (touches.length === 1) {
+                crearHijos(figura);
 
-            const punto =
-                obtenerPunto(
-                    touches[0]
-                );
+                // ------------------------------------------------
+                // MUY IMPORTANTE:
+                //
+                // Después de crear los hijos comenzamos
+                // inmediatamente la retracción.
+                // ------------------------------------------------
 
+                iniciarRetraccion(figura);
 
-            const figura =
-                encontrarFigura(
-                    punto.x,
-                    punto.y
-                );
+                // ------------------------------------------------
+                // Reiniciamos la distancia para que no vuelva
+                // a crear hijos continuamente.
+                // ------------------------------------------------
 
+                figura.distanciaInicial =
+                    distancia;
 
-            if (figura) {
-
-                figuraTouch =
-                    figura;
-
-                figuraTouch.seleccionada =
-                    true;
-
-                figuraTouch.x =
-                    punto.x;
-
-                figuraTouch.y =
-                    punto.y;
-
+                figura.deformacionActual =
+                    1;
             }
-
         }
-
     },
     {
         passive: false
@@ -1820,162 +996,451 @@ canvas.addEventListener(
 
 
 // ============================================================
-// TOUCH MOVE
+// POINTER UP
 // ============================================================
 
+function soltarPuntero(e) {
+
+    const registro =
+        punteros.get(e.pointerId);
+
+    if (!registro) return;
+
+    const figura =
+        registro.figura;
+
+    figura.dedos.delete(
+        e.pointerId
+    );
+
+    punteros.delete(
+        e.pointerId
+    );
+
+    try {
+        canvas.releasePointerCapture(
+            e.pointerId
+        );
+    } catch (_) {}
+
+    // --------------------------------------------------------
+    // Si queda un dedo:
+    // volvemos al modo movimiento.
+    // --------------------------------------------------------
+
+    if (figura.dedos.size === 1) {
+
+        figura.deformacionActual = 0;
+
+        figura.escalaGesto = 1;
+
+        figura.compresionGesto = 1;
+
+        figura.arrastrado = true;
+
+        return;
+    }
+
+    // --------------------------------------------------------
+    // Si se soltaron los dos dedos mientras estaba deformado,
+    // vuelve a su forma original.
+    // --------------------------------------------------------
+
+    if (
+        figura.deformacionActual > 0 &&
+        !figura.rebotando
+    ) {
+
+        iniciarRetraccion(figura);
+    }
+
+    figura.arrastrado = false;
+}
+
+
 canvas.addEventListener(
-    "touchmove",
-    function(evento) {
+    "pointerup",
+    soltarPuntero
+);
 
-        evento.preventDefault();
+canvas.addEventListener(
+    "pointercancel",
+    soltarPuntero
+);
 
-        if (!figuraTouch) {
-            return;
-        }
+canvas.addEventListener(
+    "pointerleave",
+    function(e) {
 
-
-        // ----------------------------------------
-        // DOS DEDOS
-        // ----------------------------------------
-
-        if (
-            evento.touches.length >= 2 &&
-            figuraTouch.gesticulando
-        ) {
-
-            const p1 =
-                obtenerPunto(
-                    evento.touches[0]
-                );
-
-            const p2 =
-                obtenerPunto(
-                    evento.touches[1]
-                );
-
-
-            figuraTouch.puntosGesto = [
-                p1,
-                p2
-            ];
-
-
-            return;
-
-        }
-
-
-        // ----------------------------------------
-        // UN DEDO
-        // ----------------------------------------
-
-        if (
-            evento.touches.length === 1 &&
-            !figuraTouch.gesticulando
-        ) {
-
-            const punto =
-                obtenerPunto(
-                    evento.touches[0]
-                );
-
-
-            figuraTouch.x =
-                punto.x;
-
-            figuraTouch.y =
-                punto.y;
-
-        }
-
-    },
-    {
-        passive: false
+        // No eliminamos el puntero inmediatamente.
+        // Si el navegador mantiene el pointer capture,
+        // el gesto puede continuar correctamente.
     }
 );
 
 
 // ============================================================
-// TOUCH END
+// CREAR HIJOS
 // ============================================================
 
-canvas.addEventListener(
-    "touchend",
-    function(evento) {
+function crearHijos(padre) {
 
-        evento.preventDefault();
+    if (!padre.puedeReproducirse) {
+        return;
+    }
 
+    const cantidad = 3;
 
-        if (figuraTouch) {
+    const direccion =
+        padre.direccionEstiramiento;
 
-            finalizarGesto(
-                figuraTouch
+    const distancia =
+        DISTANCIA_SEPARACION;
+
+    for (let i = 0; i < cantidad; i++) {
+
+        // ----------------------------------------------------
+        // Separación angular de los hijos.
+        // ----------------------------------------------------
+
+        const variacion =
+            (i - 1) * 0.45;
+
+        const angulo =
+            direccion + variacion;
+
+        const x =
+            padre.x +
+            Math.cos(angulo) *
+            distancia;
+
+        const y =
+            padre.y +
+            Math.sin(angulo) *
+            distancia;
+
+        const hijo =
+            crearFigura(
+                x,
+                y,
+                padre.color,
+                padre.tamano *
+                REDUCCION_HIJO
             );
 
+        // ----------------------------------------------------
+        // Los hijos salen impulsados hacia afuera.
+        // ----------------------------------------------------
 
-            figuraTouch.seleccionada =
-                false;
+        hijo.vx =
+            padre.vx +
+            Math.cos(angulo) *
+            0.8;
 
-        }
+        hijo.vy =
+            padre.vy +
+            Math.sin(angulo) *
+            0.8;
 
+        hijo.angulo =
+            padre.angulo;
 
-        figuraTouch = null;
+        hijo.generaciones =
+            padre.generaciones + 1;
 
-    },
-    {
-        passive: false
+        figuras.push(hijo);
     }
-);
+
+    // --------------------------------------------------------
+    // El padre sigue existiendo.
+    // --------------------------------------------------------
+
+    padre.puedeReproducirse = true;
+}
 
 
 // ============================================================
-// TECLADO
+// DIBUJAR FIGURA
 // ============================================================
 
-window.addEventListener(
-    "keydown",
-    function(evento) {
+function dibujarFigura(figura) {
 
-        if (figuras.length === 0) {
-            return;
-        }
+    ctx.save();
 
+    ctx.translate(
+        figura.x,
+        figura.y
+    );
 
-        const figura =
-            figuras[0];
+    ctx.rotate(figura.angulo);
 
+    // --------------------------------------------------------
+    // Escalas normales de respiración.
+    // --------------------------------------------------------
 
-        const velocidad =
-            8;
+    const respiracionX =
+        figura.respiracionX;
 
+    const respiracionY =
+        figura.respiracionY;
 
-        if (evento.key === "ArrowLeft") {
+    // --------------------------------------------------------
+    // DEFORMACIÓN
+    // --------------------------------------------------------
 
-            figura.x -= velocidad;
+    const deformacion =
+        figura.deformacionActual;
 
-        }
+    const escalaX =
+        figura.escalaGesto *
+        respiracionX;
 
+    const escalaY =
+        figura.compresionGesto *
+        respiracionY;
 
-        if (evento.key === "ArrowRight") {
+    ctx.scale(
+        escalaX,
+        escalaY
+    );
 
-            figura.x += velocidad;
+    const mitad =
+        figura.tamano / 2;
 
-        }
+    const gradiente =
+        obtenerGradiente(figura);
 
+    ctx.fillStyle =
+        gradiente;
 
-        if (evento.key === "ArrowUp") {
+    // --------------------------------------------------------
+    // SOMBRA
+    // --------------------------------------------------------
 
-            figura.y -= velocidad;
+    ctx.shadowColor =
+        figura.color;
 
-        }
+    ctx.shadowBlur =
+        deformacion > 0
+            ? 25
+            : 18;
 
+    ctx.shadowOffsetX = 0;
 
-        if (evento.key === "ArrowDown") {
+    ctx.shadowOffsetY = 0;
 
-            figura.y += velocidad;
+    // ========================================================
+    // CUADRADO PERFECTO
+    // ========================================================
+    //
+    // Cuando no está deformado, dibujamos un cuadrado REAL.
+    //
+    // No roundedRect.
+    // No curva.
+    // No deformación.
+    //
+    // Esto asegura que vuelva exactamente a su forma inicial.
+    //
 
-        }
+    if (deformacion <= 0.001) {
+
+        ctx.beginPath();
+
+        ctx.rect(
+            -mitad,
+            -mitad,
+            figura.tamano,
+            figura.tamano
+        );
+
+        ctx.fill();
 
     }
-);
+
+    // ========================================================
+    // MASA BLANDA
+    // ========================================================
+    //
+    // Mientras se estira:
+    // - los lados se curvan
+    // - las esquinas se vuelven orgánicas
+    // - no aparece una punta
+    // - parece una masa de goma/latex
+    //
+
+    else {
+
+        const estiramiento =
+            deformacion;
+
+        const largo =
+            mitad *
+            (1 + estiramiento * 0.95);
+
+        const ancho =
+            mitad *
+            (1 - estiramiento * 0.28);
+
+        const curva =
+            10 +
+            estiramiento * 22;
+
+        const deformacionCurva =
+            Math.sin(
+                figura.faseRespiracion
+            ) *
+            3 *
+            estiramiento;
+
+        ctx.beginPath();
+
+        // ----------------------------------------------------
+        // Arriba
+        // ----------------------------------------------------
+
+        ctx.moveTo(
+            -largo + curva,
+            -ancho
+        );
+
+        ctx.quadraticCurveTo(
+            0,
+            -ancho -
+            deformacionCurva,
+            largo - curva,
+            -ancho
+        );
+
+        // ----------------------------------------------------
+        // Derecha
+        // ----------------------------------------------------
+
+        ctx.quadraticCurveTo(
+            largo +
+            deformacionCurva,
+            0,
+            largo - curva,
+            ancho
+        );
+
+        // ----------------------------------------------------
+        // Abajo
+        // ----------------------------------------------------
+
+        ctx.quadraticCurveTo(
+            0,
+            ancho +
+            deformacionCurva,
+            -largo + curva,
+            ancho
+        );
+
+        // ----------------------------------------------------
+        // Izquierda
+        // ----------------------------------------------------
+
+        ctx.quadraticCurveTo(
+            -largo -
+            deformacionCurva,
+            0,
+            -largo + curva,
+            -ancho
+        );
+
+        ctx.closePath();
+
+        ctx.fill();
+    }
+
+    // ========================================================
+    // BRILLO INTERNO
+    // ========================================================
+
+    ctx.shadowBlur = 0;
+
+    ctx.globalAlpha = 0.16;
+
+    const brillo =
+        ctx.createRadialGradient(
+            -mitad * 0.35,
+            -mitad * 0.35,
+            1,
+            0,
+            0,
+            mitad * 1.4
+        );
+
+    brillo.addColorStop(
+        0,
+        "#FFFFFF"
+    );
+
+    brillo.addColorStop(
+        1,
+        "rgba(255,255,255,0)"
+    );
+
+    ctx.fillStyle =
+        brillo;
+
+    ctx.fill();
+
+    ctx.restore();
+}
+
+
+// ============================================================
+// ACTUALIZAR TODO
+// ============================================================
+
+function actualizar() {
+
+    figuras.forEach(figura => {
+
+        actualizarMovimiento(figura);
+
+        actualizarRetraccion(figura);
+
+    });
+
+    actualizarColisiones();
+}
+
+
+// ============================================================
+// DIBUJAR TODO
+// ============================================================
+
+function dibujar() {
+
+    const rect =
+        canvas.getBoundingClientRect();
+
+    ctx.clearRect(
+        0,
+        0,
+        rect.width,
+        rect.height
+    );
+
+    figuras.forEach(
+        dibujarFigura
+    );
+}
+
+
+// ============================================================
+// LOOP
+// ============================================================
+
+function animar() {
+
+    actualizar();
+
+    dibujar();
+
+    requestAnimationFrame(animar);
+}
+
+animar();
 
