@@ -1,7 +1,11 @@
+
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-// Colores utilizados por los triángulos.
+// ============================================================
+// COLORES
+// ============================================================
+
 const colores = [
     "#202D64",
     "#2B538E",
@@ -9,16 +13,30 @@ const colores = [
     "#D9D9D9"
 ];
 
-// Configuración del movimiento y desprendimiento.
-const VELOCIDAD_BASE = 0.45;
-const VELOCIDAD_HIJOS = 0.65;
-const FUERZA_COLISION = 0.35;
-const INTERVALO_DESPRENDIMIENTO = 700;
+// ============================================================
+// CONFIGURACIÓN
+// ============================================================
 
-// Canvas.
+const VELOCIDAD_BASE = 0.65;
+const VELOCIDAD_HIJOS = 0.95;
+
+const VELOCIDAD_MAXIMA = 2.2;
+
+const FUERZA_COLISION = 0.45;
+
+// Más rápido que antes.
+const INTERVALO_DESPRENDIMIENTO = 450;
+
+// MISMO TAMAÑO QUE INCERTIDUMBRE.
+const TAMAÑO_INICIAL = 135;
+
+// ============================================================
+// CANVAS
+// ============================================================
+
 function ajustarCanvas() {
-    const rect =
-        canvas.getBoundingClientRect();
+
+    const rect = canvas.getBoundingClientRect();
 
     canvas.width = rect.width;
     canvas.height = rect.height;
@@ -31,10 +49,16 @@ window.addEventListener(
 
 ajustarCanvas();
 
-// Guarda todos los triángulos.
+// ============================================================
+// TRIÁNGULOS
+// ============================================================
+
 let triangulos = [];
 
-// Crea un triángulo con sus características.
+// ============================================================
+// CREAR TRIÁNGULO
+// ============================================================
+
 function crearTriangulo(
     x,
     y,
@@ -42,12 +66,14 @@ function crearTriangulo(
     esHijo = false,
     color = null
 ) {
+
     const velocidad =
         esHijo
             ? VELOCIDAD_HIJOS
             : VELOCIDAD_BASE;
 
     return {
+
         x: x,
         y: y,
 
@@ -70,24 +96,39 @@ function crearTriangulo(
                 )
             ],
 
-        // Fase para generar la respiración.
+        // ====================================================
+        // RESPIRACIÓN
+        // ====================================================
+
         fase:
             Math.random() *
             Math.PI *
             2,
 
-        // Los hijos tienen un latido más rápido.
         velocidadLatido:
             esHijo
-                ? 0.13 +
-                  Math.random() * 0.07
-                : 0.025 +
-                  Math.random() * 0.015,
+                ? 0.16 +
+                  Math.random() * 0.10
+                : 0.035 +
+                  Math.random() * 0.025,
 
         amplitudLatido:
             esHijo
-                ? 0.13
-                : 0.06,
+                ? 0.15
+                : 0.07,
+
+        // ====================================================
+        // MOVIMIENTO ERRÁTICO
+        // ====================================================
+
+        faseMovimiento:
+            Math.random() *
+            Math.PI *
+            2,
+
+        velocidadCambio:
+            0.025 +
+            Math.random() * 0.035,
 
         esHijo: esHijo,
 
@@ -95,11 +136,16 @@ function crearTriangulo(
     };
 }
 
-// Crea los 4 triángulos grandes iniciales.
+// ============================================================
+// CREAR TRIÁNGULOS INICIALES
+// ============================================================
+
 function crearIniciales() {
+
     triangulos = [];
 
     const posiciones = [
+
         {
             x: canvas.width * 0.25,
             y: canvas.height * 0.30
@@ -128,11 +174,7 @@ function crearIniciales() {
                 crearTriangulo(
                     posicion.x,
                     posicion.y,
-
-                    // Ahora tienen el mismo tamaño
-                    // que los triángulos de Incertidumbre.
-                    120,
-
+                    TAMAÑO_INICIAL,
                     false
                 )
             );
@@ -142,7 +184,47 @@ function crearIniciales() {
 
 crearIniciales();
 
-// Movimiento de los triángulos.
+// ============================================================
+// LIMITAR VELOCIDAD
+// ============================================================
+
+function limitarVelocidad(
+    triangulo
+) {
+
+    const velocidad =
+        Math.sqrt(
+            triangulo.vx *
+                triangulo.vx +
+            triangulo.vy *
+                triangulo.vy
+        );
+
+    if (
+        velocidad >
+        VELOCIDAD_MAXIMA
+    ) {
+
+        triangulo.vx =
+            (
+                triangulo.vx /
+                velocidad
+            ) *
+            VELOCIDAD_MAXIMA;
+
+        triangulo.vy =
+            (
+                triangulo.vy /
+                velocidad
+            ) *
+            VELOCIDAD_MAXIMA;
+    }
+}
+
+// ============================================================
+// MOVIMIENTO
+// ============================================================
+
 function moverTriangulos() {
 
     triangulos.forEach(
@@ -158,16 +240,87 @@ function moverTriangulos() {
             triangulo.y +=
                 triangulo.vy;
 
-            // Respiración.
+            // =================================================
+            // RESPIRACIÓN
+            // =================================================
+
             triangulo.fase +=
                 triangulo.velocidadLatido;
 
-            // Límites del canvas.
+            // =================================================
+            // MOVIMIENTO ERRÁTICO
+            // =================================================
+
+            triangulo.faseMovimiento +=
+                triangulo.velocidadCambio;
+
+            triangulo.vx +=
+                Math.sin(
+                    triangulo.faseMovimiento
+                ) *
+                (
+                    triangulo.esHijo
+                        ? 0.045
+                        : 0.025
+                );
+
+            triangulo.vy +=
+                Math.cos(
+                    triangulo.faseMovimiento *
+                    1.37
+                ) *
+                (
+                    triangulo.esHijo
+                        ? 0.045
+                        : 0.025
+                );
+
+            // Cambios bruscos ocasionales.
+            if (
+                Math.random() <
+                (
+                    triangulo.esHijo
+                        ? 0.018
+                        : 0.008
+                )
+            ) {
+
+                triangulo.vx +=
+                    (
+                        Math.random() -
+                        0.5
+                    ) *
+                    (
+                        triangulo.esHijo
+                            ? 0.35
+                            : 0.20
+                    );
+
+                triangulo.vy +=
+                    (
+                        Math.random() -
+                        0.5
+                    ) *
+                    (
+                        triangulo.esHijo
+                            ? 0.35
+                            : 0.20
+                    );
+            }
+
+            limitarVelocidad(
+                triangulo
+            );
+
+            // =================================================
+            // BORDES
+            // =================================================
+
             const margen =
                 triangulo.tamaño *
                 0.7;
 
-            // Borde izquierdo.
+            // Izquierda.
             if (
                 triangulo.x -
                     margen <
@@ -177,10 +330,20 @@ function moverTriangulos() {
                 triangulo.x =
                     margen;
 
-                triangulo.vx *= -1;
+                triangulo.vx =
+                    Math.abs(
+                        triangulo.vx
+                    );
+
+                triangulo.vy +=
+                    (
+                        Math.random() -
+                        0.5
+                    ) *
+                    0.15;
             }
 
-            // Borde derecho.
+            // Derecha.
             if (
                 triangulo.x +
                     margen >
@@ -191,10 +354,20 @@ function moverTriangulos() {
                     canvas.width -
                     margen;
 
-                triangulo.vx *= -1;
+                triangulo.vx =
+                    -Math.abs(
+                        triangulo.vx
+                    );
+
+                triangulo.vy +=
+                    (
+                        Math.random() -
+                        0.5
+                    ) *
+                    0.15;
             }
 
-            // Borde superior.
+            // Arriba.
             if (
                 triangulo.y -
                     margen <
@@ -204,10 +377,20 @@ function moverTriangulos() {
                 triangulo.y =
                     margen;
 
-                triangulo.vy *= -1;
+                triangulo.vy =
+                    Math.abs(
+                        triangulo.vy
+                    );
+
+                triangulo.vx +=
+                    (
+                        Math.random() -
+                        0.5
+                    ) *
+                    0.15;
             }
 
-            // Borde inferior.
+            // Abajo.
             if (
                 triangulo.y +
                     margen >
@@ -218,13 +401,30 @@ function moverTriangulos() {
                     canvas.height -
                     margen;
 
-                triangulo.vy *= -1;
+                triangulo.vy =
+                    -Math.abs(
+                        triangulo.vy
+                    );
+
+                triangulo.vx +=
+                    (
+                        Math.random() -
+                        0.5
+                    ) *
+                    0.15;
             }
+
+            limitarVelocidad(
+                triangulo
+            );
         }
     );
 }
 
-// Detecta las colisiones entre los triángulos.
+// ============================================================
+// COLISIONES
+// ============================================================
+
 function colisiones() {
 
     for (
@@ -267,7 +467,8 @@ function colisiones() {
                 (
                     a.tamaño +
                     b.tamaño
-                ) * 0.45;
+                ) *
+                0.45;
 
             if (
                 distancia > 0 &&
@@ -276,33 +477,35 @@ function colisiones() {
             ) {
 
                 const nx =
-                    dx / distancia;
+                    dx /
+                    distancia;
 
                 const ny =
-                    dy / distancia;
+                    dy /
+                    distancia;
 
-                // Empuja los triángulos al chocar.
+                // Empuje.
                 a.vx -=
                     nx *
                     FUERZA_COLISION *
-                    0.02;
+                    0.035;
 
                 a.vy -=
                     ny *
                     FUERZA_COLISION *
-                    0.02;
+                    0.035;
 
                 b.vx +=
                     nx *
                     FUERZA_COLISION *
-                    0.02;
+                    0.035;
 
                 b.vy +=
                     ny *
                     FUERZA_COLISION *
-                    0.02;
+                    0.035;
 
-                // Evita que queden superpuestos.
+                // Separación.
                 const separacion =
                     distanciaMinima -
                     distancia;
@@ -326,12 +529,18 @@ function colisiones() {
                     ny *
                     separacion *
                     0.5;
+
+                limitarVelocidad(a);
+                limitarVelocidad(b);
             }
         }
     }
 }
 
-// Crea un triángulo que se desprende de un padre.
+// ============================================================
+// DESPRENDER TRIÁNGULO
+// ============================================================
+
 function desprenderTriangulo(
     padre
 ) {
@@ -339,8 +548,7 @@ function desprenderTriangulo(
     if (!padre.vivo)
         return;
 
-    // Tamaños de los triángulos desprendidos.
-    // Son más grandes que antes.
+    // Tamaño de los hijos.
     const tamaños = [
         45,
         50,
@@ -357,7 +565,7 @@ function desprenderTriangulo(
             )
         ];
 
-    // Dirección aleatoria del desprendimiento.
+    // Dirección aleatoria.
     const angulo =
         Math.random() *
         Math.PI *
@@ -387,32 +595,54 @@ function desprenderTriangulo(
             padre.color
         );
 
-    // El hijo sale disparado desde el padre.
+    // ========================================================
+    // SALIDA RÁPIDA
+    // ========================================================
+
+    const velocidadSalida =
+        0.65 +
+        Math.random() *
+        0.65;
+
     hijo.vx =
         Math.cos(angulo) *
-        (
-            0.4 +
-            Math.random() * 0.5
-        );
+        velocidadSalida;
 
     hijo.vy =
         Math.sin(angulo) *
-        (
-            0.4 +
-            Math.random() * 0.5
-        );
+        velocidadSalida;
 
-    // Se agrega el nuevo triángulo.
-    // No se modifica la cantidad ni la lógica
-    // original de desprendimiento.
-    triangulos.push(hijo);
+    // Desvío aleatorio.
+    hijo.vx +=
+        (
+            Math.random() -
+            0.5
+        ) *
+        0.35;
+
+    hijo.vy +=
+        (
+            Math.random() -
+            0.5
+        ) *
+        0.35;
+
+    limitarVelocidad(
+        hijo
+    );
+
+    triangulos.push(
+        hijo
+    );
 }
 
-// Desprendimiento automático.
+// ============================================================
+// DESPRENDIMIENTO AUTOMÁTICO
+// ============================================================
+
 setInterval(
     function() {
 
-        // Busca solamente los padres.
         const padres =
             triangulos.filter(
                 triangulo =>
@@ -423,11 +653,22 @@ setInterval(
         padres.forEach(
             padre => {
 
-                // Se mantiene la misma probabilidad
-                // original de desprendimiento.
+                // Mayor cantidad de desprendimientos.
                 if (
                     Math.random() <
-                    0.75
+                    0.88
+                ) {
+
+                    desprenderTriangulo(
+                        padre
+                    );
+                }
+
+                // Posibilidad de que salgan
+                // dos en el mismo momento.
+                if (
+                    Math.random() <
+                    0.18
                 ) {
 
                     desprenderTriangulo(
@@ -441,7 +682,114 @@ setInterval(
     INTERVALO_DESPRENDIMIENTO
 );
 
-// Dibuja cada triángulo.
+// ============================================================
+// GRADIENTE
+// ============================================================
+
+function obtenerGradiente(
+    triangulo,
+    tamaño
+) {
+
+    const gradiente =
+        ctx.createRadialGradient(
+            -tamaño * 0.18,
+            -tamaño * 0.22,
+            tamaño * 0.04,
+
+            0,
+            0,
+            tamaño * 0.75
+        );
+
+    if (
+        triangulo.color ===
+        "#D9D9D9"
+    ) {
+
+        gradiente.addColorStop(
+            0,
+            "#FFFFFF"
+        );
+
+        gradiente.addColorStop(
+            0.45,
+            "#D9D9D9"
+        );
+
+        gradiente.addColorStop(
+            1,
+            "#AEB4BA"
+        );
+    }
+
+    else if (
+        triangulo.color ===
+        "#8BB2D3"
+    ) {
+
+        gradiente.addColorStop(
+            0,
+            "#DCECF9"
+        );
+
+        gradiente.addColorStop(
+            0.45,
+            "#8BB2D3"
+        );
+
+        gradiente.addColorStop(
+            1,
+            "#527A9C"
+        );
+    }
+
+    else if (
+        triangulo.color ===
+        "#202D64"
+    ) {
+
+        gradiente.addColorStop(
+            0,
+            "#6674A5"
+        );
+
+        gradiente.addColorStop(
+            0.45,
+            "#202D64"
+        );
+
+        gradiente.addColorStop(
+            1,
+            "#10183B"
+        );
+    }
+
+    else {
+
+        gradiente.addColorStop(
+            0,
+            "#7EA7D0"
+        );
+
+        gradiente.addColorStop(
+            0.45,
+            "#2B538E"
+        );
+
+        gradiente.addColorStop(
+            1,
+            "#18355F"
+        );
+    }
+
+    return gradiente;
+}
+
+// ============================================================
+// DIBUJAR TRIÁNGULO
+// ============================================================
+
 function dibujarTriangulo(
     triangulo
 ) {
@@ -449,7 +797,7 @@ function dibujarTriangulo(
     if (!triangulo.vivo)
         return;
 
-    // Genera el latido orgánico.
+    // Latido.
     const latido =
         Math.sin(
             triangulo.fase
@@ -463,7 +811,6 @@ function dibujarTriangulo(
             latido
         );
 
-    // Altura de un triángulo equilátero.
     const altura =
         tamaño *
         Math.sqrt(3) /
@@ -476,9 +823,12 @@ function dibujarTriangulo(
         triangulo.y
     );
 
+    // ========================================================
+    // FORMA
+    // ========================================================
+
     ctx.beginPath();
 
-    // Triángulo equilátero centrado.
     ctx.moveTo(
         0,
         -altura * 2 / 3
@@ -496,15 +846,160 @@ function dibujarTriangulo(
 
     ctx.closePath();
 
+    // ========================================================
+    // SOMBRA
+    // ========================================================
+
+    if (
+        triangulo.color ===
+        "#D9D9D9"
+    ) {
+
+        ctx.shadowColor =
+            "rgba(217,217,217,0.25)";
+
+    }
+
+    else if (
+        triangulo.color ===
+        "#8BB2D3"
+    ) {
+
+        ctx.shadowColor =
+            "rgba(139,178,211,0.30)";
+
+    }
+
+    else if (
+        triangulo.color ===
+        "#202D64"
+    ) {
+
+        ctx.shadowColor =
+            "rgba(32,45,100,0.35)";
+
+    }
+
+    else {
+
+        ctx.shadowColor =
+            "rgba(43,83,142,0.35)";
+    }
+
+    ctx.shadowBlur = 13;
+    ctx.shadowOffsetY = 1;
+
+    // ========================================================
+    // DEGRADADO
+    // ========================================================
+
     ctx.fillStyle =
-        triangulo.color;
+        obtenerGradiente(
+            triangulo,
+            tamaño
+        );
 
     ctx.fill();
+
+    // Quitamos la sombra.
+    ctx.shadowBlur = 0;
+
+    // ========================================================
+    // BRILLO INTERIOR
+    // ========================================================
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        0,
+        -altura * 2 / 3
+    );
+
+    ctx.lineTo(
+        -tamaño / 2,
+        altura / 3
+    );
+
+    ctx.lineTo(
+        tamaño / 2,
+        altura / 3
+    );
+
+    ctx.closePath();
+
+    const brillo =
+        ctx.createRadialGradient(
+            -tamaño * 0.15,
+            -tamaño * 0.22,
+            0,
+
+            0,
+            0,
+            tamaño * 0.7
+        );
+
+    brillo.addColorStop(
+        0,
+        "rgba(255,255,255,0.25)"
+    );
+
+    brillo.addColorStop(
+        0.35,
+        "rgba(255,255,255,0.06)"
+    );
+
+    brillo.addColorStop(
+        0.75,
+        "rgba(0,0,0,0)"
+    );
+
+    brillo.addColorStop(
+        1,
+        "rgba(0,0,0,0.12)"
+    );
+
+    ctx.fillStyle =
+        brillo;
+
+    ctx.fill();
+
+    // ========================================================
+    // BORDE SUAVE
+    // ========================================================
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        0,
+        -altura * 2 / 3
+    );
+
+    ctx.lineTo(
+        -tamaño / 2,
+        altura / 3
+    );
+
+    ctx.lineTo(
+        tamaño / 2,
+        altura / 3
+    );
+
+    ctx.closePath();
+
+    ctx.strokeStyle =
+        "rgba(196,206,229,0.16)";
+
+    ctx.lineWidth = 0.8;
+
+    ctx.stroke();
 
     ctx.restore();
 }
 
-// Dibuja todos los triángulos.
+// ============================================================
+// DIBUJAR TODO
+// ============================================================
+
 function dibujar() {
 
     ctx.clearRect(
@@ -522,13 +1017,15 @@ function dibujar() {
     );
 }
 
-// Busca solamente los triángulos hijos.
+// ============================================================
+// BUSCAR HIJO
+// ============================================================
+
 function buscarTriangulo(
     x,
     y
 ) {
 
-    // Revisa primero los últimos creados.
     for (
         let i =
             triangulos.length - 1;
@@ -542,16 +1039,17 @@ function buscarTriangulo(
         if (!triangulo.vivo)
             continue;
 
-        // Los padres no pueden tocarse
-        // para eliminarlos.
+        // Los padres no se pueden eliminar.
         if (!triangulo.esHijo)
             continue;
 
         const dx =
-            x - triangulo.x;
+            x -
+            triangulo.x;
 
         const dy =
-            y - triangulo.y;
+            y -
+            triangulo.y;
 
         const radio =
             triangulo.tamaño *
@@ -571,8 +1069,10 @@ function buscarTriangulo(
     return null;
 }
 
-// Al tocar un triángulo desprendido,
-// este desaparece.
+// ============================================================
+// INTERACCIÓN
+// ============================================================
+
 canvas.addEventListener(
     "pointerdown",
     function(event) {
@@ -600,7 +1100,6 @@ canvas.addEventListener(
             triangulo.vivo =
                 false;
 
-            // Se elimina del array.
             setTimeout(
                 function() {
 
@@ -626,7 +1125,10 @@ canvas.addEventListener(
     }
 );
 
-// Bucle principal de animación.
+// ============================================================
+// ANIMACIÓN
+// ============================================================
+
 function animar() {
 
     moverTriangulos();
@@ -641,3 +1143,4 @@ function animar() {
 }
 
 animar();
+
