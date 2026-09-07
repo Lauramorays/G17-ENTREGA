@@ -1,3 +1,4 @@
+
 document.addEventListener("DOMContentLoaded", function () {
 
     const canvas = document.getElementById("canvas");
@@ -15,6 +16,8 @@ document.addEventListener("DOMContentLoaded", function () {
         "#2B538E"
     ];
 
+    const COLOR_SELECCION = "#C4CEE5";
+
 
     // =====================================================
     // CONFIGURACIÓN
@@ -26,6 +29,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const FUERZA_COLISION = 0.7;
 
+    const DISTANCIA_BASE = 70;
+
+    const FACTOR_MAXIMO =
+        4.5;
+
 
     // =====================================================
     // VARIABLES
@@ -33,7 +41,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let circulos = [];
 
-    // Todos los dedos activos
+    // Todos los dedos / punteros activos
     const dedos = new Map();
 
     // Deformación activa
@@ -46,8 +54,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function ajustarCanvas() {
 
-        canvas.width = canvas.clientWidth;
-        canvas.height = canvas.clientHeight;
+        canvas.width =
+            canvas.clientWidth;
+
+        canvas.height =
+            canvas.clientHeight;
+
 
         if (circulos.length === 0) {
 
@@ -179,6 +191,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 punteroMovimiento:
                     null,
 
+                seleccionado:
+                    false,
+
 
                 // =========================================
                 // DEFORMACIÓN
@@ -225,20 +240,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
         circulos.forEach(circulo => {
 
-            // Si lo estamos moviendo con un dedo
-            // no hacemos movimiento automático.
-
-            if (circulo.siendoMovido) {
+            if (
+                circulo.siendoMovido
+            ) {
 
                 return;
 
             }
 
 
-            // Si está siendo deformado
-            // tampoco modificamos su posición.
-
-            if (circulo.deformando) {
+            if (
+                circulo.deformando
+            ) {
 
                 return;
 
@@ -249,9 +262,11 @@ document.addEventListener("DOMContentLoaded", function () {
             // MOVIMIENTO PRINCIPAL
             // =============================================
 
-            circulo.x += circulo.vx;
+            circulo.x +=
+                circulo.vx;
 
-            circulo.y += circulo.vy;
+            circulo.y +=
+                circulo.vy;
 
 
             // =============================================
@@ -267,15 +282,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
             circulo.x +=
-                Math.sin(circulo.faseX) *
+                Math.sin(
+                    circulo.faseX
+                ) *
                 0.12;
 
             circulo.y +=
-                Math.cos(circulo.faseY) *
+                Math.cos(
+                    circulo.faseY
+                ) *
                 0.12;
 
 
-            controlarBordes(circulo);
+            controlarBordes(
+                circulo
+            );
 
         });
 
@@ -292,13 +313,17 @@ document.addEventListener("DOMContentLoaded", function () {
             radioFisico(circulo);
 
 
-        if (circulo.x - radio < 0) {
+        if (
+            circulo.x - radio < 0
+        ) {
 
             circulo.x =
                 radio;
 
             circulo.vx =
-                Math.abs(circulo.vx);
+                Math.abs(
+                    circulo.vx
+                );
 
         }
 
@@ -312,18 +337,24 @@ document.addEventListener("DOMContentLoaded", function () {
                 canvas.width - radio;
 
             circulo.vx =
-                -Math.abs(circulo.vx);
+                -Math.abs(
+                    circulo.vx
+                );
 
         }
 
 
-        if (circulo.y - radio < 0) {
+        if (
+            circulo.y - radio < 0
+        ) {
 
             circulo.y =
                 radio;
 
             circulo.vy =
-                Math.abs(circulo.vy);
+                Math.abs(
+                    circulo.vy
+                );
 
         }
 
@@ -337,7 +368,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 canvas.height - radio;
 
             circulo.vy =
-                -Math.abs(circulo.vy);
+                -Math.abs(
+                    circulo.vy
+                );
 
         }
 
@@ -398,7 +431,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
 
 
-                if (distancia === 0) {
+                if (
+                    distancia === 0
+                ) {
 
                     continue;
 
@@ -419,7 +454,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
                 // =========================================
-                // SEPARAR
+                // SEPARACIÓN
                 // =========================================
 
                 const penetracion =
@@ -518,13 +553,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
                 const impulsoX =
-                    impulso * nx;
+                    impulso *
+                    nx;
 
                 const impulsoY =
-                    impulso * ny;
+                    impulso *
+                    ny;
 
 
-                if (!a.siendoMovido) {
+                if (
+                    !a.siendoMovido
+                ) {
 
                     a.vx -=
                         impulsoX *
@@ -537,7 +576,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
 
 
-                if (!b.siendoMovido) {
+                if (
+                    !b.siendoMovido
+                ) {
 
                     b.vx +=
                         impulsoX *
@@ -604,7 +645,121 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // =====================================================
-    // DIBUJAR
+    // ESTILO SEGÚN COLOR
+    // =====================================================
+
+    function obtenerGradiente(circulo, radio) {
+
+        const gradiente =
+            ctx.createRadialGradient(
+                -radio * 0.35,
+                -radio * 0.30,
+                radio * 0.05,
+                0,
+                0,
+                radio * 1.2
+            );
+
+
+        if (
+            circulo.color ===
+            "#D9D9D9"
+        ) {
+
+            gradiente.addColorStop(
+                0,
+                "#FFFFFF"
+            );
+
+            gradiente.addColorStop(
+                0.45,
+                "#D9D9D9"
+            );
+
+            gradiente.addColorStop(
+                1,
+                "#AEB4BA"
+            );
+
+        }
+
+
+        else if (
+            circulo.color ===
+            "#8BB2D3"
+        ) {
+
+            gradiente.addColorStop(
+                0,
+                "#DCECF9"
+            );
+
+            gradiente.addColorStop(
+                0.48,
+                "#8BB2D3"
+            );
+
+            gradiente.addColorStop(
+                1,
+                "#527A9C"
+            );
+
+        }
+
+
+        else if (
+            circulo.color ===
+            "#202D64"
+        ) {
+
+            gradiente.addColorStop(
+                0,
+                "#6674A5"
+            );
+
+            gradiente.addColorStop(
+                0.50,
+                "#202D64"
+            );
+
+            gradiente.addColorStop(
+                1,
+                "#10183B"
+            );
+
+        }
+
+
+        else if (
+            circulo.color ===
+            "#2B538E"
+        ) {
+
+            gradiente.addColorStop(
+                0,
+                "#7EA7D0"
+            );
+
+            gradiente.addColorStop(
+                0.50,
+                "#2B538E"
+            );
+
+            gradiente.addColorStop(
+                1,
+                "#18355F"
+            );
+
+        }
+
+
+        return gradiente;
+
+    }
+
+
+    // =====================================================
+    // DIBUJAR CÍRCULO
     // =====================================================
 
     function dibujarCirculo(circulo) {
@@ -655,6 +810,29 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
         // =========================================
+        // SOMBRA / BRILLO
+        // =========================================
+
+        ctx.shadowColor =
+            circulo.seleccionado
+                ? COLOR_SELECCION
+                : circulo.color;
+
+
+        ctx.shadowBlur =
+            circulo.seleccionado
+                ? 30
+                : 18;
+
+
+        ctx.shadowOffsetX =
+            0;
+
+        ctx.shadowOffsetY =
+            0;
+
+
+        // =========================================
         // CÍRCULO
         // =========================================
 
@@ -671,11 +849,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
         // =========================================
-        // RELLENO
+        // GRADIENTE
         // =========================================
 
         ctx.fillStyle =
-            circulo.color;
+            obtenerGradiente(
+                circulo,
+                radioRespirando
+            );
+
 
         ctx.fill();
 
@@ -684,11 +866,23 @@ document.addEventListener("DOMContentLoaded", function () {
         // BORDE
         // =========================================
 
+        ctx.shadowBlur =
+            circulo.seleccionado
+                ? 30
+                : 10;
+
+
         ctx.strokeStyle =
-            circulo.color;
+            circulo.seleccionado
+                ? COLOR_SELECCION
+                : circulo.color;
+
 
         ctx.lineWidth =
-            3;
+            circulo.seleccionado
+                ? 3
+                : 2;
+
 
         ctx.stroke();
 
@@ -715,6 +909,9 @@ document.addEventListener("DOMContentLoaded", function () {
         circulo.punteroMovimiento =
             pointerId;
 
+        circulo.seleccionado =
+            true;
+
 
         dedos.set(
             pointerId,
@@ -739,7 +936,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // =====================================================
-    // DOS DEDOS — INICIAR DEFORMACIÓN
+    // DOS DEDOS — DEFORMAR
     // =====================================================
 
     function iniciarDeformacion(
@@ -751,8 +948,10 @@ document.addEventListener("DOMContentLoaded", function () {
         circulo.siendoMovido =
             false;
 
-
         circulo.deformando =
+            true;
+
+        circulo.seleccionado =
             true;
 
 
@@ -789,7 +988,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function actualizarDeformacion() {
 
-        if (!deformacionActiva) {
+        if (
+            !deformacionActiva
+        ) {
 
             return;
 
@@ -807,7 +1008,6 @@ document.addEventListener("DOMContentLoaded", function () {
         const dedoA =
             datos.dedoA;
 
-
         const dedoB =
             datos.dedoB;
 
@@ -823,7 +1023,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
         // =========================================
-        // DISTANCIA ENTRE LOS DOS DEDOS
+        // DISTANCIA
         // =========================================
 
         const dx =
@@ -854,34 +1054,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
         // =========================================
-        // ESCALA
+        // FACTOR
         // =========================================
-
-        // Distancia pequeña =
-        // poca deformación.
-
-        const distanciaBase =
-            70;
-
 
         let factor =
             distancia /
-            distanciaBase;
-
-
-        // =========================================
-        // MÁXIMO DE ESTIRAMIENTO
-        // =========================================
-
-        // Permite llegar prácticamente
-        // al tamaño completo de la pantalla.
-
-        const factorMaximo =
-            Math.max(
-                canvas.width,
-                canvas.height
-            ) /
-            distanciaBase;
+            DISTANCIA_BASE;
 
 
         factor =
@@ -889,7 +1067,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 0.55,
                 Math.min(
                     factor,
-                    factorMaximo
+                    FACTOR_MAXIMO
                 )
             );
 
@@ -904,7 +1082,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
         circulo.escalaY =
             1 /
-            Math.sqrt(factor);
+            Math.sqrt(
+                factor
+            );
 
 
         circulo.anguloDeformacion =
@@ -979,7 +1159,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // =====================================================
-    // OBTENER POSICIÓN DEL PUNTERO
+    // POSICIÓN DEL PUNTERO
     // =====================================================
 
     function obtenerPosicion(e) {
@@ -1041,7 +1221,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
             // =========================================
-            // ¿YA HAY UN DEDO SOBRE ESTE CÍRCULO?
+            // BUSCAR DEDOS DEL MISMO CÍRCULO
             // =========================================
 
             const dedosDelCirculo =
@@ -1068,9 +1248,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 ] =
                     dedosDelCirculo[0];
 
-
-                // El primer dedo conserva
-                // su posición REAL.
 
                 primerDato.tipo =
                     "deformacion";
@@ -1207,7 +1384,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
             // =========================================
-            // MOVIMIENTO CON UN DEDO
+            // MOVIMIENTO
             // =========================================
 
             if (
@@ -1218,9 +1395,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 const circulo =
                     dato.circulo;
 
-
-                // Si está deformándose,
-                // no mover.
 
                 if (
                     circulo.deformando
@@ -1284,7 +1458,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
         // =========================================
-        // SI ESTABA DEFORMANDO
+        // DEFORMACIÓN
         // =========================================
 
         if (
@@ -1297,10 +1471,6 @@ document.addEventListener("DOMContentLoaded", function () {
             );
 
 
-            // Al soltar cualquiera
-            // de los dos dedos,
-            // vuelve a su forma.
-
             if (
                 circulo.deformando
             ) {
@@ -1312,12 +1482,8 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
 
-            // El otro dedo también
-            // deja de controlar.
-
             circulo.siendoMovido =
                 false;
-
 
             circulo.punteroMovimiento =
                 null;
@@ -1327,8 +1493,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 null;
 
 
-            // Eliminar cualquier otro
-            // dedo asociado al círculo.
+            // Eliminar los otros dedos
+            // asociados al círculo.
 
             dedos.forEach(
                 (datoOtro, id) => {
@@ -1344,6 +1510,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 }
             );
+
+
+            setTimeout(() => {
+
+                circulo.seleccionado =
+                    false;
+
+            }, 250);
 
 
             return;
@@ -1365,6 +1539,14 @@ document.addEventListener("DOMContentLoaded", function () {
         dedos.delete(
             e.pointerId
         );
+
+
+        setTimeout(() => {
+
+            circulo.seleccionado =
+                false;
+
+        }, 150);
 
     }
 
@@ -1427,3 +1609,4 @@ document.addEventListener("DOMContentLoaded", function () {
     animar();
 
 });
+
