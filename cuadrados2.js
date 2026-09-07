@@ -11,7 +11,8 @@
 // - Tienen movimiento de respiración.
 // - Con un dedo se pueden arrastrar.
 // - Con dos dedos sobre el mismo cuadrado se puede estirar.
-// - Al estirarlo, la punta hacia donde se tira se va afinando.
+// - SOLO cuando se estira con dos dedos se deforma.
+// - La deformación es blanda y orgánica, como goma o látex.
 // - Al llegar al máximo, genera hijos.
 // - El padre permanece.
 // - Después de generar hijos rebota y recupera su forma.
@@ -168,6 +169,14 @@ function crearFigura(x, y, color, tamano = TAMANO_INICIAL) {
         inclinacionDeformacion: 0,
 
         // ----------------------------------------
+        // DEFORMACIÓN ACTUAL
+        // ----------------------------------------
+
+        deformacionActual: 0,
+
+        deformacionObjetivo: 0,
+
+        // ----------------------------------------
         // HERENCIA
         // ----------------------------------------
 
@@ -262,9 +271,13 @@ function iniciarRebote(figura) {
 
     figura.rebotando = true;
 
-    figura.velocidadRebote = FUERZA_REBOTE;
+    // La deformación actual se toma como punto de partida.
+    // De esta forma no desaparece de golpe.
+    figura.deformacionRebote =
+        figura.deformacionActual;
 
-    figura.deformacionRebote = 1;
+    figura.velocidadRebote =
+        FUERZA_REBOTE;
 
 }
 
@@ -279,17 +292,23 @@ function actualizarRebote(figura) {
         return;
     }
 
-    figura.velocidadRebote *= AMORTIGUACION_REBOTE;
+    // ----------------------------------------
+    // Movimiento elástico de regreso
+    // ----------------------------------------
 
-    figura.deformacionRebote +=
-        figura.velocidadRebote *
-        figura.direccionReboteX;
+    figura.velocidadRebote *=
+        AMORTIGUACION_REBOTE;
 
-    figura.deformacionRebote *= 0.94;
+    figura.deformacionRebote -=
+        figura.velocidadRebote;
+
+
+    // ----------------------------------------
+    // Evitar valores negativos
+    // ----------------------------------------
 
     if (
-        Math.abs(figura.deformacionRebote) < 0.015 &&
-        Math.abs(figura.velocidadRebote) < 0.008
+        figura.deformacionRebote <= 0
     ) {
 
         figura.deformacionRebote = 0;
@@ -297,6 +316,14 @@ function actualizarRebote(figura) {
         figura.velocidadRebote = 0;
 
         figura.rebotando = false;
+
+        figura.deformacionActual = 0;
+
+    }
+    else {
+
+        figura.deformacionActual =
+            figura.deformacionRebote;
 
     }
 
@@ -335,11 +362,17 @@ function actualizarGesto(figura) {
     }
 
     let progreso =
-        (distancia - figura.distanciaInicialGesto) /
+        (
+            distancia -
+            figura.distanciaInicialGesto
+        ) /
         DISTANCIA_SEPARACION;
 
     progreso =
-        Math.max(0, Math.min(1, progreso));
+        Math.max(
+            0,
+            Math.min(1, progreso)
+        );
 
 
     // ----------------------------------------
@@ -358,7 +391,18 @@ function actualizarGesto(figura) {
 
 
     // ----------------------------------------
-    // ESCALA PRINCIPAL
+    // DEFORMACIÓN
+    // ----------------------------------------
+
+    // 0 = cuadrado perfecto
+    // 1 = máxima deformación
+
+    figura.deformacionActual =
+        progreso;
+
+
+    // ----------------------------------------
+    // ESCALA
     // ----------------------------------------
 
     figura.escalaGesto =
@@ -432,7 +476,11 @@ function crearHijos(padre) {
     const distancia =
         padre.tamano * 0.95;
 
-    for (let i = 0; i < cantidadHijos; i++) {
+    for (
+        let i = 0;
+        i < cantidadHijos;
+        i++
+    ) {
 
         const lado =
             i === 0 ? -1 : 1;
@@ -454,7 +502,8 @@ function crearHijos(padre) {
                 hijoX,
                 hijoY,
                 padre.color,
-                padre.tamano * REDUCCION_HIJO
+                padre.tamano *
+                REDUCCION_HIJO
             );
 
 
@@ -509,16 +558,13 @@ function finalizarGesto(figura) {
 
     figura.puntosGesto = [];
 
+
     // ----------------------------------------
-    // SI NO LLEGÓ AL MÁXIMO,
-    // TAMBIÉN REBOTA Y RECUPERA LA FORMA
+    // REBOTA DESDE LA DEFORMACIÓN ACTUAL
     // ----------------------------------------
 
-    if (!figura._yaGeneroHijos) {
+    iniciarRebote(figura);
 
-        iniciarRebote(figura);
-
-    }
 
     figura._yaGeneroHijos = false;
 
@@ -575,7 +621,10 @@ function actualizarMovimiento(figura) {
     }
 
 
-    if (figura.x + margenX > canvas.width) {
+    if (
+        figura.x + margenX >
+        canvas.width
+    ) {
 
         figura.x =
             canvas.width - margenX;
@@ -596,7 +645,10 @@ function actualizarMovimiento(figura) {
     }
 
 
-    if (figura.y + margenY > canvas.height) {
+    if (
+        figura.y + margenY >
+        canvas.height
+    ) {
 
         figura.y =
             canvas.height - margenY;
@@ -615,9 +667,17 @@ function actualizarMovimiento(figura) {
 
 function resolverColisiones() {
 
-    for (let i = 0; i < figuras.length; i++) {
+    for (
+        let i = 0;
+        i < figuras.length;
+        i++
+    ) {
 
-        for (let j = i + 1; j < figuras.length; j++) {
+        for (
+            let j = i + 1;
+            j < figuras.length;
+            j++
+        ) {
 
             const a = figuras[i];
 
@@ -628,7 +688,10 @@ function resolverColisiones() {
             const dy = b.y - a.y;
 
             const distancia =
-                Math.sqrt(dx * dx + dy * dy);
+                Math.sqrt(
+                    dx * dx +
+                    dy * dy
+                );
 
             const distanciaMinima =
                 (
@@ -736,203 +799,103 @@ function resolverColisiones() {
 
 
 // ============================================================
-// DIBUJAR CUADRADO DEFORMADO
+// DIBUJAR CUADRADO
 // ============================================================
 //
-// ESTA ES LA PARTE MODIFICADA.
+// IMPORTANTE:
 //
-// En lugar de utilizar fillRect(), se construye una forma
-// mediante curvas.
+// Cuando deformacion = 0:
 //
-// Cuando se estira:
-// - el extremo hacia donde se tira se alarga
-// - la punta se hace más pequeña
-// - los laterales se curvan
-// - el lado contrario se comprime
+//       ┌────────┐
+//       │        │
+//       │        │
+//       └────────┘
 //
-// Al terminar el gesto, los valores vuelven progresivamente
-// a 1 y la figura vuelve a ser un cuadrado.
+// Es un cuadrado REAL.
+//
+// La deformación solamente aparece mientras se utilizan
+// los dos dedos.
+//
 // ============================================================
 
 function dibujarCuadradoDeformado(figura) {
 
-    const t = figura.tamano;
+    const t =
+        figura.tamano;
 
-    let escalaX = figura.respiracionX;
-
-    let escalaY = figura.respiracionY;
-
-
-    // ----------------------------------------
-    // PROGRESO DEL ESTIRAMIENTO
-    // ----------------------------------------
-
-    let progreso = 0;
-
-    if (
-        figura.gesticulando &&
-        figura.distanciaInicialGesto > 0
-    ) {
-
-        progreso =
-            (
-                figura.distanciaActualGesto -
-                figura.distanciaInicialGesto
-            ) /
-            DISTANCIA_SEPARACION;
-
-    }
-
-    progreso =
-        Math.max(0, Math.min(1, progreso));
+    const mitad =
+        t / 2;
 
 
-    // ----------------------------------------
-    // REBOTE
-    // ----------------------------------------
-
-    let rebote =
-        figura.deformacionRebote;
-
-
-    // ----------------------------------------
-    // DEFORMACIÓN TOTAL
-    // ----------------------------------------
+    // ========================================================
+    // DEFORMACIÓN
+    // ========================================================
 
     let deformacion =
-        progreso;
+        figura.deformacionActual;
 
+
+    // ----------------------------------------
+    // Durante el rebote
+    // ----------------------------------------
 
     if (figura.rebotando) {
 
-        deformacion += rebote;
+        deformacion =
+            figura.deformacionRebote;
 
     }
 
 
     deformacion =
         Math.max(
-            -0.15,
-            Math.min(1, deformacion)
+            0,
+            Math.min(
+                1,
+                deformacion
+            )
         );
 
 
-    // ----------------------------------------
-    // DIRECCIÓN
-    // ----------------------------------------
+    // ========================================================
+    // ESCALAS
+    // ========================================================
 
-    let angulo =
-        figura.gesticulando ||
-        figura.rebotando
-            ? figura.inclinacionDeformacion
-            : 0;
+    let escalaX =
+        figura.respiracionX;
 
-
-    // ----------------------------------------
-    // GUARDAR CONTEXTO
-    // ----------------------------------------
-
-    ctx.save();
-
-    ctx.translate(
-        figura.x,
-        figura.y
-    );
-
-    ctx.rotate(
-        figura.rotacion
-    );
+    let escalaY =
+        figura.respiracionY;
 
 
-    // ----------------------------------------
-    // ROTACIÓN DE LA DEFORMACIÓN
-    // ----------------------------------------
+    // Solo se comprime durante el estiramiento
+    // de dos dedos.
 
     if (
         figura.gesticulando ||
         figura.rebotando
     ) {
 
-        ctx.rotate(
-            angulo
-        );
+        const estiramiento =
+            1 +
+            (
+                DEFORMACION_MAXIMA - 1
+            ) *
+            deformacion;
+
+        const compresion =
+            1 -
+            (
+                1 - COMPRESION_MAXIMA
+            ) *
+            deformacion;
+
+
+        escalaX *= estiramiento;
+
+        escalaY *= compresion;
 
     }
-
-
-    // ----------------------------------------
-    // ESCALA
-    // ----------------------------------------
-
-    ctx.scale(
-        escalaX,
-        escalaY
-    );
-
-
-    const mitad =
-        t / 2;
-
-
-    // ----------------------------------------
-    // ESTIRAMIENTO
-    // ----------------------------------------
-
-    const largo =
-        mitad *
-        (
-            1 +
-            deformacion *
-            0.85
-        );
-
-
-    // ----------------------------------------
-    // ACHICAMIENTO DE LA PUNTA
-    // ----------------------------------------
-    //
-    // Cuanto más se estira, menor es el ancho
-    // de la punta.
-    //
-    // 1     = cuadrado normal
-    // 0.75  = punta ligeramente reducida
-    // 0.40  = punta bastante fina
-    //
-    // ----------------------------------------
-
-    const punta =
-        mitad *
-        (
-            1 -
-            deformacion *
-            0.60
-        );
-
-
-    // ----------------------------------------
-    // ANCHO DE LA BASE
-    // ----------------------------------------
-
-    const base =
-        mitad *
-        (
-            1 +
-            deformacion *
-            0.08
-        );
-
-
-    // ----------------------------------------
-    // CURVATURA
-    // ----------------------------------------
-
-    const curva =
-        mitad *
-        (
-            0.10 +
-            deformacion *
-            0.25
-        );
 
 
     // ========================================================
@@ -1060,23 +1023,65 @@ function dibujarCuadradoDeformado(figura) {
 
 
     // ========================================================
-    // SOMBRA EXTERIOR
+    // CONTEXTO
     // ========================================================
 
-    if (figura.color === "#D9D9D9") {
+    ctx.save();
+
+
+    ctx.translate(
+        figura.x,
+        figura.y
+    );
+
+
+    ctx.rotate(
+        figura.rotacion
+    );
+
+
+    // ========================================================
+    // DIRECCIÓN DEL ESTIRAMIENTO
+    // ========================================================
+
+    if (
+        figura.gesticulando ||
+        figura.rebotando
+    ) {
+
+        ctx.rotate(
+            figura.inclinacionDeformacion
+        );
+
+    }
+
+
+    ctx.scale(
+        escalaX,
+        escalaY
+    );
+
+
+    // ========================================================
+    // SOMBRA
+    // ========================================================
+
+    if (
+        figura.color === "#D9D9D9"
+    ) {
 
         ctx.shadowColor =
             "rgba(217,217,217,0.25)";
 
     }
-
-    else if (figura.color === "#8BB2D3") {
+    else if (
+        figura.color === "#8BB2D3"
+    ) {
 
         ctx.shadowColor =
             "rgba(139,178,211,0.25)";
 
     }
-
     else {
 
         ctx.shadowColor =
@@ -1092,77 +1097,183 @@ function dibujarCuadradoDeformado(figura) {
 
 
     // ========================================================
-    // CREAR FORMA
+    // CUADRADO NORMAL
+    // ========================================================
+    //
+    // MUY IMPORTANTE:
+    //
+    // Si no estamos haciendo el gesto de dos dedos
+    // y no estamos rebotando, dibujamos un cuadrado
+    // completamente normal.
+    //
     // ========================================================
 
-    ctx.beginPath();
+    if (
+        deformacion <= 0.001
+    ) {
 
+        ctx.beginPath();
 
-    // ----------------------------------------
-    // PUNTA DERECHA
-    // ----------------------------------------
+        ctx.rect(
+            -mitad,
+            -mitad,
+            t,
+            t
+        );
 
-    ctx.moveTo(
-        largo,
-        0
-    );
+        ctx.fillStyle =
+            gradiente;
 
+        ctx.fill();
 
-    // ----------------------------------------
-    // PARTE SUPERIOR
-    // ----------------------------------------
-
-    ctx.quadraticCurveTo(
-        largo * 0.72,
-        -punta,
-        0,
-        -base
-    );
-
-
-    // ----------------------------------------
-    // LADO IZQUIERDO
-    // ----------------------------------------
-
-    ctx.quadraticCurveTo(
-        -mitad - curva * deformacion,
-        -mitad * 0.35,
-        -mitad,
-        0
-    );
-
-
-    ctx.quadraticCurveTo(
-        -mitad - curva * deformacion,
-        mitad * 0.35,
-        0,
-        base
-    );
-
-
-    // ----------------------------------------
-    // PARTE INFERIOR
-    // ----------------------------------------
-
-    ctx.quadraticCurveTo(
-        largo * 0.72,
-        punta,
-        largo,
-        0
-    );
-
-
-    ctx.closePath();
-
+    }
 
     // ========================================================
-    // RELLENO
+    // FORMA DEFORMADA
     // ========================================================
 
-    ctx.fillStyle =
-        gradiente;
+    else {
 
-    ctx.fill();
+        // ----------------------------------------
+        // Largo
+        // ----------------------------------------
+
+        const largo =
+            mitad *
+            (
+                1 +
+                deformacion *
+                0.85
+            );
+
+
+        // ----------------------------------------
+        // Ancho reducido
+        // ----------------------------------------
+
+        const ancho =
+            mitad *
+            (
+                1 -
+                deformacion *
+                0.32
+            );
+
+
+        // ----------------------------------------
+        // Curvatura
+        // ----------------------------------------
+
+        const curva =
+            mitad *
+            (
+                0.12 +
+                deformacion *
+                0.38
+            );
+
+
+        // ----------------------------------------
+        // Lado trasero
+        // ----------------------------------------
+
+        const atras =
+            -mitad *
+            (
+                1 -
+                deformacion *
+                0.18
+            );
+
+
+        // ----------------------------------------
+        // FORMA ORGÁNICA
+        // ----------------------------------------
+
+        ctx.beginPath();
+
+
+        // Punta/extremo del estiramiento.
+        // Ya NO es una punta triangular.
+        ctx.moveTo(
+            largo,
+            -ancho * 0.48
+        );
+
+
+        // ----------------------------------------
+        // PARTE SUPERIOR
+        // ----------------------------------------
+
+        ctx.quadraticCurveTo(
+            largo * 0.72,
+            -ancho * 0.72,
+            0,
+            -ancho
+        );
+
+
+        ctx.quadraticCurveTo(
+            atras * 0.55,
+            -ancho * 0.92,
+            atras,
+            -ancho * 0.48
+        );
+
+
+        // ----------------------------------------
+        // PARTE IZQUIERDA
+        // ----------------------------------------
+
+        ctx.quadraticCurveTo(
+            atras - curva,
+            0,
+            atras,
+            ancho * 0.48
+        );
+
+
+        // ----------------------------------------
+        // PARTE INFERIOR
+        // ----------------------------------------
+
+        ctx.quadraticCurveTo(
+            atras * 0.55,
+            ancho * 0.92,
+            0,
+            ancho
+        );
+
+
+        ctx.quadraticCurveTo(
+            largo * 0.72,
+            ancho * 0.72,
+            largo,
+            ancho * 0.48
+        );
+
+
+        // ----------------------------------------
+        // CERRAR
+        // ----------------------------------------
+
+        ctx.quadraticCurveTo(
+            largo + curva * 0.35,
+            0,
+            largo,
+            -ancho * 0.48
+        );
+
+
+        ctx.closePath();
+
+
+        ctx.fillStyle =
+            gradiente;
+
+        ctx.fill();
+
+    }
 
 
     // ========================================================
@@ -1171,7 +1282,8 @@ function dibujarCuadradoDeformado(figura) {
 
     ctx.shadowBlur = 0;
 
-    ctx.shadowColor = "transparent";
+    ctx.shadowColor =
+        "transparent";
 
 
     const sombra =
@@ -1202,7 +1314,115 @@ function dibujarCuadradoDeformado(figura) {
     ctx.fillStyle =
         sombra;
 
-    ctx.fill();
+
+    // Volvemos a utilizar exactamente
+    // la misma forma para la iluminación interna.
+
+    if (
+        deformacion <= 0.001
+    ) {
+
+        ctx.beginPath();
+
+        ctx.rect(
+            -mitad,
+            -mitad,
+            t,
+            t
+        );
+
+        ctx.fill();
+
+    }
+    else {
+
+        const largo =
+            mitad *
+            (
+                1 +
+                deformacion *
+                0.85
+            );
+
+        const ancho =
+            mitad *
+            (
+                1 -
+                deformacion *
+                0.32
+            );
+
+        const curva =
+            mitad *
+            (
+                0.12 +
+                deformacion *
+                0.38
+            );
+
+        const atras =
+            -mitad *
+            (
+                1 -
+                deformacion *
+                0.18
+            );
+
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            largo,
+            -ancho * 0.48
+        );
+
+        ctx.quadraticCurveTo(
+            largo * 0.72,
+            -ancho * 0.72,
+            0,
+            -ancho
+        );
+
+        ctx.quadraticCurveTo(
+            atras * 0.55,
+            -ancho * 0.92,
+            atras,
+            -ancho * 0.48
+        );
+
+        ctx.quadraticCurveTo(
+            atras - curva,
+            0,
+            atras,
+            ancho * 0.48
+        );
+
+        ctx.quadraticCurveTo(
+            atras * 0.55,
+            ancho * 0.92,
+            0,
+            ancho
+        );
+
+        ctx.quadraticCurveTo(
+            largo * 0.72,
+            ancho * 0.72,
+            largo,
+            ancho * 0.48
+        );
+
+        ctx.quadraticCurveTo(
+            largo + curva * 0.35,
+            0,
+            largo,
+            -ancho * 0.48
+        );
+
+        ctx.closePath();
+
+        ctx.fill();
+
+    }
 
 
     // ========================================================
@@ -1230,7 +1450,9 @@ function dibujar() {
 
     for (const figura of figuras) {
 
-        dibujarCuadradoDeformado(figura);
+        dibujarCuadradoDeformado(
+            figura
+        );
 
     }
 
@@ -1260,7 +1482,9 @@ function actualizar() {
 
     dibujar();
 
-    requestAnimationFrame(actualizar);
+    requestAnimationFrame(
+        actualizar
+    );
 
 }
 
@@ -1303,7 +1527,8 @@ function encontrarFigura(x, y) {
         i--
     ) {
 
-        const figura = figuras[i];
+        const figura =
+            figuras[i];
 
         const dx =
             x - figura.x;
@@ -1362,15 +1587,19 @@ canvas.addEventListener(
         }
 
 
-        figuraMouse = figura;
+        figuraMouse =
+            figura;
 
         mouseActivo = true;
 
-        figura.seleccionada = true;
+        figura.seleccionada =
+            true;
 
-        figura.x = punto.x;
+        figura.x =
+            punto.x;
 
-        figura.y = punto.y;
+        figura.y =
+            punto.y;
 
     }
 );
@@ -1447,9 +1676,9 @@ canvas.addEventListener(
 let figuraTouch = null;
 
 
-// ------------------------------------------------------------
+// ============================================================
 // TOUCH START
-// ------------------------------------------------------------
+// ============================================================
 
 canvas.addEventListener(
     "touchstart",
@@ -1492,8 +1721,8 @@ canvas.addEventListener(
 
 
             // ------------------------------------
-            // LOS DOS DEDOS TIENEN QUE ESTAR
-            // SOBRE EL MISMO CUADRADO
+            // LOS DOS DEDOS SOBRE EL MISMO
+            // CUADRADO
             // ------------------------------------
 
             if (
@@ -1532,6 +1761,11 @@ canvas.addEventListener(
 
                 figuraTouch.distanciaActualGesto =
                     figuraTouch.distanciaInicialGesto;
+
+
+                // Empieza completamente cuadrado.
+                figuraTouch.deformacionActual =
+                    0;
 
             }
 
@@ -1585,9 +1819,9 @@ canvas.addEventListener(
 );
 
 
-// ------------------------------------------------------------
+// ============================================================
 // TOUCH MOVE
-// ------------------------------------------------------------
+// ============================================================
 
 canvas.addEventListener(
     "touchmove",
@@ -1661,9 +1895,9 @@ canvas.addEventListener(
 );
 
 
-// ------------------------------------------------------------
+// ============================================================
 // TOUCH END
-// ------------------------------------------------------------
+// ============================================================
 
 canvas.addEventListener(
     "touchend",
