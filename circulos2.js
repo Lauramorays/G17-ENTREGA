@@ -10,7 +10,8 @@
 // - Después cada círculo se altera en un momento diferente.
 // - Cada círculo se altera directamente, sin transición lenta.
 // - Los círculos alterados respiran fuerte y rápido.
-// - Los círculos alterados se mueven rápido y de forma errática.
+// - Los círculos alterados se mueven MUY rápido y MUY erráticamente.
+// - Los círculos se chocan, se empujan y rebotan con mucha fuerza.
 // - Al tocar 2 o más círculos al mismo tiempo, se calman.
 // - Se pueden calmar grupos de 2, 3 o 4.
 // - Al soltar los dedos permanecen calmados.
@@ -54,27 +55,41 @@ const TAMAÑO_INICIAL = 55;
 // VELOCIDAD
 // ------------------------------------------------------------
 //
-// Alterados = mucho más rápidos
-//
-
-const VELOCIDAD_MAXIMA = 1.35;
-
-const VELOCIDAD_MINIMA_ALTERADA = 0.75;
-
-
+// Aumentada x5 aproximadamente respecto al comportamiento
+// errático anterior.
 // ------------------------------------------------------------
+
+const VELOCIDAD_MAXIMA = 3.2;
+
+const VELOCIDAD_MINIMA_ALTERADA = 1.45;
+
+
+// ============================================================
 // COLISIONES
+// ============================================================
+//
+// Muchísimo más fuertes.
 // ------------------------------------------------------------
 
-const FUERZA_COLISION = 0.7;
+const FUERZA_COLISION = 6.75;
+
+const FUERZA_EMPUJE_LATERAL = 0.60;
+
+const FUERZA_REBOTE_EXTRA = 0.90;
+
+
+// ============================================================
+// SEPARACIÓN DE COLISIONES
+// ============================================================
+
+const FUERZA_SEPARACION = 0.90;
+
+const FUERZA_IMPACTO = 0.65;
 
 
 // ============================================================
 // RESPIRACIÓN ALTERADA
 // ============================================================
-//
-// Mucho más visible y rápida.
-//
 
 const AMPLITUD_RESPIRACION_MIN = 7;
 
@@ -110,15 +125,6 @@ const TIEMPO_TRANQUILO_INICIAL = 2500;
 
 // ============================================================
 // TIEMPO INDIVIDUAL DE ALTERACIÓN
-// ============================================================
-//
-// Después de los 2.5 segundos:
-//
-// círculo 1 -> inmediatamente
-// círculo 2 -> 0.85 s después
-// círculo 3 -> 1.75 s después
-// círculo 4 -> 2.85 s después
-//
 // ============================================================
 
 const TIEMPOS_ALTERACION = [
@@ -325,20 +331,23 @@ function crearCirculo(
             2,
 
 
+        // x5 aproximadamente
+
         velocidadErratica:
-            0.025 +
+            0.12 +
             Math.random() *
-            0.035,
+            0.16,
 
 
         fuerzaErratica:
-            0.018 +
+            0.15 +
             Math.random() *
-            0.028,
+            0.20,
 
 
-        // Segundo movimiento errático
-        // para evitar que sea demasiado regular
+        // ====================================================
+        // SEGUNDO MOVIMIENTO ERRÁTICO
+        // ====================================================
 
         faseErraticaSecundaria:
             Math.random() *
@@ -347,9 +356,41 @@ function crearCirculo(
 
 
         velocidadErraticaSecundaria:
-            0.04 +
+            0.18 +
             Math.random() *
-            0.04,
+            0.25,
+
+
+        // ====================================================
+        // TERCER MOVIMIENTO
+        // ====================================================
+
+        faseErraticaTerciaria:
+            Math.random() *
+            Math.PI *
+            2,
+
+
+        velocidadErraticaTerciaria:
+            0.25 +
+            Math.random() *
+            0.30,
+
+
+        // ====================================================
+        // CUARTO MOVIMIENTO
+        // ====================================================
+
+        faseErraticaCuarta:
+            Math.random() *
+            Math.PI *
+            2,
+
+
+        velocidadErraticaCuarta:
+            0.35 +
+            Math.random() *
+            0.40,
 
 
         // ====================================================
@@ -364,16 +405,27 @@ function crearCirculo(
 
 
         tiempoCambioDireccion:
-            500 +
+            100 +
             Math.random() *
-            900,
+            250,
 
 
         siguienteCambioDireccion:
             performance.now() +
-            500 +
+            100 +
             Math.random() *
-            900,
+            250,
+
+
+        // ====================================================
+        // IMPULSOS ALEATORIOS
+        // ====================================================
+
+        siguienteImpulso:
+            performance.now() +
+            80 +
+            Math.random() *
+            180,
 
 
         // ====================================================
@@ -522,30 +574,17 @@ function todosCalmados() {
 
 function alterarCirculo(circulo) {
 
-    // --------------------------------------------------------
-    // SI TODOS ESTÁN CALMADOS
-    // NO SE ALTERA NINGUNO
-    // --------------------------------------------------------
-
     if (todosCalmados()) {
 
         return;
     }
 
 
-    // --------------------------------------------------------
-    // SI YA ESTÁ ALTERADO
-    // --------------------------------------------------------
-
     if (!circulo.calmado) {
 
         return;
     }
 
-
-    // --------------------------------------------------------
-    // ALTERAR
-    // --------------------------------------------------------
 
     circulo.calmado = false;
 
@@ -572,12 +611,12 @@ function alterarCirculo(circulo) {
 
     circulo.velocidadMovimiento =
         circulo.velocidadMovimientoOriginal *
-        2.2;
+        5;
 
 
-    // --------------------------------------------------------
-    // Dirección aleatoria
-    // --------------------------------------------------------
+    // ========================================================
+    // DIRECCIÓN ALEATORIA
+    // ========================================================
 
     const angulo =
         Math.random() *
@@ -604,15 +643,22 @@ function alterarCirculo(circulo) {
         velocidad;
 
 
-    // --------------------------------------------------------
-    // Nuevo cambio de dirección
-    // --------------------------------------------------------
+    // ========================================================
+    // CAMBIO DE DIRECCIÓN
+    // ========================================================
 
     circulo.siguienteCambioDireccion =
         performance.now() +
-        250 +
+        100 +
         Math.random() *
-        500;
+        250;
+
+
+    circulo.siguienteImpulso =
+        performance.now() +
+        50 +
+        Math.random() *
+        120;
 }
 
 
@@ -622,28 +668,16 @@ function alterarCirculo(circulo) {
 
 function calmarCirculo(circulo) {
 
-    // --------------------------------------------------------
-    // YA CALMADO
-    // --------------------------------------------------------
-
     if (circulo.calmado) {
 
         return;
     }
 
 
-    // --------------------------------------------------------
-    // CALMAR
-    // --------------------------------------------------------
-
     circulo.calmado = true;
 
     circulo.alterandose = false;
 
-
-    // ========================================================
-    // REDUCIR VELOCIDAD
-    // ========================================================
 
     const velocidadActual =
         Math.sqrt(
@@ -678,10 +712,6 @@ function calmarCirculo(circulo) {
         VELOCIDAD_MOVIMIENTO_CALMADO;
 
 
-    // ========================================================
-    // REDUCIR RESPIRACIÓN
-    // ========================================================
-
     circulo.amplitudRespiracion =
         AMPLITUD_RESPIRACION_CALMADA;
 
@@ -704,7 +734,6 @@ function actualizarAlteracionInicial(ahora) {
 
     // ========================================================
     // PRIMEROS 2.5 SEGUNDOS
-    // TODOS TRANQUILOS
     // ========================================================
 
     if (
@@ -750,10 +779,6 @@ function actualizarAlteracionInicial(ahora) {
         const circulo of circulos
     ) {
 
-        // ----------------------------------------------------
-        // SI YA ESTÁ ALTERADO
-        // ----------------------------------------------------
-
         if (
             circulo.yaSeAltero
         ) {
@@ -762,21 +787,10 @@ function actualizarAlteracionInicial(ahora) {
         }
 
 
-        // ----------------------------------------------------
-        // LLEGÓ SU MOMENTO
-        // ----------------------------------------------------
-
         if (
             tiempoAlteracion >=
             circulo.tiempoAlteracion
         ) {
-
-            // -----------------------------------------------
-            // IMPORTANTE:
-            //
-            // Entra directamente alterado.
-            // No existe una transición gradual.
-            // -----------------------------------------------
 
             circulo.calmado =
                 false;
@@ -799,12 +813,12 @@ function actualizarAlteracionInicial(ahora) {
 
 
             // -----------------------------------------------
-            // MOVIMIENTO RÁPIDO
+            // VELOCIDAD x5
             // -----------------------------------------------
 
             circulo.velocidadMovimiento =
                 circulo.velocidadMovimientoOriginal *
-                2.2;
+                5;
 
 
             // -----------------------------------------------
@@ -837,14 +851,21 @@ function actualizarAlteracionInicial(ahora) {
 
 
             // -----------------------------------------------
-            // PRIMER CAMBIO DE DIRECCIÓN
+            // CAMBIO DE DIRECCIÓN
             // -----------------------------------------------
 
             circulo.siguienteCambioDireccion =
                 ahora +
-                250 +
+                100 +
                 Math.random() *
-                500;
+                250;
+
+
+            circulo.siguienteImpulso =
+                ahora +
+                50 +
+                Math.random() *
+                120;
         }
     }
 }
@@ -868,10 +889,6 @@ function actualizarRespiracion(circulo) {
         !circulo.calmado
     ) {
 
-        // ----------------------------------------------------
-        // Variación irregular de amplitud
-        // ----------------------------------------------------
-
         const variacion =
             Math.sin(
                 circulo.faseRespiracion *
@@ -879,10 +896,6 @@ function actualizarRespiracion(circulo) {
             ) *
             0.18;
 
-
-        // ----------------------------------------------------
-        // Segundo movimiento respiratorio
-        // ----------------------------------------------------
 
         const variacionSecundaria =
             Math.sin(
@@ -939,7 +952,7 @@ function actualizarMovimiento(circulo, ahora) {
     ) {
 
         // ----------------------------------------------------
-        // FASE ERRÁTICA
+        // FASES ERRÁTICAS
         // ----------------------------------------------------
 
         circulo.faseErratica +=
@@ -950,9 +963,17 @@ function actualizarMovimiento(circulo, ahora) {
             circulo.velocidadErraticaSecundaria;
 
 
-        // ----------------------------------------------------
-        // CAMBIOS CONTINUOS DE DIRECCIÓN
-        // ----------------------------------------------------
+        circulo.faseErraticaTerciaria +=
+            circulo.velocidadErraticaTerciaria;
+
+
+        circulo.faseErraticaCuarta +=
+            circulo.velocidadErraticaCuarta;
+
+
+        // ====================================================
+        // PRIMERA FUERZA
+        // ====================================================
 
         const cambioX =
             Math.sin(
@@ -969,12 +990,16 @@ function actualizarMovimiento(circulo, ahora) {
             circulo.fuerzaErratica;
 
 
+        // ====================================================
+        // SEGUNDA FUERZA
+        // ====================================================
+
         const cambioSecundarioX =
             Math.cos(
                 circulo.faseErraticaSecundaria
             ) *
             circulo.fuerzaErratica *
-            0.65;
+            1.15;
 
 
         const cambioSecundarioY =
@@ -983,21 +1008,69 @@ function actualizarMovimiento(circulo, ahora) {
                 1.43
             ) *
             circulo.fuerzaErratica *
-            0.65;
+            1.15;
+
+
+        // ====================================================
+        // TERCERA FUERZA
+        // ====================================================
+
+        const cambioTerciarioX =
+            Math.sin(
+                circulo.faseErraticaTerciaria *
+                1.71
+            ) *
+            circulo.fuerzaErratica *
+            1.5;
+
+
+        const cambioTerciarioY =
+            Math.cos(
+                circulo.faseErraticaTerciaria *
+                1.29
+            ) *
+            circulo.fuerzaErratica *
+            1.5;
+
+
+        // ====================================================
+        // CUARTA FUERZA
+        // ====================================================
+
+        const cambioCuartoX =
+            Math.sin(
+                circulo.faseErraticaCuarta *
+                2.31
+            ) *
+            circulo.fuerzaErratica *
+            1.8;
+
+
+        const cambioCuartoY =
+            Math.cos(
+                circulo.faseErraticaCuarta *
+                1.83
+            ) *
+            circulo.fuerzaErratica *
+            1.8;
 
 
         circulo.vx +=
             cambioX +
-            cambioSecundarioX;
+            cambioSecundarioX +
+            cambioTerciarioX +
+            cambioCuartoX;
 
 
         circulo.vy +=
             cambioY +
-            cambioSecundarioY;
+            cambioSecundarioY +
+            cambioTerciarioY +
+            cambioCuartoY;
 
 
         // ====================================================
-        // CAMBIO DE DIRECCIÓN MÁS BRUSCO
+        // CAMBIOS BRUSCOS DE DIRECCIÓN
         // ====================================================
 
         if (
@@ -1037,7 +1110,7 @@ function actualizarMovimiento(circulo, ahora) {
 
 
             // ------------------------------------------------
-            // Cambios rápidos e impredecibles
+            // VELOCIDAD NUEVA
             // ------------------------------------------------
 
             const nuevaVelocidad =
@@ -1049,31 +1122,103 @@ function actualizarMovimiento(circulo, ahora) {
                 );
 
 
+            // ------------------------------------------------
+            // IMPULSO MUCHO MÁS FUERTE
+            // ------------------------------------------------
+
+            const fuerzaCambio =
+                1.3 +
+                Math.random() *
+                1.4;
+
+
             circulo.vx +=
                 circulo.objetivoDireccionX *
                 nuevaVelocidad *
-                0.45;
+                fuerzaCambio;
 
 
             circulo.vy +=
                 circulo.objetivoDireccionY *
                 nuevaVelocidad *
-                0.45;
+                fuerzaCambio;
 
+
+            // ------------------------------------------------
+            // SIGUIENTE CAMBIO
+            // ------------------------------------------------
 
             circulo.siguienteCambioDireccion =
                 ahora +
-                circulo.tiempoCambioDireccion *
-                (
-                    0.35 +
-                    Math.random() *
-                    0.65
-                );
+                80 +
+                Math.random() *
+                220;
         }
 
 
         // ====================================================
-        // LIMITAR VELOCIDAD ALTERADA
+        // IMPULSOS ALEATORIOS MUY FUERTES
+        // ====================================================
+
+        if (
+            ahora >
+            circulo.siguienteImpulso
+        ) {
+
+            const anguloImpulso =
+                Math.random() *
+                Math.PI *
+                2;
+
+
+            const fuerzaImpulso =
+                0.35 +
+                Math.random() *
+                0.85;
+
+
+            circulo.vx +=
+                Math.cos(
+                    anguloImpulso
+                ) *
+                fuerzaImpulso;
+
+
+            circulo.vy +=
+                Math.sin(
+                    anguloImpulso
+                ) *
+                fuerzaImpulso;
+
+
+            circulo.siguienteImpulso =
+                ahora +
+                60 +
+                Math.random() *
+                180;
+        }
+
+
+        // ====================================================
+        // CAMBIOS ALEATORIOS
+        // ====================================================
+
+        circulo.vx +=
+            (
+                Math.random() * 2 - 1
+            ) *
+            0.08;
+
+
+        circulo.vy +=
+            (
+                Math.random() * 2 - 1
+            ) *
+            0.08;
+
+
+        // ====================================================
+        // LIMITAR VELOCIDAD
         // ====================================================
 
         const velocidad =
@@ -1106,7 +1251,7 @@ function actualizarMovimiento(circulo, ahora) {
 
 
         // ----------------------------------------------------
-        // Evitar que se vuelva demasiado lento
+        // EVITAR QUE SE VUELVA LENTO
         // ----------------------------------------------------
 
         else if (
@@ -1175,10 +1320,6 @@ function actualizarMovimiento(circulo, ahora) {
             movimientoCalmoY;
 
 
-        // ----------------------------------------------------
-        // Límites
-        // ----------------------------------------------------
-
         mantenerDentroCanvas(
             circulo
         );
@@ -1206,14 +1347,14 @@ function actualizarMovimiento(circulo, ahora) {
 
     circulo.faseMovimiento +=
         circulo.velocidadFaseMovimiento *
-        2;
+        4;
 
 
     circulo.x +=
         Math.sin(
             circulo.faseMovimiento
         ) *
-        0.035;
+        0.09;
 
 
     circulo.y +=
@@ -1221,7 +1362,7 @@ function actualizarMovimiento(circulo, ahora) {
             circulo.faseMovimiento *
             0.83
         ) *
-        0.035;
+        0.09;
 
 
     // ========================================================
@@ -1264,10 +1405,10 @@ function mantenerDentroCanvas(circulo) {
         circulo.vx =
             Math.abs(
                 circulo.vx
-            );
+            ) *
+            1.15;
 
 
-        // Alterados salen con una pequeña desviación
         if (
             !circulo.calmado
         ) {
@@ -1278,7 +1419,7 @@ function mantenerDentroCanvas(circulo) {
                     2 -
                     1
                 ) *
-                0.15;
+                0.65;
         }
     }
 
@@ -1301,7 +1442,8 @@ function mantenerDentroCanvas(circulo) {
         circulo.vx =
             -Math.abs(
                 circulo.vx
-            );
+            ) *
+            1.15;
 
 
         if (
@@ -1314,7 +1456,7 @@ function mantenerDentroCanvas(circulo) {
                     2 -
                     1
                 ) *
-                0.15;
+                0.65;
         }
     }
 
@@ -1336,7 +1478,8 @@ function mantenerDentroCanvas(circulo) {
         circulo.vy =
             Math.abs(
                 circulo.vy
-            );
+            ) *
+            1.15;
 
 
         if (
@@ -1349,7 +1492,7 @@ function mantenerDentroCanvas(circulo) {
                     2 -
                     1
                 ) *
-                0.15;
+                0.65;
         }
     }
 
@@ -1372,7 +1515,8 @@ function mantenerDentroCanvas(circulo) {
         circulo.vy =
             -Math.abs(
                 circulo.vy
-            );
+            ) *
+            1.15;
 
 
         if (
@@ -1385,7 +1529,7 @@ function mantenerDentroCanvas(circulo) {
                     2 -
                     1
                 ) *
-                0.15;
+                0.65;
         }
     }
 }
@@ -1433,6 +1577,10 @@ function detectarColisiones() {
                     dy * dy
                 );
 
+
+            // ------------------------------------------------
+            // Evitar división por cero
+            // ------------------------------------------------
 
             if (
                 distancia <= 0
@@ -1484,18 +1632,22 @@ function detectarColisiones() {
                     distancia;
 
 
-                // ------------------------------------------------
-                // SEPARACIÓN
-                // ------------------------------------------------
+                // =================================================
+                // PENETRACIÓN
+                // =================================================
 
                 const penetracion =
                     distanciaMinima -
                     distancia;
 
 
+                // =================================================
+                // SEPARACIÓN MUY FUERTE
+                // =================================================
+
                 const separacion =
                     penetracion *
-                    0.5;
+                    FUERZA_SEPARACION;
 
 
                 if (
@@ -1528,9 +1680,9 @@ function detectarColisiones() {
                 }
 
 
-                // ------------------------------------------------
+                // =================================================
                 // VELOCIDAD RELATIVA
-                // ------------------------------------------------
+                // =================================================
 
                 const velocidadRelativaX =
                     b.vx -
@@ -1549,9 +1701,9 @@ function detectarColisiones() {
                     ny;
 
 
-                // ------------------------------------------------
-                // IMPULSO
-                // ------------------------------------------------
+                // =================================================
+                // IMPACTO PRINCIPAL x5
+                // =================================================
 
                 if (
                     velocidadNormal < 0
@@ -1562,24 +1714,232 @@ function detectarColisiones() {
                         FUERZA_COLISION;
 
 
-                    a.vx +=
+                    if (
+                        !a.siendoMovido
+                    ) {
+
+                        a.vx +=
+                            nx *
+                            impulso;
+
+
+                        a.vy +=
+                            ny *
+                            impulso;
+                    }
+
+
+                    if (
+                        !b.siendoMovido
+                    ) {
+
+                        b.vx -=
+                            nx *
+                            impulso;
+
+
+                        b.vy -=
+                            ny *
+                            impulso;
+                    }
+                }
+
+
+                // =================================================
+                // EMPUJE POR PENETRACIÓN
+                // =================================================
+
+                const empujeImpacto =
+                    Math.min(
+                        penetracion *
+                        FUERZA_IMPACTO,
+                        2.5
+                    );
+
+
+                if (
+                    !a.siendoMovido
+                ) {
+
+                    a.vx -=
                         nx *
-                        impulso;
+                        empujeImpacto;
 
 
-                    a.vy +=
+                    a.vy -=
                         ny *
-                        impulso;
+                        empujeImpacto;
+                }
 
 
-                    b.vx -=
+                if (
+                    !b.siendoMovido
+                ) {
+
+                    b.vx +=
                         nx *
-                        impulso;
+                        empujeImpacto;
 
 
-                    b.vy -=
+                    b.vy +=
                         ny *
-                        impulso;
+                        empujeImpacto;
+                }
+
+
+                // =================================================
+                // EMPUJE LATERAL x5
+                // =================================================
+
+                const perpendicularX =
+                    -ny;
+
+
+                const perpendicularY =
+                    nx;
+
+
+                const signo =
+                    Math.random() <
+                    0.5
+                        ? -1
+                        : 1;
+
+
+                const empujeLateral =
+                    FUERZA_EMPUJE_LATERAL *
+                    signo;
+
+
+                if (
+                    !a.siendoMovido
+                ) {
+
+                    a.vx -=
+                        perpendicularX *
+                        empujeLateral;
+
+
+                    a.vy -=
+                        perpendicularY *
+                        empujeLateral;
+                }
+
+
+                if (
+                    !b.siendoMovido
+                ) {
+
+                    b.vx +=
+                        perpendicularX *
+                        empujeLateral;
+
+
+                    b.vy +=
+                        perpendicularY *
+                        empujeLateral;
+                }
+
+
+                // =================================================
+                // REBOTE EXTRA x5
+                // =================================================
+
+                if (
+                    !a.calmado &&
+                    !a.siendoMovido
+                ) {
+
+                    a.vx -=
+                        nx *
+                        FUERZA_REBOTE_EXTRA;
+
+
+                    a.vy -=
+                        ny *
+                        FUERZA_REBOTE_EXTRA;
+                }
+
+
+                if (
+                    !b.calmado &&
+                    !b.siendoMovido
+                ) {
+
+                    b.vx +=
+                        nx *
+                        FUERZA_REBOTE_EXTRA;
+
+
+                    b.vy +=
+                        ny *
+                        FUERZA_REBOTE_EXTRA;
+                }
+
+
+                // =================================================
+                // LIMITAR VELOCIDAD DESPUÉS DEL CHOQUE
+                // =================================================
+
+                if (
+                    !a.siendoMovido
+                ) {
+
+                    const velocidadA =
+                        Math.sqrt(
+                            a.vx * a.vx +
+                            a.vy * a.vy
+                        );
+
+
+                    if (
+                        velocidadA >
+                        VELOCIDAD_MAXIMA
+                    ) {
+
+                        const factorA =
+                            VELOCIDAD_MAXIMA /
+                            velocidadA;
+
+
+                        a.vx *=
+                            factorA;
+
+
+                        a.vy *=
+                            factorA;
+                    }
+                }
+
+
+                if (
+                    !b.siendoMovido
+                ) {
+
+                    const velocidadB =
+                        Math.sqrt(
+                            b.vx * b.vx +
+                            b.vy * b.vy
+                        );
+
+
+                    if (
+                        velocidadB >
+                        VELOCIDAD_MAXIMA
+                    ) {
+
+                        const factorB =
+                            VELOCIDAD_MAXIMA /
+                            velocidadB;
+
+
+                        b.vx *=
+                            factorB;
+
+
+                        b.vy *=
+                            factorB;
+                    }
                 }
 
 
@@ -1768,6 +2128,11 @@ function manejarPointerDown(event) {
             y
         );
 
+
+    // ========================================================
+    // SI SE TOCA FUERA
+    // NO PASA NADA
+    // ========================================================
 
     if (!circulo) {
 
@@ -1988,11 +2353,7 @@ function manejarPointerUp(event) {
 
 
     // --------------------------------------------------------
-    // IMPORTANTE:
-    //
-    // AL SOLTAR NO SE ALTERA.
-    //
-    // Si estaba calmado, queda calmado.
+    // AL SOLTAR NO SE ALTERA
     // --------------------------------------------------------
 }
 
@@ -2025,10 +2386,13 @@ canvas.addEventListener(
 );
 
 
-canvas.addEventListener(
-    "pointerleave",
-    manejarPointerUp
-);
+// ============================================================
+// NO USAMOS POINTERLEAVE
+// ============================================================
+//
+// Tocar fuera del círculo no modifica nada.
+//
+// ============================================================
 
 
 // ============================================================
